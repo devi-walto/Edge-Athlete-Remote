@@ -109,6 +109,21 @@ EOF
                 echo "[!] cannot reach GitHub from this machine:"
                 echo "    $access_error"
                 echo "    This is a network problem, not a key problem. Get it online and re-run."
+                echo
+                # The key still gets printed, because making it needed no network and
+                # ENROLLING it needs no network either — that part happens on GitHub,
+                # in a browser, on whatever device you like. A base station in access
+                # point mode has no uplink by design, so the common case is exactly
+                # this: add the key now from your phone or laptop, plug in ethernet
+                # once, re-run. Exiting without showing it would force a second trip
+                # to the machine for information it already had in its hand.
+                echo "    This machine's key, for when you can reach GitHub:"
+                echo "      $key.pub"
+                echo
+                cat "$key.pub"
+                echo
+                echo "    Add it under the repo's Settings -> Deploy keys (write access OFF)."
+                echo "    Then give this machine internet and run this again."
                 exit 1
                 ;;
         esac

@@ -144,8 +144,12 @@ echo
 echo "--- assertions ---"
 check "stops (non-zero)" "nonzero" "$([ "$rc4" -ne 0 ] && echo nonzero || echo zero)"
 check "calls it a network problem" "network problem, not a key problem" "$out4"
-check "does NOT send you off to paste a key" "no key advice" \
-      "$(printf '%s' "$out4" | grep -q 'Deploy keys' && echo gave key advice || echo no key advice)"
+check "does NOT blame the key for a dead network" "no key advice" \
+      "$(printf '%s' "$out4" | grep -q 'not allowed to read' && echo blamed the key || echo no key advice)"
+# A base station in AP mode has no uplink, so "offline" is the NORMAL first run. It
+# must still hand over the key, or enrolling means a second trip to the machine.
+check "still prints the key so it can be enrolled offline" "ssh-ed25519 " "$out4"
+check "and says where to put it" "Deploy keys (write access OFF)" "$out4"
 
 echo
 echo "=== run 5: key added — the real SSH clone path ==="
