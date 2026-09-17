@@ -41,7 +41,37 @@
 set -uo pipefail
 
 EDGE_DIR="${EDGE_DIR:-/srv/edge-athlete/Edge-Athlete}"
-EDGE_REPO_RAW="https://raw.githubusercontent.com/carbolizer/Edge-Athlete"
+
+# ── HOW AN UPDATE REACHES GITHUB ──────────────────────────────────────────────────
+# This used to `curl` the bootstrap from raw.githubusercontent.com. The repo is
+# private now, and GitHub answers an anonymous download from a private repo with a
+# 404 — so `curl -f` fails, `sudo bash` receives nothing, and the update does
+# nothing while looking like it ran.
+#
+# So updates come through this machine's OWN clone instead, which already knows how
+# to authenticate: bootstrap.sh stored the machine's deploy key in the clone's
+# core.sshCommand. Fetch the branch, then run THAT BRANCH's bootstrap — the same
+# thing the download used to do, so `ea-update some-branch` still installs
+# some-branch's idea of how to install itself.
+run_branch_bootstrap() {
+    local branch="$1" script
+    if ! sudo git -C "$EDGE_DIR" fetch --depth 1 origin \
+            "+refs/heads/$branch:refs/remotes/origin/$branch"; then
+        echo "[!] could not fetch '$branch' from GitHub."
+        echo "    No internet, no such branch, or this machine's deploy key was removed."
+        echo "    To re-enroll the key: sudo bash $EDGE_DIR/scripts/basestation/bootstrap.sh"
+        return 1
+    fi
+    # A file, not a pipe into bash: if the key needs re-adding, bootstrap.sh can
+    # still wait at the terminal for you instead of exiting on an empty stdin.
+    script="$(mktemp /tmp/edgeathlete-bootstrap.XXXXXX)"
+    sudo git -C "$EDGE_DIR" show "origin/$branch:scripts/basestation/bootstrap.sh" > "$script" \
+        || { echo "[!] branch '$branch' has no scripts/basestation/bootstrap.sh"; rm -f "$script"; return 1; }
+    sudo EDGE_BRANCH="$branch" bash "$script"
+    local rc=$?
+    rm -f "$script"
+    return "$rc"
+}
 
 # Which name were we invoked as? Called as plain `ea`, take the subcommand from the
 # first argument instead, so `ea update` and `ea-update` both work.
@@ -74,8 +104,7 @@ ea-update)
     # one-shot, so this is the ONLY update path. Takes a branch, defaulting to main.
     branch="${1:-main}"
     echo "==> updating from branch '$branch' (this rebuilds — several minutes)"
-    curl -fsSL "${EDGE_REPO_RAW}/${branch}/scripts/basestation/bootstrap.sh" \
-        | sudo EDGE_BRANCH="$branch" bash
+    run_branch_bootstrap "$branch"
     ;;
 
 ea-reset|ea-reset-hard)
@@ -108,8 +137,10 @@ ea-reset|ea-reset-hard)
     # Same update path as ea-update: pull latest code and rebuild. The bootstrap
     # is deliberately re-runnable — this is exactly what a first install runs.
     echo "==> pulling latest code + rebuilding (several minutes)"
-    curl -fsSL "${EDGE_REPO_RAW}/${branch}/scripts/basestation/bootstrap.sh" \
-        | sudo EDGE_BRANCH="$branch" bash
+    # If the update fails, say so — but still bring the stack back up. A reset that
+    # leaves the gym with NO app because GitHub was unreachable is worse than one
+    # that restarts the code it already had.
+    run_branch_bootstrap "$branch" || echo "[!] update failed — restarting the code already on this machine"
     sudo docker compose up -d
     if [ "$CMD" = "ea-reset-hard" ]; then
         echo "==> re-seeding demo data"

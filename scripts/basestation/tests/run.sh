@@ -38,9 +38,11 @@ docker run --rm -v "$REPO:/src:ro" debian:12 \
     bash /src/scripts/basestation/tests/provisioning.sh || failed=1
 
 echo
+# openssh-client for the REAL ssh-keygen: the deploy key is generated for real.
+# Only `ssh` itself is faked (tests/bootstrap.sh), because the test cannot reach GitHub.
 echo "############ bootstrap: the one-command install ############"
 docker run --rm -v "$REPO:/src:ro" debian:12 bash -c \
-    'apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq git >/dev/null 2>&1 \
+    'apt-get update -qq >/dev/null 2>&1 && apt-get install -y -qq git openssh-client >/dev/null 2>&1 \
      && bash /src/scripts/basestation/tests/bootstrap.sh' || failed=1
 
 echo

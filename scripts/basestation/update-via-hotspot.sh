@@ -47,7 +47,8 @@ HOTSPOT_PASS="CHANGE_ME"
 
 BRANCH="${EDGE_BRANCH:-main}"
 AP_PROFILE="EdgeAthlete-AP"
-RAW="https://raw.githubusercontent.com/carbolizer/Edge-Athlete/${BRANCH}/scripts/basestation/bootstrap.sh"
+# The installed clone. The update goes through it, not a download — see step 3.
+EDGE_DIR="${EDGE_DIR:-/srv/edge-athlete/Edge-Athlete}"
 
 log() { echo "[$(date '+%H:%M:%S')] $*"; }
 
@@ -120,8 +121,15 @@ done
 log "online"
 
 # ── 3. update ───────────────────────────────────────────────────────────────
-log "fetching bootstrap from branch '$BRANCH'..."
-curl -fsSL "$RAW" -o /tmp/ea-bootstrap.sh || { log "download failed"; exit 1; }
+# Through the machine's own clone, not raw.githubusercontent.com. The repo is private,
+# so an anonymous download is a 404 — and with this script's "the AP still comes
+# back" safety net, that failure would look like a finished update. The clone's
+# core.sshCommand carries the deploy key bootstrap.sh set up, so a plain fetch works.
+log "fetching branch '$BRANCH' through the installed clone..."
+git -C "$EDGE_DIR" fetch --depth 1 origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH" \
+    || { log "fetch failed — no route to GitHub, no such branch, or the deploy key was removed"; exit 1; }
+git -C "$EDGE_DIR" show "origin/$BRANCH:scripts/basestation/bootstrap.sh" > /tmp/ea-bootstrap.sh \
+    || { log "branch '$BRANCH' has no scripts/basestation/bootstrap.sh"; exit 1; }
 
 log "running bootstrap (this rebuilds the stack — several minutes)..."
 EDGE_BRANCH="$BRANCH" bash /tmp/ea-bootstrap.sh

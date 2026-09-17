@@ -34,7 +34,6 @@
 set -uo pipefail
 
 EDGE_DIR="${EDGE_DIR:-/srv/edge-athlete/Edge-Athlete}"
-EDGE_REPO_RAW="https://raw.githubusercontent.com/carbolizer/Edge-Athlete"
 EDGE_KIOSK_LOG="${EDGE_KIOSK_LOG:-/tmp/edgeathlete-kiosk.log}"
 
 CMD="$(basename "$0")"
@@ -64,8 +63,29 @@ case "$CMD" in
 ea-update)
     branch="${1:-main}"
     echo "==> updating this screen from branch '$branch'"
-    curl -fsSL "${EDGE_REPO_RAW}/${branch}/scripts/rack-screen/rack-bootstrap.sh" \
-        | sudo EDGE_BRANCH="$branch" bash
+    # Through this screen's own clone, NOT an anonymous download: the repo is private
+    # and raw.githubusercontent.com answers with a 404. rack-bootstrap.sh stored the
+    # screen's deploy key in the clone's core.sshCommand, so a plain fetch works.
+    # Then run THAT branch's rack-bootstrap.sh, as the download used to. Same shape
+    # as the base station's ea-update — see scripts/basestation/ea.sh.
+    if ! sudo git -C "$EDGE_DIR" fetch --depth 1 origin \
+            "+refs/heads/$branch:refs/remotes/origin/$branch"; then
+        echo "[!] could not fetch '$branch' from GitHub."
+        echo "    No internet, no such branch, or this screen's deploy key was removed."
+        echo "    To re-enroll the key: sudo bash $EDGE_DIR/scripts/rack-screen/rack-bootstrap.sh"
+        exit 1
+    fi
+    # A file, not a pipe, so a bootstrap that needs the key re-added can still wait
+    # at the terminal instead of exiting on an empty stdin.
+    script="$(mktemp /tmp/edgeathlete-rack-bootstrap.XXXXXX)"
+    if ! sudo git -C "$EDGE_DIR" show "origin/$branch:scripts/rack-screen/rack-bootstrap.sh" > "$script"; then
+        echo "[!] branch '$branch' has no scripts/rack-screen/rack-bootstrap.sh"
+        rm -f "$script"; exit 1
+    fi
+    sudo EDGE_BRANCH="$branch" bash "$script"
+    rc=$?
+    rm -f "$script"
+    exit "$rc"
     ;;
 
 ea-restart)
