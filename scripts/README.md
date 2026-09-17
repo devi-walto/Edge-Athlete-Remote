@@ -8,14 +8,20 @@ different kinds of device on the gym network.
 The mini PC that runs the whole Docker stack and **broadcasts** the "EdgeAthlete"
 Wi-Fi. Everything else on the network reaches it at `http://basestation`.
 
-### Installing one — the whole thing, one command
+### Installing one — copy the bootstrap over, run it there
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/carbolizer/Edge-Athlete/main/scripts/basestation/bootstrap.sh | sudo bash
+scp scripts/basestation/bootstrap.sh edgeathlete@basestation:/tmp/
+ssh -t edgeathlete@basestation 'sudo bash /tmp/bootstrap.sh'
 ```
 
-Run the **same command again** any time you want to update the base station. It
-is not one-shot: it pulls the latest code and re-provisions.
+The first run prints the machine's public key and waits while you add it on GitHub
+(repo → Settings → Deploy keys, write access **off**). The repo is private, so an
+anonymous `curl … | sudo bash` gets a 404 and installs nothing — see the header of
+`bootstrap.sh`.
+
+After that, `ea-update`. Re-running the file also works: it is not one-shot, it
+pulls the latest code and re-provisions.
 
 - **`bootstrap.sh`** — pulls the repo to `/srv/edge-athlete/Edge-Athlete` and
   hands off to `setup.sh`.
@@ -171,11 +177,13 @@ why. The failure is shouted about in the log instead.
 A Pi + touchscreen that **joins** the base station's Wi-Fi and boots straight
 into full-screen Chromium. Runs **no** server.
 
-- **`rack-bootstrap.sh`** — the whole install, in one command. Same shape as the
-  base station's `bootstrap.sh`, and re-running it is how you update a screen:
+- **`rack-bootstrap.sh`** — the whole install. Same shape as the base station's
+  `bootstrap.sh`, including the deploy-key enrolment, and re-running it is how you
+  update a screen:
 
   ```bash
-  curl -fsSL https://raw.githubusercontent.com/carbolizer/Edge-Athlete/main/scripts/rack-screen/rack-bootstrap.sh | sudo bash
+  scp scripts/rack-screen/rack-bootstrap.sh pi@<screen>:/tmp/
+  ssh -t pi@<screen> 'sudo bash /tmp/rack-bootstrap.sh'
   ```
 
   It takes **no role argument** — a rack screen is a rack screen. This is the path

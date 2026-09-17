@@ -18,8 +18,13 @@ gym's Wi-Fi. One per gym.
 **`scripts/rack-screen/`** — a kiosk client that **joins** that Wi-Fi and boots
 straight into full-screen browser. Runs no server.
 
-Installing a base station is one command, and running the same command again is how
-you update it. It is not one-shot.
+Installing a base station is two commands — copy the bootstrap over, run it there —
+and running it again is how you update. It is not one-shot.
+
+It used to be a single `curl … | sudo bash`. That needed the repo to be public, and
+this one is private: GitHub answers an anonymous download from a private repo with a
+404, so the one-liner would have handed `sudo bash` an empty script and reported
+nothing. See "Decision: each device carries its own read-only key" below.
 
 ---
 
@@ -415,14 +420,45 @@ something none of these ever needed.
 
 ---
 
-## Decision: a rack screen installs with one command too
+## Decision: each device carries its own read-only key
 
-**What forced it.** The base station had a one-command install. A rack screen did not:
+**What forced it.** This repo is private, and that broke every install path at once.
+An anonymous download from a private repo is a 404, so `curl -f … | sudo bash` handed
+`sudo bash` nothing — a failure that looks exactly like a successful no-op. An HTTPS
+clone was worse: it asked a headless box in a gym for a GitHub username.
+
+**What we chose.** Each machine generates its own SSH key and gets read-only access to
+this one repo. The key is saved into the clone, so `ea-update` keeps working with no
+human in the loop afterwards.
+
+**Why a key per machine and not one shared token.** Losing a base station should cost
+one key, not the fleet. A shared token sits on every device's disk and revoking it cuts
+them all off together — and the day you need to revoke it is the day you least want to
+re-provision every screen in the gym.
+
+**The key is named after the repo**, not just `deploy_key`. GitHub allows a deploy key
+on exactly one repository, so a machine that later needs a second repo gets a second
+key rather than an error nobody would connect to that rule.
+
+**GitHub's host keys are pinned** rather than accepted on first connect. That first
+connection is the one moment a fake `github.com` could hand a base station its own
+code, and "just press yes" is the normal answer to a host-key prompt.
+
+**Two failures that must not look alike.** "Your key is not added yet" and "this
+machine has no internet" get different messages. The first time someone pastes a key
+into GitHub to fix a dead ethernet cable is the last time they trust the installer.
+
+---
+
+## Decision: a rack screen installs the same way as the base station
+
+**What forced it.** The base station had a scripted install. A rack screen did not:
 you installed git, cloned the repository, changed directory, and ran a script with the
 right argument. Four chances to get it wrong — on the device there are the most of.
 
-**What we chose.** The same shape as the base station's installer, so the two are
-learned once rather than twice. One command, and running it again is how you update.
+**What we chose.** The same shape as the base station's installer, including the key
+enrolment, so the two are learned once rather than twice. Running it again is how you
+update.
 
 **It takes no role argument, on purpose.** A rack screen is a rack screen. This is the
 path you run on a dozen identical devices, and an argument on that path is a way to end

@@ -1,7 +1,7 @@
 <!--
 this guide — the operator's manual for the base station.
-Deliberately SHORT at the top: the install is one command, and a page that buries
-that under a wall of reference is a page nobody reads to the end. Everything else is
+Deliberately SHORT at the top: the install is two commands, and a page that buries
+them under a wall of reference is a page nobody reads to the end. Everything else is
 still here, folded into dropdowns, so the page skims in a minute and still answers
 the 2am question. If you add to this file, add inside a dropdown.
 -->
@@ -20,16 +20,30 @@ everything itself.
 ## Install it
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/carbolizer/Edge-Athlete/main/scripts/basestation/bootstrap.sh | sudo bash
+scp scripts/basestation/bootstrap.sh edgeathlete@basestation:/tmp/
+ssh -t edgeathlete@basestation 'sudo bash /tmp/bootstrap.sh'
 ```
 
-**Run the same command again to update it.** It is not one-shot.
+The first run prints **this machine's own public key** and waits. Add it on GitHub —
+the repo → **Settings → Deploy keys → Add deploy key** — and leave **"Allow write
+access" unchecked**. Then press Enter and it carries on.
+
+:::{note}
+**Why not a `curl … | sudo bash` one-liner?** There used to be one, and it needed the
+repo to be public. This one is private, and GitHub answers an anonymous download from
+a private repo with a 404 — so the old one-liner would hand `sudo bash` an empty
+script, which does nothing and says nothing. `-t` on the `ssh` matters: without a
+terminal there is nothing to wait on, so it prints the key and stops.
+:::
+
+**To update later: `ea-update`.** Re-running this file also works — it is not
+one-shot.
 
 Three scripts, in order:
 
 | | |
 |---|---|
-| `scripts/basestation/bootstrap.sh` | installs git, clones to `/srv/edge-athlete/Edge-Athlete`, hands off |
+| `scripts/basestation/bootstrap.sh` | installs git, enrols this machine's deploy key, clones to `/srv/edge-athlete/Edge-Athlete`, hands off |
 | `scripts/basestation/setup.sh` | Docker, Chromium, the Wi-Fi config, the boot service, the short commands |
 | `scripts/basestation/startup.sh` | runs on every boot: access point up, then the stack |
 
@@ -91,8 +105,15 @@ base station's Wi-Fi and boots into a locked browser — no Docker, no database,
 access point of its own.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/carbolizer/Edge-Athlete/main/scripts/rack-screen/rack-bootstrap.sh | sudo bash
+scp scripts/rack-screen/rack-bootstrap.sh pi@<screen>:/tmp/
+ssh -t pi@<screen> 'sudo bash /tmp/rack-bootstrap.sh'
 ```
+
+Use whatever account the screen was imaged with in place of `pi`. Like the base
+station, the first run prints the screen's public key and waits while you add it as a
+read-only deploy key.
+
+**To update later: `ea-update`** on the screen.
 
 ⚠️ **Run that on the screen, not here.** The two `ea-update` commands resolve to
 different bootstraps, and installing the base station's on a tablet would give it a
@@ -421,10 +442,23 @@ One command on a fresh machine. It installs Docker, pulls the code, writes the
 boot service, and builds the stack:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/carbolizer/Edge-Athlete/main/scripts/basestation/bootstrap.sh | sudo bash
+scp scripts/basestation/bootstrap.sh edgeathlete@basestation:/tmp/
+ssh -t edgeathlete@basestation 'sudo bash /tmp/bootstrap.sh'
 ```
 
-Run the **same command again** to update a base station later — it is not
+The first run prints **this machine's own public key** and waits. Add it on GitHub —
+the repo → **Settings → Deploy keys → Add deploy key** — and leave **"Allow write
+access" unchecked**. Then press Enter and it carries on.
+
+:::{note}
+**Why not a `curl … | sudo bash` one-liner?** There used to be one, and it needed the
+repo to be public. This one is private, and GitHub answers an anonymous download from
+a private repo with a 404 — so the old one-liner would hand `sudo bash` an empty
+script, which does nothing and says nothing. `-t` on the `ssh` matters: without a
+terminal there is nothing to wait on, so it prints the key and stops.
+:::
+
+**To update later: `ea-update`.** Re-running this file also works — it is not
 one-shot.
 
 | | Path |
@@ -464,11 +498,27 @@ Clean Linux machine to a running base station. Run the same command again later 
 - **Internet for the install only** (to pull Docker + build images). It runs fully offline after that.
 - **sudo/root** access.
 
-### 1. Install — one command
+### 1. Install — copy the bootstrap over and run it
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/carbolizer/Edge-Athlete/main/scripts/basestation/bootstrap.sh | sudo bash
+scp scripts/basestation/bootstrap.sh edgeathlete@basestation:/tmp/
+ssh -t edgeathlete@basestation 'sudo bash /tmp/bootstrap.sh'
 ```
+
+The first run prints **this machine's own public key** and waits. Add it on GitHub —
+the repo → **Settings → Deploy keys → Add deploy key** — and leave **"Allow write
+access" unchecked**. Then press Enter and it carries on.
+
+:::{note}
+**Why not a `curl … | sudo bash` one-liner?** There used to be one, and it needed the
+repo to be public. This one is private, and GitHub answers an anonymous download from
+a private repo with a 404 — so the old one-liner would hand `sudo bash` an empty
+script, which does nothing and says nothing. `-t` on the `ssh` matters: without a
+terminal there is nothing to wait on, so it prints the key and stops.
+:::
+
+**To update later: `ea-update`.** Re-running this file also works — it is not
+one-shot.
 
 Installs git + Docker + NetworkManager, clones the repo to
 `/srv/edge-athlete/Edge-Athlete`, generates a unique `SECRET_KEY`, detects the

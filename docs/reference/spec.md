@@ -511,7 +511,7 @@ Set      EXTENDED — is_makeup (Bool, default False) — excluded from
 > | Left behind | Where it lives now |
 > |---|---|
 > | Branch mechanics, `git show`/checkout recipes | The merge is done; git history |
-> | The P0–P15 phase plan and its gates | [`docs/_PATCH_NOTES.md`](https://github.com/carbolizer/Edge-Athlete/blob/main/docs/_PATCH_NOTES.md) |
+> | The P0–P15 phase plan and its gates | [`docs/_PATCH_NOTES.md`](https://github.com/devi-walto/Edge-Athlete-Remote/blob/main/docs/_PATCH_NOTES.md) |
 > | Endpoint reconciliation (which of his routes we kept) | [`docs/reference/message-contract.md`](message-contract.md) has the real shapes |
 > | Migration plan (`0008`→`0017`) | The migration files themselves |
 
@@ -1203,7 +1203,7 @@ The two things that could not be lost, and did not:
 | Tags | `p1-complete` … `p15-complete` |
 | Frozen-file check | clean at all fifteen gates |
 
-> **Detail lives in [`docs/_PATCH_NOTES.md`](https://github.com/carbolizer/Edge-Athlete/blob/main/docs/_PATCH_NOTES.md)** — each sub-phase
+> **Detail lives in [`docs/_PATCH_NOTES.md`](https://github.com/devi-walto/Edge-Athlete-Remote/blob/main/docs/_PATCH_NOTES.md)** — each sub-phase
 > with the files it touched and a click path to see it working. It is not repeated
 > here; two copies would drift.
 
@@ -1220,7 +1220,7 @@ The two things that could not be lost, and did not:
 | **P6** | Retirement + the delete fix | Dropped the legacy `Program` table; `Set.session` → `PROTECT` (`0011`) | A `Set` is the only permanent record an athlete trained |
 | **P7** | Coach frontend on the real API | Rewired his screens; folded 6 of his routes, dropped 3; `ErrorBoundary`; router race fixed | **Seven bugs found by clicking, none by a green suite** |
 | **P8** | Verify on a fresh database | Cold build, rack loop end to end, replaced invented test fixtures with live payloads | |
-| **P9** | Naming alignment | Routes and models renamed to match what they serve (`0012`) | [`_NAMING_CHANGES.md`](https://github.com/carbolizer/Edge-Athlete/blob/main/docs/_NAMING_CHANGES.md) · a blunt sed shadows model imports |
+| **P9** | Naming alignment | Routes and models renamed to match what they serve (`0012`) | [`_NAMING_CHANGES.md`](https://github.com/devi-walto/Edge-Athlete-Remote/blob/main/docs/_NAMING_CHANGES.md) · a blunt sed shadows model imports |
 | **P10** | Catalog editing + reordering | Rename/reorder/delete days and rows; `updated_at` (`0013`) | Reorder sends the **whole list** — non-deferrable unique constraint |
 | **P11** | Multi-coach | `?coach=me` lens, block categories M2M (`0014`), `TrainingGroupCoach` join (`0015`) | **Filter, not fence** — see the Phase 16 rewrite below |
 | **P12** | One open training day | 409 on a second open day; end-time correction after a power cut | D18 |
@@ -2469,7 +2469,7 @@ This is the gate before Devin exits. All of it must pass.
 > **Delivered by THE MERGE (P0–P15), which diverged from this prompt.** The
 > deliverable exists and works; the prompt below is the original design and is
 > kept for provenance. Where the two disagree, **the built product wins** — read
-> [`docs/_PATCH_NOTES.md`](https://github.com/carbolizer/Edge-Athlete/blob/main/docs/_PATCH_NOTES.md) P7/P10/P11/P13/P14.
+> [`docs/_PATCH_NOTES.md`](https://github.com/devi-walto/Edge-Athlete-Remote/blob/main/docs/_PATCH_NOTES.md) P7/P10/P11/P13/P14.
 >
 > | This prompt says | What was built |
 > |---|---|

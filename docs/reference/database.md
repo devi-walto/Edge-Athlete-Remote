@@ -22,7 +22,7 @@ fatiguing. The database is where all of that is remembered.
 > means a row remembers which row it belongs to — like a set remembering which athlete
 > did it. That's all you need to know to follow everything below.
 
-The source of truth is [`django/event_handler/models.py`](https://github.com/carbolizer/Edge-Athlete/blob/main/django/event_handler/models.py),
+The source of truth is [`django/event_handler/models.py`](https://github.com/devi-walto/Edge-Athlete-Remote/blob/main/django/event_handler/models.py),
 which carries the full reasoning in comments. This is the readable version.
 
 ---
@@ -338,5 +338,5 @@ confusion:
 ---
 
 *The 24 tables above are the current model. If it changes, the source of truth is
-[`django/event_handler/models.py`](https://github.com/carbolizer/Edge-Athlete/blob/main/django/event_handler/models.py) — keep this overview
+[`django/event_handler/models.py`](https://github.com/devi-walto/Edge-Athlete-Remote/blob/main/django/event_handler/models.py) — keep this overview
 in step with it.*

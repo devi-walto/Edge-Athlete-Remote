@@ -22,10 +22,15 @@ this setup, see {doc}`../journal/scripts` and {doc}`../journal/rack-tablet`.
 ## Install it
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/carbolizer/Edge-Athlete/main/scripts/rack-screen/rack-bootstrap.sh | sudo bash
+scp scripts/rack-screen/rack-bootstrap.sh pi@<screen>:/tmp/
+ssh -t pi@<screen> 'sudo bash /tmp/rack-bootstrap.sh'
 ```
 
-**Run the same command again to update it.** It is not one-shot.
+Use whatever account the screen was imaged with in place of `pi`. Like the base
+station, the first run prints the screen's public key and waits while you add it as a
+read-only deploy key.
+
+**To update later: `ea-update`** on the screen.
 
 No role argument — a rack screen is a rack screen. A **coach tablet** is the one
 exception and is provisioned by hand:
@@ -42,8 +47,12 @@ Two things it will not guess, and both have caught people out:
 | `SCREEN_ROTATE=` | rack screens install **portrait** (`right`) by default. Pass `normal` for a landscape tablet, or fix it afterwards with `ea rotate-left`. |
 
 ```bash
-curl -fsSL .../rack-bootstrap.sh | sudo AP_PASSWORD='your-password' bash
+ssh -t pi@<screen> "sudo AP_PASSWORD='your-password' SCREEN_ROTATE=normal bash /tmp/rack-bootstrap.sh"
 ```
+
+⚠️ The assignments go **after** `sudo`. It scrubs the environment, so anything set
+before it never reaches the script — and the screen would install with defaults
+while looking like it took your settings.
 
 ## The short commands
 
@@ -130,8 +139,15 @@ Then set it in `/etc/edgeathlete/rack-agent.conf` and
 :::
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/carbolizer/Edge-Athlete/main/scripts/rack-screen/rack-bootstrap.sh | sudo bash
+scp scripts/rack-screen/rack-bootstrap.sh pi@<screen>:/tmp/
+ssh -t pi@<screen> 'sudo bash /tmp/rack-bootstrap.sh'
 ```
+
+Use whatever account the screen was imaged with in place of `pi`. Like the base
+station, the first run prints the screen's public key and waits while you add it as a
+read-only deploy key.
+
+**To update later: `ea-update`** on the screen.
 
 No role argument — a rack screen is a rack screen. A **coach tablet** is the one
 exception and is provisioned by hand:

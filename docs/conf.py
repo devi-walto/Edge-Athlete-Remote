@@ -95,7 +95,10 @@ exclude_patterns = [
 # change this to "sphinx_rtd_theme" and swap the matching line in
 # requirements.txt — nothing else needs to change.
 html_theme = "furo"
-html_title = "Edge Athlete — Developer Journal"
+# The DOC SITE's title only. The product is still called Edge Athlete everywhere
+# it faces a coach or an athlete — this repo is the remote-capable line of it, and
+# the title says which docs you are reading when two sites look identical.
+html_title = "Edge Athlete Remote — Developer Journal"
 
 # Furo's stock palette is low contrast in dark mode — dull grey text on near-black,
 # with the sidebar almost the same shade as the page. custom.css replaces it with a

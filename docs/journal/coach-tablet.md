@@ -18,11 +18,16 @@ and the scheduling workspace — **Devin**, delivered through the merge (P0–P1
 rather than as the Phase 14 that was originally written.
 :::
 
-:::{admonition} This surface is mid-redesign
-:class: warning
-What ships today and what is being built are different shapes. Both are recorded
-here — the shipped design first, then the redesign and the reasoning behind it. The
-redesign lives on an unmerged branch (`coach-admin-state-machine`).
+:::{admonition} The redesign has shipped — in THIS repo
+:class: note
+The three-state console below is what this repo runs. It was merged on 2026-09-17
+(`a50e3f7`), taking the coach UI from eight flat tabs to PLANNING / SESSION /
+ANALYTICS.
+
+Two shapes still exist in the world, so it is worth knowing which you are looking at:
+the **team's** repo still runs the grouped-eight-tab console, recorded further down
+because it is still live there and still the thing a second codebase will be compared
+against.
 :::
 
 ## Where the coach's code actually lives
@@ -111,17 +116,31 @@ fix was to compare rather than replace. The reasoning is preserved as a comment 
 `App.jsx`, because the "obvious" version is the broken one.
 :::
 
-**What it cost.** Two shapes exist at once until the branch merges: the shipped
-eight-tab console on `main`, and the three-state version on its branch. Anyone
-reading the coach code needs to know which one they are looking at.
+**What it cost.** Two shapes existed at once for six weeks — the eight-tab console
+on the team's `main`, and this on a branch — and anyone reading the coach code had to
+know which they were looking at. Merging it here ended that for this repo and not for
+the other one, which is the honest cost of a fork rather than a fix.
+
+**What the merge itself had to settle.** The branch forked on 5 August and the trunk
+kept moving, so two files genuinely conflicted: `App.jsx` and `Dashboard.jsx`. The
+rule used was *the redesign wins on shape, the trunk wins on behaviour the redesign
+never touched* — decided per hunk by asking which side actually CHANGED a thing
+relative to the fork point, not which side was newer. So the states, the navbar, the
+session widget, groups, quick notes and the removal of the empty-room panels came
+from the redesign; live velocity on the session hero and coach-side sensor linking
+stayed from the trunk, because the redesign had simply never seen them.
 
 ---
 
-## Shipped change: the eight tabs, grouped
+## Superseded: the eight tabs, grouped
 
-The three-state redesign above lives on a branch. On `main`, the eight tabs remain
-— but they are now visually split into **Room** and **Athlete** groups, with a
-divider between them.
+**This is history in this repo, and current in the team's.** Kept because a fork with
+no memory of what it replaced cannot explain itself later.
+
+Before the three states, the eight tabs were visually split into **Room** and
+**Athlete** groups with a divider between them. The three states replace that whole
+row, so `react/src/coachTabs.js` is now dead code here — it is still imported by
+nothing, and its tests still pass, which is exactly how dead code survives.
 
 **What forced it.** Eight flat tabs mix room-level views (room, workouts,
 schedule, reports) with per-athlete ones (athlete, history, programs, notes).
@@ -133,10 +152,12 @@ tabs are **dimmed until an athlete is selected** — clicking one before that sh
 "Select an athlete to open their view." The room group is always live. The logic
 is pure and tested in `react/src/coachTabs.js` (`tabDisabled`, `tabGroup`).
 
-**Why this and not the three-state redesign.** The grouping is the low-risk,
-mainline increment that directly answers "per-athlete views are mixed in with
-room-level ones with no visual cue." It changes no routes and no data. The
-three-state redesign remains the larger future shape.
+**Why it was done this way at the time.** The grouping was the low-risk mainline
+increment that answered "per-athlete views are mixed in with room-level ones with no
+visual cue" without touching routes or data, while the three-state redesign was still
+unproven on a branch. That reasoning was right then and is worth keeping: it is the
+shape of decision that gets made under a deadline, and it did not block the larger
+change.
 
 ---
 
