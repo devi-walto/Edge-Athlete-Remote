@@ -45,3 +45,7 @@ docs/_build/
 # dev-only: run the stack on a machine that already has an edgeathlete install
 # (renames containers + moves nginx to 8082 to avoid clashing with a real stack)
 docker-compose.demo.yml
+
+# Firmware credentials. secrets.h.example is the committed template; the real
+# secrets.h holds a Wi-Fi password and an MQTT host, and never belongs in git.
+esp32/**/secrets.h
