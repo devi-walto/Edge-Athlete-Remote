@@ -43,7 +43,13 @@ echo "[*] building the site (warnings are fatal)..."
 # -W turns warnings into errors; --keep-going reports ALL of them in one run rather
 # than stopping at the first, which turns "fix, rebuild, discover the next one" into
 # a single list.
-"$VENV/bin/sphinx-build" -b html -W --keep-going "$DOCS_DIR" "$OUT"
+#
+# -E rebuilds from scratch instead of reusing the cache, and it is here because the
+# cache got it wrong: adding a new SECTION updated the front page but left every
+# other page's sidebar still showing the old navigation. The pages were individually correct and
+# the site was wrong, which is the worst kind of wrong to debug. A full rebuild of a
+# site this size costs a few seconds; believing a stale sidebar costs longer.
+"$VENV/bin/sphinx-build" -b html -E -W --keep-going "$DOCS_DIR" "$OUT"
 
 echo
 echo "[✔] built. Open it:"
