@@ -34,7 +34,8 @@ to the internet.
 training data and submit sets.** That is an accepted trade. It is why the Wi-Fi
 password matters more than it looks, and why the wall display shows no names
 (see {doc}`dashboard`). If this ever runs on a network that is not private, this is
-the first decision to revisit.
+the first decision to revisit — and the hosted service is that network: see
+{doc}`../remote/access`.
 
 ## "Coach" means "logged in", and nothing more
 
@@ -45,7 +46,8 @@ exactly one kind of privileged user in a weight room running this, and a role sy
 that is never exercised is a system that is wrong the first time someone needs it.
 
 **What it cost.** Any authenticated account has full coach powers. Fine for one gym
-with two staff logins; not fine the moment athletes get accounts.
+with two staff logins; not fine the moment athletes get accounts — which the hosted
+service needs ({doc}`../remote/access`).
 
 ## One path through authentication
 

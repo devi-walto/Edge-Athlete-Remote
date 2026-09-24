@@ -46,6 +46,10 @@ Three kinds of question, deliberately kept apart:
 **Guides — "how do I do a thing?"**
 : Install a base station, run a demo without hardware, change the database safely.
 
+**{doc}`Remote <remote/index>` — "what is it becoming?"**
+: The same system run from anywhere instead of from a gym's own network. Decided, not
+  yet built — kept apart so a plan is never read as a description of the code.
+
 ## A note on how the decisions are written
 
 Every journal entry follows the same four beats:
@@ -66,5 +70,6 @@ orientation
 journal/index
 reference/index
 guides/index
+remote/index
 history
 ```
