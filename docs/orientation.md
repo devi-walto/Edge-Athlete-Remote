@@ -21,9 +21,14 @@ five reps at 225 lb, but if one is moving the bar slower than usual they are
 fatiguing — and a coach who sees that can change the session before it becomes a bad
 week. Counting reps will not tell you that.
 
-Commercial systems that do this cost **$3,880** (GymAware) or **$1,995 per rack plus
-$3,000 a year** (Perch). Edge Athlete does the same job with a mini PC and about $10
-of sensor per rack.
+Commercial systems that do this cost about **$1,995 per unit** — GymAware, with its
+software included, or Perch, which then charges from **$3,000 a year** on top and sells
+the mount, bracket and battery separately. Either way a ten-rack room is roughly
+$20,000 of hardware. Edge Athlete does the same job with a mini PC and a sensor that
+costs tens of dollars, not thousands.
+
+(Prices checked September 2026, from each vendor's public pages. They move; the
+comparison that matters is the order of magnitude.)
 
 :::{important}
 **There is no internet in the gym.** The base station broadcasts its own Wi-Fi and
