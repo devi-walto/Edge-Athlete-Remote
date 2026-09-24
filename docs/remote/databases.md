@@ -3,20 +3,22 @@ this page — one database per installation, and how a program moves between a g
 and the hosted service.
 
 The decision here is small to state and decides a lot: it is why the hosted code can
-be the gym box's code, why the fence between programs cannot be forgotten, and why
-moving a program from one shape to the other is a copy. Read it before adding anything
-that has to know about more than one program.
+be the gym box's code, why the fence between programs cannot be forgotten, why the demo
+cannot leak real data, and why moving a program from one shape to the other starts
+with a copy. Read it before adding anything that has to know about more than one
+program.
 -->
 
 # One database per installation
 
 An **installation** is one program's copy of the system: its roster, its plans, its
 history. A gym box is one installation. On the hosted service, each program is one
-installation too.
+installation too — and so is the demo shown to faculty ({doc}`access`).
 
 ## What forced it
 
-The hosted service may run more than one program. There were two ways to hold that:
+The hosted service will run more than one installation — at the very least the real
+one and the demo. There were two ways to hold that:
 
 1. **One shared database**, with a column on every table saying which program a row
    belongs to, and a filter on every query.
@@ -32,12 +34,13 @@ must stay one codebase ({doc}`deployments`).
 
 - Every installation — gym box or hosted — has the same schema, created by the same
   migrations.
-- On the hosted service, each installation is its own copy of the stack: its own
-  database, its own message broker, its own address ({doc}`hosting`).
+- On the hosted service, each installation is its own copy of the stack, deployed from
+  **one template**: its own database, its own message broker, its own address
+  ({doc}`hosting`).
 - **The fence between programs is structural.** Program B's rows are not in program
   A's database, so there is no query that can leak them.
 
-### Moving a program between shapes is a copy
+### The first move between shapes is a copy
 
 Because both sides have the same schema and each holds exactly one program:
 
@@ -46,55 +49,77 @@ Because both sides have the same schema and each holds exactly one program:
 - **Gym box first, moving online:** the hosted installation is new and empty. Same
   copy, the other direction.
 
-A plain database dump and restore does this. **The one precondition is that both sides
-run the same schema version** — the copy must refuse to run across versions rather
-than guess. Upgrade first, then copy.
+A plain database dump and restore does this. **Both sides must run the same schema
+version** — the copy refuses to run across versions rather than guess. Upgrade first,
+then copy.
 
-### After the first copy: a hand-off, not a merge
+**Only the first move is a copy.** After that, both sides hold real data, and restoring
+one over the other would erase whatever the overwritten side recorded since.
 
-A program's sessions never run in the gym and online **at the same time**. So ongoing
-sync is a hand-off: **whichever side ran the last session holds the current truth, and
-the other side syncs before it runs one.**
+### Right after the first copy: move the counters apart
 
-The one case that hand-off does not cover is an edit made **between** sessions while
-the gym box is offline — a coach changes Thursday's plan from home on Tuesday. That is
-settled by giving each kind of record one home:
+Every table numbers its rows with an auto-incrementing counter. Straight after a copy,
+both sides' counters stand at the same number — so the next set recorded on the box and
+the next set recorded online would **both be number 501**, and could never be combined.
 
-| Record | Home in a hybrid program | Why |
+So the copy has one more step: **the receiving side's counters are moved to a distant
+range** (start at a trillion, say). From then on, a new row on one side can never
+share a number with a new row on the other. It is part of the copy, not a separate
+chore, so it cannot be forgotten.
+
+### After that: add, don't overwrite
+
+A program's sessions normally run on one side at a time, and each side syncs before
+running one — a **hand-off**. The case that matters is when that does not happen: the
+gym box is offline, a remote session runs online, and a gym session runs on the box
+before they have synced.
+
+That still works, because **everything a workout creates is new rows** — the session,
+its sets, its reps, its check-ins, its report. Merging back is **adding the other
+side's new rows**: both workouts are kept, and because the counters were moved apart,
+none of their numbers clash. The athletes they point at already exist on both sides,
+with the same numbers, from the first copy.
+
+What can genuinely conflict is a **shared record edited on both sides** — the same
+athlete renamed differently, the same plan changed twice. Those get an owner:
+
+| Record | On a merge | Why |
 |---|---|---|
-| Sessions, sets, reps, check-ins | **wherever they were recorded** | only one side ran that session |
-| Plans and programs | **hosted** | a coach plans from anywhere; the gym box runs what it was last given |
-| Athlete logins | **hosted** | the gym box has no athlete logins ({doc}`access`) |
+| Sessions, sets, reps, check-ins, reports | **added from both sides** | new rows; they never overwrite each other |
+| New athletes, groups, plans created on either side | **added** | new rows, and their numbers cannot collide |
+| Edits to an existing athlete, group or training group membership | **hosted wins** | the coach manages the roster from anywhere |
+| Edits to an existing plan or program | **hosted wins** | the coach plans from anywhere; the box runs what it was last given |
+| Athlete logins and login links | **hosted only** | the gym box has no athlete logins ({doc}`access`) |
 
-The two sides then only ever change **different kinds** of record, so there is nothing
-to reconcile — only newer copies to pass along.
+### What a merge must carry, and what re-derives
 
-### What a sync must carry, and what re-derives
-
-Most of the history derives from sets; a few things do not, and a sync that drops them
-is silently wrong:
+Most of the history derives from sets; a few things do not, and a merge that drops
+them is silently wrong:
 
 - **Carry:** sets and reps; **manual** maxes (a coach typed them — deriving would
   discard that judgment); end-of-day reports (frozen on purpose, and regenerating one
   later gives a different answer); and **original timestamps** on all of it.
-- **Watch:** maxes are add-only, newest wins. Replayed out of order, or stamped with the
-  time of the sync, every athlete's *current* max comes out wrong — and every
-  prescribed weight with it, because plans store percentages.
-
-A whole-database copy gets all of this right for free. It only matters once sync is
-incremental.
+- **Watch:** maxes are add-only, newest wins. Stamped with the time of the merge
+  instead of the time of the lift, every athlete's *current* max comes out wrong — and
+  every prescribed weight with it, because plans store percentages.
 
 ## What we rejected, and why
 
 **One shared database with a program column on every table.** Every query in the
 codebase would have to remember the filter, forever, and one forgotten filter leaks
-another program's athletes. Row IDs would collide the first time a gym box's data moved
-online — the box's athlete 17 and the hosted athlete 17 are different people — so every
-move would need a renumbering import. And the hosted code would carry a concept the gym
-box does not have, which is exactly the drift {doc}`deployments` rules out.
+another program's athletes — or real athletes into the faculty demo. And the hosted
+code would carry a concept the gym box does not have, which is exactly the drift
+{doc}`deployments` rules out.
 
-**Live two-way sync.** Unnecessary, because sessions never overlap and each record has
-one home.
+**Restoring one side over the other after the first copy.** It is the simplest merge,
+and it deletes a workout whenever both sides recorded one.
+
+**Switching every table to random IDs (UUIDs).** It also prevents collisions, but it
+means rewriting every primary and foreign key in the schema. Moving the counters
+apart gets the same guarantee from one step at copy time.
+
+**Live two-way sync.** Unnecessary: new rows are added, and shared records have an
+owner.
 
 ## What it cost
 
@@ -106,7 +131,12 @@ one home.
 - **Each hosted installation costs a full stack** in memory, not a few rows. Sharing
   one database server between installations (still one database each) is a tuning
   option for later.
+- **"Hosted wins" can discard a roster edit made on an offline box** when the same
+  record was also edited online. Rare, and the reason the hand-off — sync before
+  switching sides — stays the normal path.
 
-**Status.** For the directed study there is exactly one hosted installation, so none of
-the sync is built. What is binding **now**: no hosted-only tables, no program column,
-and nothing that makes the hosted schema differ from the gym box's.
+**Status.** Binding **now**, for the directed study: installations are deployed from one
+template (the demo is the second one); creating an installation **from a copy** of
+another — counters moved apart included — is part of that template; and nothing makes
+the hosted schema differ from the gym box's. The merge itself is not built — there is
+nothing to merge until a program runs both shapes.

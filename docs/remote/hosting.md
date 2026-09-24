@@ -22,7 +22,9 @@ end, and renew its own certificates without anyone visiting it.
 
 The hosted service runs on **k3s**, a small Kubernetes distribution. Each installation
 ({doc}`databases`) is one copy of the same stack the gym box runs — web server, Django,
-Postgres, the message broker — built from **the same images**, in its own namespace.
+Postgres, the message broker — built from **the same images**, in its own namespace,
+**stamped out from one template**. The second installation is the demo shown to
+faculty ({doc}`access`), which makes the template prove itself from the first week.
 
 Learning k3s is itself one of the directed study's outcomes ({doc}`directed-study`).
 

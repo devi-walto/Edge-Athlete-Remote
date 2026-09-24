@@ -41,38 +41,63 @@ Most of the backend was built with this in mind:
 
 ## What is actually new
 
-- **Hosting**: k3s, TLS, automatic certificates, deploys from CI ({doc}`hosting`)
-- **Logins where the network used to be the lock**: a coach/athlete role split, athlete
-  invites, the session link, a rack slot per remote athlete ({doc}`access`)
-- **Sensors over the internet**: TLS, per-sensor credentials, the broker locked down
-  ({doc}`sensors`)
+- **Hosting**: k3s, TLS, automatic certificates, deploys from CI, and installations
+  stamped out from one template — the real one and a demo ({doc}`hosting`,
+  {doc}`databases`)
+- **Logins where the network used to be the lock**: a coach/athlete role split, login
+  links, the session link with its group check, a rack slot per remote athlete
+  ({doc}`access`)
+- **Sensors over the internet**: TLS, per-sensor credentials, the broker locked down,
+  and settings stored on the sensor per network ({doc}`sensors`)
 
 **The main risk is authentication.** The rack screen has no login by design, because
 the gym box's network was the boundary. On the internet, everything the old boundary
 did has to be done by logins — and it has to be complete before the first athlete login
 exists.
 
+## What goes in now, and what waits
+
+The rule: **anything that shapes the data, a protocol or the hardware is built now.
+Anything that only adds on top of those can wait** — because the first kind is
+expensive to change once there is data, devices or a printed board depending on it,
+and the second kind is not.
+
+| Now — by November 11 | Why now |
+|---|---|
+| The group check: an athlete gets into a session only if one of their groups is in it | It *is* the access model |
+| Login links — first sign-in and recovery | The only way a login is connected to an athlete |
+| Installations deployed from one template, with the demo as the second | Proves one database per installation for real — and faculty need the demo |
+| Creating an installation from a copy, with the counters moved apart | Trivial before there is data; painful after |
+| Sensor settings stored on the device, per network | The firmware is being rewritten for TLS anyway |
+| The circuit-board requirements written down | Must be settled before a board is printed |
+
+| Later | Why it can wait |
+|---|---|
+| The sensor's setup page (captive portal) | Writes the settings format built now |
+| Merging a gym box and a hosted installation back together | Nothing to merge until a program runs both |
+| An athlete's "my history" page | A screen over data that already exists |
+| One sign-in across programs | Needs a second program to matter |
+
 ## The schedule
 
 | Dates | Work | Done when |
 |---|---|---|
-| **Sep 24 – Oct 7** | Port the coach-account hardening. Stand up k3s, TLS and automatic certificates, deploys from CI | **The app is live at a public HTTPS link** |
-| **Oct 8 – Oct 17** | The coach/athlete role split. Athlete invites, the session link, a rack slot per remote athlete. Encrypted live updates | An invited athlete opens a link and lands on their own rack screen |
-| **Oct 18 – Oct 31** | Sensors over the internet: broker TLS and credentials, per-sensor topic limits, the hosted firmware profile, authenticated sensor registration | A sensor on a home network sends reps to the hosted broker |
+| **Sep 24 – Oct 7** | Port the coach-account hardening. Stand up k3s, TLS and automatic certificates, deploys from CI. The installation template, with the demo as the second installation | **The app is live at a public HTTPS link**, and the demo beside it |
+| **Oct 8 – Oct 17** | The coach/athlete role split. Login links, the session link and its group check, a rack slot per remote athlete. Encrypted live updates | A linked athlete opens the session link and lands on their own rack screen; one outside the session's groups is turned away |
+| **Oct 18 – Oct 31** | Sensors over the internet: broker TLS and credentials, per-sensor topic limits, per-network settings on the sensor and the USB tool that writes them, authenticated sensor registration. Board requirements written down | A sensor on a home network sends reps to the hosted broker |
 | **Nov 1 – Nov 3** | End to end, from a network other than the cluster's | **A remote athlete lifts with a real sensor and the workout is saved on the server** |
 | **Nov 4 – Nov 11** | Report, and buffer | Submitted |
 
 The sensor work sits **before** the buffer, not inside it, because it is the only part
-with hardware in the loop.
+with hardware in the loop. The first block grew the most; if it runs long, the demo
+installation is the piece that slides into the second.
 
 ## Deliberately left out
 
-- **Sync between a gym box and the hosted service** — designed ({doc}`databases`), not
-  built. The study hosts one installation.
-- **Linking an athlete's logins across programs** — future ({doc}`access`).
-- **Setting a sensor's Wi-Fi without rebuilding it, and firmware updates over the
-  air** — sensors are built once per athlete ({doc}`sensors`).
-- **An athlete's "my history" page** — only if time remains after November 3.
+Everything in the **Later** table above, plus:
+
+- **Firmware updates over the air.**
+- **Live two-way sync** — rejected outright, not deferred ({doc}`databases`).
 
 ## Still open
 
@@ -80,3 +105,5 @@ with hardware in the loop.
   If it is, it needs its own slot, and something above moves.
 - **Where the cluster runs** — hardware at home, or a rented server.
 - **The domain**, and whether its DNS can be changed freely.
+- **When the sensor board is printed** — the setup page does not need to exist first,
+  but the board requirements do.
