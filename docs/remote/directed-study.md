@@ -13,7 +13,8 @@ change this page and say why; do not let it quietly drift from what is being bui
 
 ## What it promises
 
-The learning outcomes, as submitted:
+The learning outcomes, as proposed — the requirements document itself is written from
+the course's template (CSC 4903) and has not been submitted yet:
 
 1. **Learn k3s.**
 2. **Host the app at a link anyone can click.**
