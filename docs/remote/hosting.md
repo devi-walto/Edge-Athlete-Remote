@@ -28,11 +28,48 @@ faculty ({doc}`access`), which makes the template prove itself from the first we
 
 Learning k3s is itself one of the directed study's outcomes ({doc}`directed-study`).
 
+### Where the cluster runs: at home
+
+The cluster runs on two machines at home: **a Dell OptiPlex and a Mac mini.**
+
+**It starts on the Dell alone.** k3s runs only on Linux. The Dell runs it directly;
+the Mac mini can only join through a Linux virtual machine. So the first goal is
+everything working on one machine. The Mac mini joins later as a second node, which
+is a learning step in its own right and blocks nothing before it.
+
+**If the Mac mini has an Apple chip, the images must be built twice** — once for the
+Dell's Intel-style processor, once for the Mac's ARM one. Another reason the Dell goes
+first.
+
+**Getting traffic from the internet to the Dell:**
+
+| What | How |
+|---|---|
+| Web traffic (80, 443) and sensors (8883) | The home router forwards those three ports to the Dell. Nothing else is forwarded |
+| The home address changing | Home internet addresses change now and then. A small job in the cluster checks the address and updates the domain's records through Porkbun's API when it moves |
+| The cluster's own control port (6443) | **Never forwarded.** It is managed from inside the home network only |
+
+**Before any of that works, two things about the home connection have to be true:**
+
+1. **It has its own public address.** Some providers share one public address between
+   many homes (called CGNAT), and then nothing outside can reach in. The check: the
+   internet address the router reports must match what a site like whatismyip.com
+   shows.
+2. **The provider does not block ports 80 and 443** on a home plan.
+
+If either fails, the fallback is a tunnel service — see the rejected options below for
+why it is the fallback and not the plan.
+
 ### HTTPS, with certificates that renew themselves
 
-Each installation gets its own address under one domain. Certificates come from
-Let's Encrypt and are **renewed automatically by the cluster** well before they expire —
-nobody logs in every few months to do it.
+The project uses **a domain Devin owns, registered with Porkbun.** Each installation
+gets its own sub-address under it — one for the real installation, one for the demo.
+
+Certificates come from Let's Encrypt and are **renewed automatically by the cluster**
+well before they expire — nobody logs in every few months to do it. Let's Encrypt
+proves the domain is ours by fetching a file over port 80, which is why port 80 is
+forwarded even though the site itself redirects to HTTPS. If port 80 ever cannot be
+opened, the same proof can be done through Porkbun's DNS API instead.
 
 ### Two doors into one broker
 
@@ -56,6 +93,11 @@ a development tool and must not be served by a hosted installation.
 A push builds the images, tags them, and rolls them out to the cluster. The gym box
 keeps installing from its own clone ({doc}`../journal/scripts`).
 
+Because the cluster sits behind a home router, CI cannot reach in to deploy — and the
+control port is deliberately never opened for it. Instead, the **rollout step runs on
+the Dell itself** (a self-hosted runner): it reaches out to collect the job, so nothing
+new is exposed.
+
 ## What we rejected, and why
 
 **A separate WebSocket server with a message store behind it**, instead of the broker's
@@ -70,14 +112,34 @@ it already works. The cost is recorded in {doc}`deployments`.
 **Certificates renewed by hand.** Certificate lifetimes are getting shorter, not
 longer. Anything that needs a person to renew it will eventually lapse.
 
+**A rented server.** It avoids every home-network question above, for a monthly bill.
+Hardware already on hand does the same job, and running the cluster on it — router,
+addresses and all — is part of what the directed study is for.
+
+**A tunnel service instead of forwarding ports.** It hides the home address and needs
+no router changes, and it handles websites well. It handles the sensors' raw MQTT
+connection on port 8883 poorly: most tunnels expect web traffic, or need their own
+software on the connecting device, which an ESP32 cannot run. Forwarding three ports
+keeps the sensors simple. The tunnel stays the fallback if the home connection cannot
+take incoming traffic.
+
 ## What it cost
 
 - **Two orchestration setups for the same images** — Compose on the gym box,
   manifests on the cluster.
 - **The browser's broker login is new work.** Today the broker trusts everyone on the
   box's Wi-Fi; hosted, it has to check a credential the site issued.
-- **If the cluster mixes processor types** (an ARM board and an x86 machine), every
-  image must be built for both. Avoidable by keeping the cluster to one type.
+- **If the cluster mixes processor types** — an Apple-chip Mac mini beside the Dell —
+  every image must be built for both. Starting on the Dell alone defers this.
+- **The site is only as available as the house.** A power cut, a router reboot or an
+  outage at the provider takes it down. Fine for a directed study; worth saying out
+  loud before a live demo.
+- **The home network is now partly public.** Three ports point at the Dell, so the
+  Dell needs to be kept updated, and nothing else in the house should depend on it.
 
-**Still open:** where the cluster runs — hardware at home, or a rented server — and
-which domain it lives under. Both change the work, not the design.
+**Still to check before week 2:**
+
+- Does the home connection have its own public address (no CGNAT)?
+- Does the provider allow incoming traffic on ports 80 and 443?
+- Does the Mac mini have an Apple chip or an Intel one?
+- Have the domain's old DNS records been cleared out, so only the project's remain?

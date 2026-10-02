@@ -103,7 +103,8 @@ Everything in the **Later** table above, plus:
 
 - **Whether any measurement is required** — load testing, monitoring, response times.
   If it is, it needs its own slot, and something above moves.
-- **Where the cluster runs** — hardware at home, or a rented server.
-- **The domain**, and whether its DNS can be changed freely.
+- **The home connection** — the cluster runs at home on the Dell and Mac mini, under
+  a Porkbun domain ({doc}`hosting`), but whether the connection accepts incoming
+  traffic is still to be checked.
 - **When the sensor board is printed** — the setup page does not need to exist first,
   but the board requirements do.
