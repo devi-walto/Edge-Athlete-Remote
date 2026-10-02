@@ -23,6 +23,11 @@
 # The copy is test-built on its own before anything is pushed, with warnings fatal —
 # if it does not build standalone here, it will not build on Read the Docs either.
 #
+# RELEASES CARRY OVER
+# If the commit being published has a release tag (v0.3.0), the public copy gets the
+# same tag. Read the Docs builds its "stable" version from the newest release tag, so
+# the site then offers the docs for the latest release alongside "latest".
+#
 set -euo pipefail
 
 PUBLIC_REPO="${PUBLIC_DOCS_REPO:-git@github.com:devi-walto/Edge-Athlete-Remote-docs.git}"
@@ -39,6 +44,8 @@ if [ -n "$(git status --porcelain -- docs .readthedocs.yaml)" ]; then
     exit 1
 fi
 REV="$(git rev-parse --short HEAD)"
+# A release tag on exactly this commit, if there is one (pre-releases included).
+TAG="$(git describe --exact-match --tags HEAD 2>/dev/null || true)"
 
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
@@ -85,9 +92,19 @@ find "$CLONE" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
 cp -R "$STAGE/docs" "$STAGE/.readthedocs.yaml" "$STAGE/README.md" "$CLONE/"
 git -C "$CLONE" add -A
 if git -C "$CLONE" diff --cached --quiet; then
-    echo "[✔] the public repo already matches $REV — nothing to push"
-    exit 0
+    echo "[✔] the public repo already matches $REV — no new commit"
+else
+    git -C "$CLONE" commit -q -m "docs from $REV"
+    git -C "$CLONE" push -q origin main
+    echo "[✔] published docs from $REV. Read the Docs rebuilds on its own within a minute or two."
 fi
-git -C "$CLONE" commit -q -m "docs from $REV"
-git -C "$CLONE" push -q origin main
-echo "[✔] published docs from $REV. Read the Docs rebuilds on its own within a minute or two."
+
+if [ -n "$TAG" ]; then
+    if git -C "$CLONE" ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+        echo "[✔] the public repo already has $TAG"
+    else
+        git -C "$CLONE" tag -a "$TAG" -m "docs for $TAG (from $REV)"
+        git -C "$CLONE" push -q origin "$TAG"
+        echo "[✔] tagged the public copy $TAG — Read the Docs' \"stable\" now follows it"
+    fi
+fi

@@ -49,8 +49,28 @@ That is an honest description of where this project is:
 
 - the frozen-contract files can still move
 - insights and fatigue detection are stubs that return nothing
-- the ESP32 firmware is not in this repository
+- the ESP32 firmware is in the repository but has not been rebuilt for the internet yet
 - the broker still allows anonymous connections
+- none of the remote version ({doc}`../remote/index`) is built yet
+
+## One version line, and what "compatible" means
+
+This repository carries **one** version line. The gym box and the hosted version are
+the same code ({doc}`../remote/deployments`), so they are released together under the
+same number. The line continues from `v0.2.0`, which this repository's history already
+contains; starting again at `v0.1.0` would put two different releases under one name.
+
+**The release number does not decide whether two installations can work together —
+the database schema does.** Copying a program between a gym box and the hosted service
+requires both to be on the same schema ({doc}`../remote/databases`), which is the
+newest migration in `django/event_handler/migrations/`. Two installations on the same
+schema are compatible even if their release numbers differ.
+
+So every release tag names its schema, in its message:
+
+```
+Schema: migration 0022
+```
 
 ## What `1.0.0` would mean
 
@@ -97,7 +117,9 @@ git push origin v0.3.0
 Annotated (`-a`), not lightweight, so the tag carries a message, an author and a
 date of its own.
 
-Two things worth putting in that message, from experience rather than principle:
+Three things worth putting in that message, from experience rather than principle:
+
+**The schema version** — the newest migration, as above.
 
 **What is knowingly incomplete.** `v0.2.0` records that the WT901 agent publishes
 no reps without an opt-in flag, and that clearing a rack discards buffered reps.
