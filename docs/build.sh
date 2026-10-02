@@ -4,12 +4,11 @@
 #
 # Run it:   ./docs/build.sh        then open the file it prints
 #
-# WHY THIS EXISTS RATHER THAN A HOSTED SITE
-# This repo is private, and the free Read the Docs cannot clone a private repo —
-# private repositories are a Read the Docs Business feature. So the site is built
-# here instead of published, and `.readthedocs.yaml` is kept ready for the day that
-# changes. Nothing about the docs themselves is different; this is the same Sphinx
-# build with the same requirements.txt.
+# WHERE THE HOSTED SITE COMES FROM
+# This repo is private, and the free Read the Docs cannot clone a private repo. So the
+# hosted site is built from a public copy of docs/ that publish.sh pushes to a separate
+# repo. This script is the check before that: the same Sphinx build, the same
+# requirements.txt, the same rules — run it before you publish.
 #
 # HOW THIS DIFFERS FROM serve.sh, AND WHY BOTH EXIST
 #   serve.sh   live preview while writing. Warnings are NOT fatal, because a
@@ -20,8 +19,8 @@
 #
 # That distinction is load-bearing. A hosted build keeps serving the LAST BUILD THAT
 # WORKED, which is how these docs once sat frozen for weeks while every URL still
-# resolved and nothing on the page admitted it was old. Without a hosted build to
-# catch it, this script is the only thing standing in that place.
+# resolved and nothing on the page admitted it was old. Catching a broken build here,
+# before publishing, is what stops that from happening again.
 #
 set -euo pipefail
 

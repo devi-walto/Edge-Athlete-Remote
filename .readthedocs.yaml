@@ -1,20 +1,16 @@
 # Read the Docs configuration file
 # See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
 #
-# ⚠️ NOTHING IS BUILDING FROM THIS FILE RIGHT NOW, AND THAT IS EXPECTED.
-# This repo is private, and Read the Docs Community (readthedocs.org, the free one)
-# cannot clone a private repo — private repositories are a Read the Docs Business
-# feature ($50/month at the time of writing, with a 30-day trial). Checked 2026-09-17.
+# ⚠️ READ THE DOCS DOES NOT BUILD FROM THIS REPO. It is private, and the free Read the
+# Docs cannot clone a private repo. It builds from a separate PUBLIC repo holding a copy
+# of docs/ and of this file, which `./docs/publish.sh --push` replaces on every publish.
+# So this file is the source of the public one: change it here, then publish.
 #
-# So the docs are built locally instead:
+# Locally:
 #
 #   ./docs/build.sh     build the site once and print where it landed
 #   ./docs/serve.sh     live preview that rebuilds as you type
-#
-# This file is kept, unchanged and correct, so that pointing a Business account (or a
-# public docs mirror) at this repo is a one-click job rather than a rebuild of the
-# toolchain. If you do connect one, the two versions described in
-# docs/stack/sphinx.md come back with it.
+#   ./docs/publish.sh   copy the docs to the public repo (add --push to send it)
 
 # Required
 version: 2
