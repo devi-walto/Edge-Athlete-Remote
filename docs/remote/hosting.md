@@ -137,9 +137,13 @@ take incoming traffic.
 - **The home network is now partly public.** Three ports point at the Dell, so the
   Dell needs to be kept updated, and nothing else in the house should depend on it.
 
-**Still to check before week 2:**
+**Checked, October 5:** the home connection has its own public address (no CGNAT). A
+traceroute to the public address reaches it in one hop, so the router holds that
+address itself.
 
-- Does the home connection have its own public address (no CGNAT)?
-- Does the provider allow incoming traffic on ports 80 and 443?
+**Still to check:**
+
+- Does the provider allow incoming traffic on ports 80 and 443? Only testable once the
+  Dell is serving something and the router forwards those ports.
 - Does the Mac mini have an Apple chip or an Intel one?
 - Have the domain's old DNS records been cleared out, so only the project's remain?

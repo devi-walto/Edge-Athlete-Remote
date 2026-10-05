@@ -103,8 +103,9 @@ Everything in the **Later** table above, plus:
 
 - **Whether any measurement is required** — load testing, monitoring, response times.
   If it is, it needs its own slot, and something above moves.
-- **The home connection** — the cluster runs at home on the Dell and Mac mini, under
-  a Porkbun domain ({doc}`hosting`), but whether the connection accepts incoming
-  traffic is still to be checked.
+- **Whether the provider blocks ports 80 and 443.** The home connection has its own
+  public address (checked October 5), so traffic can reach the router; whether those
+  two ports get through can only be tested once something is serving on them
+  ({doc}`hosting`).
 - **When the sensor board is printed** — the setup page does not need to exist first,
   but the board requirements do.
