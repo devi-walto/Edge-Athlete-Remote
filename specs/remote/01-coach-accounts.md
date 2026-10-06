@@ -3,7 +3,7 @@
 - Owner: Devin Walton
 - Date: 2026-10-05
 - Status: **Phase 0 done 2026-10-06 on branch `feature-coach_accounts`, waiting on Devin's review.** Two browser checks are his to do (see Phase 0)
-- Mockup: `FirstRun`, `SignIn`, `Coaches`, `AccountMenu` on the Remote page of the canvas (first-draft styling; follow [spec 06](../ui/06-design-rules.md) for the look)
+- Mockup: `F_SignIn`, `F_FirstRun`, `F_Coaches`, `F_AccountMenu` on the canvas's **Final designs** page ("The same in both: accounts and access"), also in [`specs/ui/mockups/coach-ui-final.html`](../ui/mockups/coach-ui-final.html). Look: [spec 06](../ui/06-design-rules.md) rule 9
 - Index and shared decisions: [specs/README.md](../README.md)
 - Form item: Definition of Done #2 ("Coach accounts are secured")
 - Next spec: 02 — roles (coach, athlete, everyone else refused)
@@ -208,17 +208,46 @@ No new screen is wired up yet.
 
 **Stop. Devin reviews before Phase 2.**
 
-## Phase 2 — The screens, in the redesigned interface
+## Phase 2 — The screens, built to the Final designs
 
 **Goal:** a coach can do all of it without touching a terminal, after the first claim.
 
-| Screen | Where it goes |
-|---|---|
-| **First-run setup** — enter the setup code, choose a username and password | Shown instead of the app while an installation is unclaimed |
-| **Sign in** | Replaces the current form. **No credentials filled in** |
-| **Change password** | Forced after a temporary password; also in the account menu |
-| **Coaches** — list, add, reset, deactivate, make or remove administrator | The account menu (the logo), **administrators only** |
-| **Archive athlete** | The existing roster in PLANNING → Groups |
+**Whose screens these are.** Braydon's commit came with working screens, but they were
+written for the old eight-tab coach page, which the redesign replaced. Since then the
+Final designs were agreed (2026-10-06). So this phase **builds the Final design
+boards, and takes the working logic out of Braydon's files** — the calls to the
+server, the forced password change, the guards, the error messages — rather than
+showing his screens as he laid them out. His files have been in the tree, unattached,
+since Phase 0. Credit him in each file that carries his logic.
+
+| Screen | Final design | Where it goes | Built from |
+|---|---|---|---|
+| **First-run setup** — setup code, username, password twice, and "Where the code comes from" beside it | `F_FirstRun` | Shown instead of the app while an installation is unclaimed | The status check and submit logic in his `FirstRunSetup.jsx` |
+| **Sign in** — the installation's name, username, password | `F_SignIn` | Replaces today's form. **No credentials filled in.** | The sign-in half of his `CoachAccess.jsx` |
+| **Change password** | No board: the same card as sign in, with current password, new password, new password again | Forced after a temporary password; also in the account menu | His `ChangePassword.jsx` |
+| **Coaches** — banner, the temporary-password card, the table, **Add coach** | `F_Coaches` | The account menu, **administrators only** | His `CoachManagement.jsx` |
+| **Account menu** — signed in as, the Administrator badge, Coaches, Change password, Log out | `F_AccountMenu` | Opens from the top bar, as today | The existing menu, restyled |
+| **Archive athlete** | The **Archive** action on a roster row (`F_Local_Roster`) | Today's roster, in PLANNING → Groups. It moves to the Roster tab when spec 07 builds that tab | The archive call in his `RosterWorkspace.jsx` |
+
+**What is not built:** his `RosterWorkspace` as a screen (the design already has a
+roster), and his tab entries for the old page. When this phase ends, any of his screen
+files that nothing imports are deleted, and so is the dead `coachTabs.js`.
+
+**The look** (spec 06 rule 9, and the boards):
+
+- Sign in and first-run setup are a solid card with a 10px corner on the dark page,
+  with the lime "EA" mark, because nobody is signed in. Inputs are `#0b1114` with a
+  6px corner. One lime button each.
+- The top bar is the bold one, with the signed-in coach's profile image on the lime
+  square. The account menu's **Administrator** is the lime pill badge.
+- Coaches: the header banner, then the temporary password in its own bordered card
+  with **Copy**, then one table on one solid surface. **Add coach** is the screen's one
+  lime button. Row actions are quiet text; **Deactivate** is the only red one.
+- On a `remote` installation the sign-in page also shows "Athlete? Open the session
+  link your coach shared." and **Athlete sign in**. That line is added by spec 03, not
+  here; leave room for it.
+
+**Rules:**
 
 - Every label says **Administrator**. "Head coach" appears nowhere for this flag.
 - A temporary password is shown **once**, when created or reset, with a line telling
@@ -227,11 +256,18 @@ No new screen is wired up yet.
   anyway (Phase 1), so hiding it is a courtesy, not the lock.
 - Archived athletes disappear from pickers and the active roster. Their history stays
   readable in ANALYTICS.
+- **An unclaimed installation shows first-run setup to every device, rack screens
+  included** (Braydon's behaviour, kept: nothing should run on a box nobody has
+  claimed). A rack screen that was already set up can still reopen while the server is
+  unreachable, as his wrapper allows.
 
 **Done when:**
 
-- [ ] His screen tests are adapted to the new placement and pass, along with the full
-      frontend suite and the production build.
+- [ ] His screen tests are rewritten against the new screens and pass, along with the
+      full frontend suite and the production build. No behaviour he tested is dropped
+      without a line here saying why.
+- [ ] *(Browser)* Sign in, first-run setup, Coaches and the account menu match their
+      Final design boards.
 - [ ] *(Browser)* On an empty database the site shows first-run setup and nothing else.
 - [ ] *(Browser)* The sign-in form is empty when it loads.
 - [ ] *(Browser)* An administrator sees **Coaches** in the account menu; a regular
@@ -243,6 +279,7 @@ No new screen is wired up yet.
 - [ ] *(Browser)* All three states — SESSION, ANALYTICS, PLANNING — still work as
       before for a regular coach.
 - [ ] The word "head coach" does not appear on the Coaches screen or in its messages.
+- [ ] No file under `react/src/coach/` is left that nothing imports.
 
 **Stop. Devin reviews before Phase 3.**
 
