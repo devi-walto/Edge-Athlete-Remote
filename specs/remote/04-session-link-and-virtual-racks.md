@@ -251,6 +251,32 @@ device.
   removed card. With no sensor the footer reads `node: —` as it does today, and
   lifting is still allowed.
 
+**3e. End Set with no reps measured: confirm before saving** (both versions; Devin,
+2026-10-06, as an edge-case precaution). Mockup `B_ConfirmSet`.
+
+Today, pressing End Set when no reps arrived saves a real, completed set with 0 reps
+and says nothing (`finishSet` in `RackScreen.jsx`). That happens with no sensor, and
+with a sensor that was on but missed the set.
+
+- **When:** End Set is pressed, it is not a False Set, and the rep buffer is empty. The
+  trigger is "nothing was measured", never "this rack has no sensor".
+- **What appears:** a full-screen form in the rack screen's own style, like the number
+  pad for changing the load: "No reps were measured · Set 2 complete?", the movement,
+  and two numbers, **reps** and **load**, filled in from the plan's target reps and
+  the load on the bar. Tapping a number opens the existing number pad.
+- **Complete** sends the same `complete` call with `reps_completed` as typed, an empty
+  `reps` list and no velocities, and saves the typed load on the set. The server
+  already accepts this; nothing checks that the count matches the list.
+- **Go back** closes the form. The set is still open and still listening, so reps that
+  arrive late are not lost.
+- **One set at a time.** The form is for the set that was just ended, not a way to log
+  several sets at once: every set is its own row and its own rest.
+- **A typed set is never a personal record.** `_personal_records` skips a set that has
+  no rep rows.
+- **Wherever velocity is shown for a typed set** (the summary, the coach's room,
+  History, the daily report) it reads "not measured", never 0.00. The summary shows
+  the reps and "— m/s", as it already does for a missing value.
+
 **Done when:**
 
 - [ ] *(Frontend test)* Rendered with an owner: no check-in list, no "Not here?", no
@@ -261,6 +287,14 @@ device.
 - [ ] *(Frontend test)* Five reps arriving draw five bars in zone colours; the summary
       shows the same five.
 - [ ] *(Frontend test)* No "WT901" text is rendered in either mode.
+- [ ] *(Frontend test)* End Set with an empty buffer shows the form, prefilled with the
+      target reps and the load; with one or more buffered reps it does not appear.
+- [ ] *(Frontend test)* Go back leaves the set open and sends nothing; Complete sends
+      exactly one `complete` call with the typed count and an empty rep list.
+- [ ] A set completed with a count and no rep rows saves, counts toward "sets done",
+      is flagged as neither a velocity nor a weight record, and appears in the report
+      as not measured.
+- [ ] False Set never shows the form.
 - [ ] `RackScreen.jsx` is one component; there is no `MyRackScreen` or copy of it.
 - [ ] *(Browser)* Opening the session link signed out → sign in → Ready view for that
       athlete, in one flow, with no list of names at any point.
