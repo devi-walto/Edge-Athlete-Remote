@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-05
-- Status: **Approved 2026-10-05, not started.** Waiting on Devin's go to begin Phase 0
+- Status: **Phase 0 done 2026-10-06 on branch `remote/coach-accounts`, waiting on Devin's review.** Two browser checks are his to do (see Phase 0)
 - Mockup: `FirstRun`, `SignIn`, `Coaches`, `AccountMenu` on the Remote page of the canvas (first-draft styling; follow [spec 06](../ui/06-design-rules.md) for the look)
 - Index and shared decisions: [specs/README.md](../README.md)
 - Form item: Definition of Done #2 ("Coach accounts are secured")
@@ -111,14 +111,64 @@ No new screen is wired up yet.
 
 **Done when:**
 
-- [ ] Migrations `0023` and `0024` apply cleanly to a **copy of an existing database**
+- [x] Migrations `0023` and `0024` apply cleanly to a **copy of an existing database**
       and to an empty one.
-- [ ] `makemigrations --check` reports no drift.
-- [ ] The full Django suite passes: the baseline count, plus his new tests.
-- [ ] The full frontend suite passes and the production build succeeds.
+- [x] `makemigrations --check` reports no drift.
+- [x] The full Django suite passes: the baseline count, plus his new tests.
+- [x] The full frontend suite passes and the production build succeeds.
 - [ ] In a browser, an existing coach can still sign in and use SESSION, ANALYTICS and
-      PLANNING exactly as before.
+      PLANNING exactly as before. *(Checked at the server only; see below.)*
 - [ ] A rack screen still works with no login (the open routes are untouched).
+      *(Checked at the server only; see below.)*
+
+### Phase 0 result — 2026-10-06
+
+| Check | `main` | Branch |
+|---|---|---|
+| Django tests | 447 pass | **468 pass** (447 + his 21) |
+| Frontend tests | 265 pass | **279 pass** (265 + his 14) |
+| Production build | succeeds | succeeds |
+| `makemigrations --check` | — | no drift |
+| Docs build (warnings fatal) | — | passes |
+
+- **Migrations on a copy of the running database:** `0023` and `0024` applied; 2
+  logins, 1 administrator, 4 athletes (all active), 34 sessions, 52 sets and 109 reps
+  before and after; setup marked complete. On an empty database: applied, setup left
+  open for a setup code.
+- **`CoachProfile` rows after migrating: 0.** That is gap 2 above, confirmed; Phase 1's
+  migration `0025` fixes it.
+- **The branch's server against that copy:** the existing coach signs in (the reply
+  now also carries `must_change_password`), a wrong password is refused, eight rack
+  routes answer with no login exactly as the running app does, and four coach routes
+  refuse without a login and answer with one.
+- **Not done: the two browser checks.** The app running on this machine is the team
+  clone, and swapping it to this branch would interrupt it. To do them: build and
+  start this branch (`docker compose up -d --build` from this repository), sign in,
+  walk the three states, and open a rack screen.
+
+**Where this differs from "bring `78260b4` over as it is", and why:**
+
+1. **`main.jsx` is not wrapped in his first-run screen, and the Room Layout page keeps
+   its own login form.** Both attach his screens, which is Phase 2. His wrapper also
+   sits in front of every route, rack screens included.
+2. **`GET /api/athletes/` stays open.** His commit made it coach-only. The connection
+   test and gym tools read it with no login, and this phase promised the open routes
+   would not move. Spec 05 closes it for `remote`. His archive filter on that route
+   is kept.
+3. **His guide is `docs/_COACH_ACCOUNTS.md`, private, with a credit line.** It describes
+   screens that are not attached yet, and anything in `docs/` without the underscore is
+   published. Its content moves into `docs/remote/` in the last phase.
+4. **His frontend tests got an in-memory `localStorage` when none works.** On Node 25
+   and later, Node's own `localStorage` hides the test environment's and all 14 failed
+   in setup. They pass on either now. No test's meaning changed.
+5. **Startup no longer creates the demo login** (his `Dockerfile` change, kept: with the
+   guard, creating it at startup would stop a real installation from starting).
+   Existing databases keep theirs. **A brand-new database on this branch has no login
+   and no screen to claim it until Phase 2**; `manage.py setup_code` plus
+   `POST /api/auth/setup/` works by hand, and `docker compose --profile seed` still
+   makes the demo login.
+6. **`nginx` now limits sign-in, setup and password attempts** to 10 a minute per
+   address (his change, kept). It does not touch token refresh or any other route.
 
 **Stop. Devin reviews before Phase 1.**
 

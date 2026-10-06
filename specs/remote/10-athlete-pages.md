@@ -60,8 +60,8 @@ only if there is time before November 11.
 - `POST /api/sessions/{id}/join/` and its membership rule (spec 04 Phase 1).
 - `ScheduledSession`: `training_program`, `training_program_workout`, `date`, and
   `session` (empty until the day is set up). A program belongs to one group.
-- `GET /api/athletes/{id}/progress/`: the athlete's plan and progress for the running
-  session, already used by the rack screen.
+- `GET /api/sessions/active/athlete/{id}/progress/`: the athlete's plan and progress for
+  the running session, already used by the rack screen.
 
 ## Scope
 
