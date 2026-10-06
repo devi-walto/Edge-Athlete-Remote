@@ -386,8 +386,11 @@ Mockup `V4c`. `ScheduleWorkspace.jsx`.
   Sessions. Setting one up creates its roster. It does not start it."
 - The **next** session that is not complete is the focus card, with its group, program
   and workout, and **Set up this session**.
-- "Coming up" and "Earlier" as quiet rows with the existing four states. List and Cards
-  stay as a quiet toggle.
+- Two views behind one **List | Month** switch (spec 06 rule 9; mockups
+  `F_Local_CalendarList`, `F_Local_CalendarMonth`). **List**: "Coming up" and "Earlier"
+  as solid rows with the existing four states. **Month**: a grid of solid square day
+  blocks; pressing a day with a session opens it, as pressing its row does. The switch
+  remembers the coach's last choice. The old Cards view is replaced by Month.
 - The "open a day from scratch" panel leaves this tab (spec 08 gives it a home).
 - The empty state names the real next step: "Nothing is scheduled. Create a Training
   Program in Design and schedule it."

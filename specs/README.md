@@ -158,6 +158,9 @@ a day can still change, but days cannot be added, removed or reordered.
 - **Local and hosted are one interface.** Hosted mode adds or hides elements on a
   screen; it never gets its own screen. Features change, form does not. The
   screen-by-screen comparison is rule 8 of spec 06.
+- **The look is solid surfaces** (adopted 2026-10-06): every row, card and table on a
+  solid panel with a border; tints only on banners; solid block buttons; every End
+  button a red outline, in both versions. Spec 06 rule 9.
 - Full rules in [spec 06](ui/06-design-rules.md).
 
 ---
@@ -168,8 +171,10 @@ a day can still change, but days cannot be added, removed or reordered.
   Open it in a browser. Static, sample data only.
 - **Live canvas (private to Devin):** https://claude.ai/artifact/Hz3PHLTwRv52aUVe9U4gsG
   — three pages: Remote coach view, Current local UI (real screenshots), Proposed local
-  UI. The rows titled **Final version** are the agreed design. The Remote page was
-  redrawn in the final look on 2026-10-06; a dashed REMOTE tag marks what hosted adds.
+  UI, and **Final designs**. **Build only from the Final designs page** (boards named
+  `F_*`): local and remote side by side in the adopted solid look; a dashed REMOTE tag
+  marks what hosted adds. The other pages are the history of how it got there, and the
+  `V3*`/`V4*` boards the specs name show the same screens in the earlier hairline look.
 - **Source and screenshots:** `~/Desktop/Coding Projects/Edge Athlete Remote/mockups/`
   and `.../ui-captures/` (outside the repo).
 

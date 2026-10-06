@@ -5,7 +5,9 @@
 - Status: Written — not started
 - Form item: #11 (unified coach interface, added 2026-10-06)
 - Depends on: nothing. **Specs 07, 08 and 09 all depend on this one**
-- Mockup: every screen in [`mockups/coach-ui-final.html`](mockups/coach-ui-final.html)
+- Mockup: every screen in [`mockups/coach-ui-final.html`](mockups/coach-ui-final.html).
+  On the canvas, the **Final designs** page (boards named `F_*`) is the only one to build from
+- Look adopted 2026-10-06: **solid surfaces** (rule 9). It replaced the earlier hairline look
 
 ## Why
 
@@ -31,7 +33,7 @@ Every screen has exactly one **focus card**: the thing the coach opened or is ac
 | | Focus card | Everything else |
 |---|---|---|
 | Title | 24px, weight 850 | 14px, weight 650, grey `#c9d1d5` |
-| Container | tinted panel `#121b14`, 1px lime border `#a9f04d` | no box; rows on hairlines `#1b252a` |
+| Container | tinted panel `#121b14`, 1px lime border `#a9f04d` | a solid surface with its own border (rule 9) |
 | Section label above | — | 10px uppercase, `#6f7c83` ("Other Training Blocks") |
 
 A step the coach is not in collapses to a single thin row (26px outlined number, 14px
@@ -46,15 +48,20 @@ The single most likely next action is the filled lime button. Everything else is
 |---|---|---|
 | **Primary** | filled `#a9f04d`, dark text, weight 800 | the one next step |
 | **Primary, next step** | the same, ending in a right arrow | a button that moves the coach to the next stage |
-| **Outline** | transparent, 1px border `#8d9aa1`, white text | real but secondary actions |
+| **Solid** | filled `#151e23`, 1px border `#5c6a72`, 6px corner, white text, weight 800 | real but secondary actions |
+| **Solid, key** | the same with a lime border, and an icon where one helps | the main secondary action of a screen (**Copy session link**) |
+| **End** | transparent, 1px border `#ff646b`, text `#ff9aa0`, 6px corner | **every button that ends something**, in both versions |
 | **Quiet** | text only, grey `#89969d` or white | row actions, Close, Cancel |
+| **Quiet, lime** | lime text, weight 800, set off by a dashed divider | an action inside a dashed "waiting" row (**Send login link**) |
 
-- **Anything pressable must look pressable.** A secondary action that matters is an
-  outline button, not bare text. (Devin's comments on "Import a roster" and "Save as a
+- Primary buttons also get the 6px corner.
+- **Anything pressable must look pressable.** A secondary action that matters is a
+  solid button, not bare text. (Devin's comments on "Import a roster" and "Save as a
   new Training Block".)
-- **Destructive actions are grey until hovered**, not red. Red is reserved (rule 5).
-- The session strip's **End training day** is lime on every screen by Devin's ruling.
-  It is the one allowed second lime button.
+- **End training day is the End button on every screen, local and hosted** (Devin,
+  2026-10-06). This replaces the earlier ruling that it was lime, so the strip no
+  longer carries a second lime button.
+- Other destructive row actions (Archive, Delete, Remove) stay quiet grey.
 
 ### 3. Nothing important is buried
 
@@ -78,7 +85,8 @@ Never "template" as the name of a thing (it describes a Training Block).
 ### 5. Two accent colours, each meaning one thing
 
 - **Lime** — where you are, and what to press next.
-- **Red** (`#ff646b` on `#1c0f10`) — an athlete is **Behind**. Nothing else is red.
+- **Red** (`#ff646b`) — an athlete is **Behind**, or a button **ends** something.
+  Nothing else is red.
 - Mint and amber keep their existing jobs: velocity zones, sensor state, elapsed time.
 
 ### 6. What stays exactly as it is
@@ -138,6 +146,36 @@ annotation, not part of the interface):
   a remote athlete's device is their rack, and the rack screen was laid out for a
   tablet on a rack, not a phone. That needs its own mockup before spec 04's front end.
 
+### 9. Solid surfaces, clear edges
+
+Adopted by Devin on 2026-10-06 after comparing three versions on the canvas. His words:
+solid foreground colours that give clear element boundaries; no excessive gradients;
+the exception is a banner that announces something.
+
+- **Every row, card and table sits on a solid surface**: `panel #10171b` with a 1px
+  `line #263239` border. No see-through rows separated only by thin lines.
+- **List rows are separate blocks** with a 6px gap between them. **A table is one
+  surface**: a header row and its rows inside one border, divided by `line`.
+- **Selected** is `panel2 #151e23` with a lime border (a rack card, a calendar day).
+- **Waiting / not there yet** is a dashed `line` border with no fill (an athlete who
+  has not joined).
+- **Gradients and tints are for banners only**: the header card on each tab (rule 6)
+  and the focus card. Nothing else is tinted.
+- **Filter chips are solid**: `panel2` with a `line` border; the chosen one is filled
+  white with dark text.
+- **The top bar** is the bold one: "Edge Athlete" at weight 800 beside the signed-in
+  coach's **profile image** on a lime rounded square. On the sign-in and first-run
+  pages, where nobody is signed in, the square holds the letters "EA".
+- **Administrator** is a pill badge: `admin-bg #1a2610`, lime border, text `#c6f78a`.
+- **The Calendar has two views behind one List | Month switch** (a two-option segmented
+  control, the chosen option filled white). **Month** is a grid of solid square day
+  blocks: a planned session has a mint bar, the next one a lime border, a finished one
+  is greyed, and a date shared by two programs names the second ("+ Receivers · Day 1").
+  This replaces the old List / Cards text buttons.
+- **Forms and dialogs** (sign in, first-run setup, send a login link) are a solid
+  `panel` card with a 10px corner; inputs are `#0b1114` with a `line` border and a 6px
+  corner. A dialog sits over a dimmed page.
+
 ## Tokens
 
 From `react/src/theme.js` and `App.css` — existing values, unchanged:
@@ -146,8 +184,10 @@ From `react/src/theme.js` and `App.css` — existing values, unchanged:
 `muted #89969d` · `lime #a9f04d` · `mint #45dcb3` · `amber #ffb63e` · `coral #ff646b`.
 Font: Inter.
 
-New, added by this spec: `focus-bg #121b14` · `hairline #1b252a` · `faint #6f7c83` ·
-`soft-ink #c9d1d5` · `outline #8d9aa1` · `risk-bg #1c0f10` · `hero-bg #101a17`.
+New, added by this spec: `focus-bg #121b14` · `faint #6f7c83` · `soft-ink #c9d1d5` ·
+`button-edge #5c6a72` · `risk-bg #170d0e` · `hero-bg #101a17` · `admin-bg #1a2610` ·
+`radius-button 6px`. (`hairline #1b252a` and `outline #8d9aa1` from the first draft of
+this spec are dropped: rule 9 uses `line` and `panel` instead.)
 
 ---
 
@@ -213,11 +253,14 @@ Build them against the mockup, each with a render test. Use them nowhere yet.
 
 ## Acceptance criteria
 
-- [ ] Every coach screen has one focus card and at most one lime button besides the strip's.
+- [ ] Every coach screen has one focus card and at most one lime button.
+- [ ] No row, card or table is drawn without a solid surface and a border; only banners
+      and the focus card are tinted.
+- [ ] Every button that ends something uses the End style, in both deployments.
 - [ ] Every pressable thing is a `Button`.
 - [ ] The six vocabulary terms are used consistently; "deploy" and "head coach" (for
       the flag) appear nowhere a coach reads.
-- [ ] Red appears only on **Behind**.
+- [ ] Red appears only on **Behind** and on End buttons.
 - [ ] The strip, header cards, LIVE pill and navbar are unchanged.
 - [ ] No component, page or stylesheet exists only for hosted mode, apart from the
       login-link dialog. Every hosted difference is reached through `useDeployment()`.
