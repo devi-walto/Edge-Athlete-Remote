@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: Written — not started. **One decision open** (how a program covers several groups)
+- Status: Written — not started. **One decision open** (several groups in one session; recommendation: no model change)
 - Form item: #11 (unified coach interface)
 - Depends on: [06 Design rules](06-design-rules.md); [01 Coach accounts](../remote/01-coach-accounts.md) for archiving an athlete
 - Mockup: `V3a_DesignStep1`, `V3g_CreateProgram`, `V3b_DesignStep2`,
@@ -64,27 +64,48 @@ A program can be **saved as a new Training Block** at any time.
 - **The one-off session leaves Planning.** It is unplanned work and lives in SESSION
   (spec 08).
 
-### Open decision — one program for several groups
+### Open decision — several groups in one session
 
 Devin: "you can have multiple groups attending a training session so a training
 program should let you select multiple groups."
 
-Today a program belongs to exactly one group (`TrainingProgram.training_group`), and
-several groups share a session by each having **their own program** attached to it
-(`SessionParticipation`). About 20 places in the views and services read "the
-program's group", including the code that decides which plan an athlete sees.
+**Checked in the code on 2026-10-06: the server already does this, and not through the
+program.** The pieces:
 
-| | A. One program, many groups | B. One program per group, created together |
-|---|---|---|
-| The data | `training_group` becomes many-to-many | No schema change. Choosing two groups creates two programs with the same days |
-| The card | One card: "Training Groups: Varsity, Test" | One card grouping the copies, by a shared batch id (one small new field) |
-| Editing | One edit, everyone gets it | Edits are applied to every copy by default; a group can be edited alone |
-| Risk | Medium–high. Touches plan resolution and ~20 query sites | Low. Plan resolution is untouched; it is how sessions already combine groups |
-| Per-group differences (lighter loads for JV) | Not possible without splitting the program | Natural |
+- An **athlete** can be in several Training Groups (`Athlete.training_groups`).
+- A **Training Program** belongs to exactly one group. A group can have several programs.
+- A **Training Session** can hold several programs at once, one `SessionParticipation`
+  row each, each pointing at the day that group is running.
+- `services/plan_resolution.py` then gives each athlete the **intersection**: the
+  programs in this session whose group the athlete is in. For an athlete in two of
+  them, the movement lists are **combined** — the bigger group's work first, one entry
+  per movement, and where both plans prescribe the same movement the **lighter
+  percentage wins**, taking its sets and reps with it.
+- There is a test for exactly this, using "Varsity Football" and "Receivers":
+  `test_two_groups_combine_and_the_lighter_prescription_wins`.
 
-**Recommendation: B.** It gives the behaviour asked for with the least risk before
-November 11, and it matches how a session already holds several groups. **Confirm
-before Phase 3.** Until then, build everything with a single group.
+So a receiver gets football's lifts and the receivers' lifts in one session **if both
+programs are on that session.**
+
+**What is missing is the interface, not the model.** Nothing in the front end calls
+`POST sessions/{id}/participation/`, and setting up a calendar day
+(`scheduled_session_create_session`) creates a session holding only that one program.
+Two programs scheduled on the same date become two separate sessions, and only one day
+can run at a time. Until now the seed command was the only thing that put two programs
+on one session.
+
+| | A. One program, many groups | B. Copies, one per group | **C. Leave programs alone; combine on the session** |
+|---|---|---|---|
+| The data | `training_group` becomes many-to-many | A shared batch id | **No schema change** |
+| Plan resolution | Rewritten (~20 query sites) | Untouched | **Untouched — it is the feature** |
+| Receivers + football | Not expressible: they need *different* programs | Works | **Works; it is the tested case** |
+| Risk | High | Low | **Lowest** |
+
+**Recommendation: C.** Programs stay one group each. When a day is set up, **every
+program with a session scheduled on that date goes onto the same Training Session**,
+and the coach can untick one. The "create for several groups at once" checkbox in the
+mockup (`V3g`) can stay as a convenience that makes one independent program per group
+— or be dropped. **Confirm before Phase 3.**
 
 ## What exists today
 
@@ -212,25 +233,35 @@ Backend.
 
 **Stop. Devin reviews.**
 
-## Phase 3 — More than one group
+## Phase 3 — Several groups on one Training Session
 
-Blocked on the open decision above. For option B:
+Blocked on the decision above. For option C:
 
-- Migration: `TrainingProgram.batch` — a nullable UUID shared by programs created together.
-- `POST training-programs/` accepts `training_groups: [ids]`; creates one program per
-  group with the same `batch`, all-or-nothing.
-- The list groups programs by `batch` for display.
-- The Phase 1 routes accept `?batch=1` to apply an edit to every program in the batch;
-  the interface uses it by default. `schedule` schedules the whole batch on one date.
+- `POST scheduled-sessions/{slot_id}/session/` (setting a day up) gains an optional
+  `also: [slot ids]`. Every listed slot must be on the same date and not yet set up. In
+  one transaction: one session; a `SessionParticipation` per slot; the roster is the
+  union of the groups' athletes; every slot points at the session.
+- `GET scheduled-sessions/?date=` already lists a date's slots; the Calendar uses it to
+  offer the others. **Default: all ticked.**
+- An existing set-up session can take another program later through the route that
+  already exists, `POST sessions/{id}/participation/`. Give it its first caller.
+- Optional convenience, only if Devin keeps the checkbox: `POST training-programs/`
+  accepts `training_groups: [ids]` and creates one independent program per group,
+  all-or-nothing. No batch id, no linked editing.
+- **Do not touch `services/plan_resolution.py`.**
 
 **Done when:**
 
-- [ ] Creating for two groups makes two programs with identical days and one `batch`.
-- [ ] A batch edit changes every copy; a single edit changes one and leaves the others.
-- [ ] Scheduling a batch gives every group sessions on the same dates; setting one of
-      those days up puts both groups on the same Training Session.
-- [ ] Each athlete still sees the plan for their own group (the plan-resolution tests
-      pass unchanged).
+- [ ] Setting up a date with two programs creates **one** session with two
+      participations and a roster holding both groups' athletes once each.
+- [ ] An athlete in both groups gets the combined movement list — the existing
+      `test_two_groups_combine_and_the_lighter_prescription_wins` passes unchanged, and
+      a new test reaches the same result through the set-up route.
+- [ ] An athlete in only one of the groups sees only that group's plan.
+- [ ] Unticking a program leaves its slot planned and off the session.
+- [ ] A slot from a different date, or one already set up, is refused and nothing is created.
+- [ ] *(Browser)* Two programs on one date → set the day up → one Training Session in
+      SESSION, with both groups' athletes.
 
 **Stop. Devin reviews.**
 
@@ -244,8 +275,8 @@ Frontend, on the components from spec 06. Mockups `V3a`, `V3g`, `V3b`, `V3e`, `V
   or dates of its own." The open block is the focus card; its button is **Create a
   Training Program →**. Days are labelled "Days in this template · copied into every
   Training Program you create from it". Other blocks are quiet rows.
-- **Create a Training Program** (dialog, `V3g`): name; Training Groups (one, or several
-  after Phase 3); planned start, filled with `suggested_start`. "Nothing goes on the
+- **Create a Training Program** (dialog, `V3g`): name; Training Group (several only if
+  the Phase 3 convenience is kept); planned start, filled with `suggested_start`. "Nothing goes on the
   calendar until you schedule it."
 - **Step 2 · Create a Training Program** — the open program is the focus card: a
   **NOT SCHEDULED** / **SCHEDULED** badge beside its name; its groups and planned start,
@@ -368,7 +399,7 @@ Mockup `V4c`. `ScheduleWorkspace.jsx`.
 | Scheduling stops happening and nobody notices a program has no calendar | The NOT SCHEDULED badge on every unscheduled program; step 2's idle row says how many are unscheduled |
 | A coach expects to move a scheduled program | The scheduled card says the days are locked and why; moving is named as out of scope |
 | Deleting a program movement silently wipes athletes' exceptions | Phase 1 reports it; Phase 4 warns before doing it |
-| Option B's copies drift apart without anyone meaning them to | Batch edit is the default; a single-group edit is a deliberate second choice |
+| Two programs on one date are set up as two separate sessions, and only one can run | Phase 3 puts every program on that date onto one session by default |
 | Phase 0 loses a catalog action | Its checklist requires every catalog action to be reachable before the tab is removed |
 
 ## Docs to update when done

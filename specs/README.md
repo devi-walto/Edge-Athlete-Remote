@@ -54,7 +54,7 @@ The Django suite had 447 tests in `tests.py` on 2026-10-06.
 | 03 | [Athlete login links](remote/03-athlete-login-links.md) | 4 | 02, 05 | Written |
 | 04 | [Session link and virtual racks](remote/04-session-link-and-virtual-racks.md) | 3, 4 | 02, 03, 05 | Written |
 | 06 | [Design rules for the coach interface](ui/06-design-rules.md) | 11 | — | Written |
-| 07 | [Planning](ui/07-planning.md) | 11 | 06, 01 | Written, one decision open |
+| 07 | [Planning](ui/07-planning.md) | 11 | 06, 01 | Written, one decision open (recommended: no model change) |
 | 08 | [Session](ui/08-session.md) | 11 | 06 | Written |
 | 09 | [Analytics](ui/09-analytics.md) | 11 | 06 | Written |
 
@@ -118,7 +118,7 @@ One database per installation. The code never knows another installation exists.
 | Term | What it is | Rules |
 |---|---|---|
 | **Training Block** | A template: an ordered list of days, plus a weekly pattern and a length | **Only ever a template.** No group, no dates. Never "deployed" to a group directly |
-| **Training Program** | An instance: your own copy of a block, for one or more groups, with a start date | Freely editable; edits never touch the block. Can be **saved as a new Training Block** (promoted) |
+| **Training Program** | An instance: your own copy of a block, for **one** group, with a start date | Freely editable; edits never touch the block. Can be **saved as a new Training Block** (promoted). Several programs can share one Training Session |
 | **Training Session** | One day of a program on the calendar; later, the day as it was actually run | Created when a program is **scheduled**, not when it is created |
 | **Training Group** | Athletes who train together | Filtered, never fenced: every coach sees every group |
 | **Roster** | Everyone you coach | The only place athletes are created |
@@ -190,6 +190,10 @@ Checked on 2026-10-06 against commit `31f0573`.
   (`react/src/rack/RackScreen.jsx`, around line 540).
 - **`instantiate_block()`** creates a program and, as its last line, calls
   `generate_schedule()` (`django/event_handler/services/planning.py`).
+- **Several groups already share a session on the server.** A session holds one
+  `SessionParticipation` per program; `plan_resolution.py` gives an athlete in two of
+  those groups both plans combined, lighter percentage winning on a shared movement.
+  The front end has no way to put two programs on one session yet. See spec 07.
 - **A program's days cannot be edited through the API today.** Blocks have routes for
   adding, reordering, editing and deleting days; programs have only "create" and
   "promote". See spec 07.
