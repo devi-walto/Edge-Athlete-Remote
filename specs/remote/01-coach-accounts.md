@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-05
-- Status: **Phase 0 done 2026-10-06 on branch `remote/coach-accounts`, waiting on Devin's review.** Two browser checks are his to do (see Phase 0)
+- Status: **Phase 0 done 2026-10-06 on branch `feature-coach_accounts`, waiting on Devin's review.** Two browser checks are his to do (see Phase 0)
 - Mockup: `FirstRun`, `SignIn`, `Coaches`, `AccountMenu` on the Remote page of the canvas (first-draft styling; follow [spec 06](../ui/06-design-rules.md) for the look)
 - Index and shared decisions: [specs/README.md](../README.md)
 - Form item: Definition of Done #2 ("Coach accounts are secured")
@@ -123,7 +123,7 @@ No new screen is wired up yet.
 
 ### Phase 0 result — 2026-10-06
 
-| Check | `main` | Branch |
+| Check | `SprintBranch` (same as `main` that day) | `feature-coach_accounts` |
 |---|---|---|
 | Django tests | 447 pass | **468 pass** (447 + his 21) |
 | Frontend tests | 265 pass | **279 pass** (265 + his 14) |
