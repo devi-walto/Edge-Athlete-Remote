@@ -73,7 +73,6 @@ overlaps are called out inside each spec.
 | The demo installation | 5 | Part of the hosting template |
 | Sensors over the internet | 6 | Design is in `docs/remote/sensors.md`; firmware not started |
 | The athlete's screens | 4 | No mockup yet. Spec 04 covers the server side |
-| The remote coach page in the final look | 4, 11 | The mockup's Remote page is a first draft in an older style |
 
 ---
 
@@ -156,6 +155,9 @@ a day can still change, but days cannot be added, removed or reordered.
   needs to see must be visible without drilling.
 - The session strip stays on all three states and the header card stays on every tab.
   Both are intentional.
+- **Local and hosted are one interface.** Hosted mode adds or hides elements on a
+  screen; it never gets its own screen. Features change, form does not. The
+  screen-by-screen comparison is rule 8 of spec 06.
 - Full rules in [spec 06](ui/06-design-rules.md).
 
 ---
@@ -166,7 +168,8 @@ a day can still change, but days cannot be added, removed or reordered.
   Open it in a browser. Static, sample data only.
 - **Live canvas (private to Devin):** https://claude.ai/artifact/Hz3PHLTwRv52aUVe9U4gsG
   — three pages: Remote coach view, Current local UI (real screenshots), Proposed local
-  UI. The rows titled **Final version** are the agreed design.
+  UI. The rows titled **Final version** are the agreed design. The Remote page was
+  redrawn in the final look on 2026-10-06; a dashed REMOTE tag marks what hosted adds.
 - **Source and screenshots:** `~/Desktop/Coding Projects/Edge Athlete Remote/mockups/`
   and `.../ui-captures/` (outside the repo).
 

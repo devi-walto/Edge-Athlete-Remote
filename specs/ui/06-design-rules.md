@@ -97,12 +97,46 @@ Devin ruled these intentional. Do not "fix" them:
 A state with one sub-tab shows no tab row. SESSION has one (`room`), so its lone ROOM
 tab goes. If a second is ever added, the row comes back by itself.
 
-### 8. Local and hosted are one interface
+### 8. Local and hosted are one interface: features change, form does not
 
-The hosted version shows a few extra things, all keyed off `useDeployment()` (spec 05):
-login status and **Send login link**, sensor ownership, **Copy session link**, remote
-racks, **Not joined yet**. Everything else is identical. Never build a second screen
-for hosted.
+**The rule.** Hosted mode may **add or hide elements on a screen**. It never gets its
+own version of a screen, its own layout, its own components or its own tokens. Every
+difference hangs off one switch, `useDeployment()` (spec 05).
+
+The one exception is **Send a login link**, which exists only when hosted. It is built
+from the same focus card and rows as every other dialog.
+
+Compared screen by screen on 2026-10-06 (the mockup's Remote page is drawn by starting
+from the local screens; a dashed **REMOTE** tag marks each addition and is an
+annotation, not part of the interface):
+
+| Screen | When hosted |
+|---|---|
+| Design, Create a Training Program, scheduling, Add to the existing sessions | Identical |
+| Groups | Identical |
+| Analytics: Athlete, History, History by group, Notes | Identical |
+| Session with nothing running, Quick Training Session | Identical |
+| Sign in, first-run setup, Coaches, account menu (spec 01) | Identical, in both. Sign in adds an **Athlete sign in** link |
+| Header | **Room Layout** is hidden: there is no room |
+| Session strip | Adds **Copy session link**; the count reads "5 of 8 athletes joined" |
+| Roster (`Roster`) | Adds a **Login** column, a **Sensor** column, a **No login yet** filter, and **Send login link** as the first row action |
+| Session, running (`Main`) | A rack card is headed by the athlete, not a rack number. Adds a **Not joined yet** list under the room, each with **Send login link** |
+| Calendar (`RemCalendar`) | A session that is set up adds **Copy session link** |
+| Sensor badge on a rack card | Shows status only. Linking a sensor from the badge is hidden: a remote sensor attaches to its owner's rack on its own |
+| Send a login link (`LoginLink`) | Hosted only |
+
+**How to keep it true while building:**
+
+- An addition is a column, a button, a filter, a badge or one list. If a hosted
+  feature seems to need a new page, stop and bring it back as a design question.
+- Additions are added to the shared component behind the switch, never to a copy of it.
+  There is no `HostedRoster.jsx`.
+- A hosted column must not push a local action off the row. The Roster keeps
+  **Change groups**, **Open in Analytics** and **Archive** in both; login and sensor
+  are two-line cells so the row still fits at 1180 px.
+- The athlete's own screens are a separate job and are **not covered by this rule**:
+  a remote athlete's device is their rack, and the rack screen was laid out for a
+  tablet on a rack, not a phone. That needs its own mockup before spec 04's front end.
 
 ## Tokens
 
@@ -185,6 +219,10 @@ Build them against the mockup, each with a render test. Use them nowhere yet.
       the flag) appear nowhere a coach reads.
 - [ ] Red appears only on **Behind**.
 - [ ] The strip, header cards, LIVE pill and navbar are unchanged.
+- [ ] No component, page or stylesheet exists only for hosted mode, apart from the
+      login-link dialog. Every hosted difference is reached through `useDeployment()`.
+- [ ] With the switch set to gym box, every screen renders exactly as before the
+      hosted additions were written (render tests run in both modes).
 
 ## Risks
 
