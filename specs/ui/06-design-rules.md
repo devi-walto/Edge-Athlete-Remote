@@ -68,8 +68,8 @@ The single most likely next action is the filled lime button. Everything else is
 
 Use these words, capitalised, everywhere a coach reads:
 
-**Training Block** (template) · **Training Program** (your copy, for one or more
-groups) · **Training Session** (a day on the calendar, or the day as run) ·
+**Training Block** (template) · **Training Program** (your copy, for one
+group) · **Training Session** (a day on the calendar, or the day as run) ·
 **Training Group** · **Roster** · **Administrator**.
 
 Never "deploy" for block → program. Never "head coach" for the administrator flag.

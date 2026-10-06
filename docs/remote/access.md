@@ -167,7 +167,7 @@ coach did not make, and it breaks the one rule that holds in both shapes.
 
 **Keeping "coach means logged in".** The moment an athlete has a login, that rule gives
 them full coach powers over the roster, plans and sessions. The check currently guards
-34 endpoints; it must become "is a coach", and the rack's open routes must require an
+32 endpoints; it must become "is a coach", and the rack's open routes must require an
 athlete login **on the hosted service**.
 
 **Demo logins inside the real installation.** See section 7.

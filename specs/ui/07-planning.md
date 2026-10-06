@@ -2,11 +2,11 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: Written — not started. **One decision open** (several groups in one session; recommendation: no model change)
+- Status: Written — not started. No decisions open
 - Form item: #11 (unified coach interface)
 - Depends on: [06 Design rules](06-design-rules.md); [01 Coach accounts](../remote/01-coach-accounts.md) for archiving an athlete
 - Mockup: `V3a_DesignStep1`, `V3g_CreateProgram`, `V3b_DesignStep2`,
-  `V3e_ScheduleOnCalendar`, `V3f_ProgramScheduled`, `V4a_Groups`, `V4b_Roster`,
+  `V3e_ScheduleOnCalendar`, `V3h_AddToExistingSession`, `V3f_ProgramScheduled`, `V4a_Groups`, `V4b_Roster`,
   `V4c_Calendar` in [`mockups/coach-ui-final.html`](mockups/coach-ui-final.html)
 
 ## Why
@@ -35,8 +35,8 @@ Training Block  ──create──▶  Training Program  ──schedule──▶
 ```
 
 1. **Build a Training Block.** A template. Never has a group or dates.
-2. **Create a Training Program.** Your own copy of a block, for one or more groups,
-   with a **planned start**. Edit its days and its date as much as you like. Nothing is
+2. **Create a Training Program.** Your own copy of a block, for one group, with a
+   **planned start**. Edit its days and its date as much as you like. Nothing is
    on the calendar yet.
 3. **Schedule Training Sessions.** Confirm the start date on a calendar — or move it —
    and the program's sessions are created. From then on the day *structure* is locked;
@@ -64,48 +64,42 @@ A program can be **saved as a new Training Block** at any time.
 - **The one-off session leaves Planning.** It is unplanned work and lives in SESSION
   (spec 08).
 
-### Open decision — several groups in one session
+### Decided 2026-10-06 — several groups share a session; a program stays one group
 
-Devin: "you can have multiple groups attending a training session so a training
-program should let you select multiple groups."
-
-**Checked in the code on 2026-10-06: the server already does this, and not through the
-program.** The pieces:
+**The server already does this, and not through the program.** Checked in the code:
 
 - An **athlete** can be in several Training Groups (`Athlete.training_groups`).
 - A **Training Program** belongs to exactly one group. A group can have several programs.
 - A **Training Session** can hold several programs at once, one `SessionParticipation`
   row each, each pointing at the day that group is running.
-- `services/plan_resolution.py` then gives each athlete the **intersection**: the
-  programs in this session whose group the athlete is in. For an athlete in two of
-  them, the movement lists are **combined** — the bigger group's work first, one entry
-  per movement, and where both plans prescribe the same movement the **lighter
-  percentage wins**, taking its sets and reps with it.
-- There is a test for exactly this, using "Varsity Football" and "Receivers":
+- `services/plan_resolution.py` gives each athlete the **intersection**: the programs
+  in this session whose group the athlete is in. For an athlete in two of them, the
+  movement lists are **combined** — the bigger group's work first, one entry per
+  movement, and where both plans prescribe the same movement the **lighter percentage
+  wins**, taking its sets and reps with it.
+- Test, using "Varsity Football" and "Receivers":
   `test_two_groups_combine_and_the_lighter_prescription_wins`.
 
 So a receiver gets football's lifts and the receivers' lifts in one session **if both
-programs are on that session.**
+programs are on that session.** The journal explains the rule and why:
+`docs/journal/database.md`, "One session, several groups".
 
-**What is missing is the interface, not the model.** Nothing in the front end calls
+**What was missing is the interface.** Nothing in the front end calls
 `POST sessions/{id}/participation/`, and setting up a calendar day
 (`scheduled_session_create_session`) creates a session holding only that one program.
-Two programs scheduled on the same date become two separate sessions, and only one day
-can run at a time. Until now the seed command was the only thing that put two programs
-on one session.
+Two programs scheduled on the same date became two separate sessions, and only one day
+can run at a time.
 
-| | A. One program, many groups | B. Copies, one per group | **C. Leave programs alone; combine on the session** |
-|---|---|---|---|
-| The data | `training_group` becomes many-to-many | A shared batch id | **No schema change** |
-| Plan resolution | Rewritten (~20 query sites) | Untouched | **Untouched — it is the feature** |
-| Receivers + football | Not expressible: they need *different* programs | Works | **Works; it is the tested case** |
-| Risk | High | Low | **Lowest** |
+**Decision:**
 
-**Recommendation: C.** Programs stay one group each. When a day is set up, **every
-program with a session scheduled on that date goes onto the same Training Session**,
-and the coach can untick one. The "create for several groups at once" checkbox in the
-mockup (`V3g`) can stay as a convenience that makes one independent program per group
-— or be dropped. **Confirm before Phase 3.**
+- **A Training Program is for one group. No change to the model, and
+  `services/plan_resolution.py` is not touched.** Making a program many-to-many was
+  rejected: it would rewrite the resolver, and it could not express receivers plus
+  football anyway, because those two groups need *different* programs.
+- **Groups come together on the session.** When a coach schedules a program onto dates
+  where another program already has a Training Session, the interface asks **"Add to
+  the existing sessions?"** (mockup `V3h_AddToExistingSession`).
+- The multi-group checkboxes are removed from "Create a Training Program". It picks one group.
 
 ## What exists today
 
@@ -233,35 +227,56 @@ Backend.
 
 **Stop. Devin reviews.**
 
-## Phase 3 — Several groups on one Training Session
+## Phase 3 — Add to the existing sessions
 
-Blocked on the decision above. For option C:
+Backend. Mockup `V3h_AddToExistingSession`.
 
-- `POST scheduled-sessions/{slot_id}/session/` (setting a day up) gains an optional
-  `also: [slot ids]`. Every listed slot must be on the same date and not yet set up. In
-  one transaction: one session; a `SessionParticipation` per slot; the roster is the
-  union of the groups' athletes; every slot points at the session.
-- `GET scheduled-sessions/?date=` already lists a date's slots; the Calendar uses it to
-  offer the others. **Default: all ticked.**
-- An existing set-up session can take another program later through the route that
-  already exists, `POST sessions/{id}/participation/`. Give it its first caller.
-- Optional convenience, only if Devin keeps the checkbox: `POST training-programs/`
-  accepts `training_groups: [ids]` and creates one independent program per group,
-  all-or-nothing. No batch id, no linked editing.
-- **Do not touch `services/plan_resolution.py`.**
+**When the question is asked.** Calendar days hold a **date, not a time**
+(`ScheduledSession.date`), so "already scheduled" means *another program has a calendar
+day on the same date*. If times are ever added, the same question gets asked about the
+overlap in time instead.
+
+- Migration: `ScheduledSession.shares_session` — a boolean, default `True`. It means
+  "when this date is set up, this program goes on the same Training Session as the
+  other programs on that date that also share".
+- `GET training-programs/{id}/schedule-preview/?start_date=` — coach-only, changes
+  nothing. Returns the dates the program would get and, for each date that another
+  program already holds, that program's name, group and day. The scheduling screen
+  already needs the dates for its preview; this is the same call.
+- `POST training-programs/{id}/schedule/` (Phase 2) accepts `share_sessions`
+  (default `true`) and writes it to every calendar day it creates. The interface sends
+  it only after asking; with no overlaps there is nothing to ask.
+- **Setting a day up** (`POST scheduled-sessions/{slot_id}/session/`):
+  - if the slot shares: one session for **every sharing slot on that date** — a
+    `SessionParticipation` per program, the roster is the union of the groups' athletes,
+    and every one of those slots points at the session;
+  - if it does not share: exactly today's behaviour, a session for that program alone.
+- **If a session for that date is already set up** (and not ended) when a sharing
+  program is scheduled onto it, the new program is added to it straight away: a
+  participation, the athletes added to the roster, the slot pointed at it.
+- `PATCH scheduled-sessions/{slot_id}/` can flip `shares_session` for one date, as long
+  as that slot has no session yet.
+- Give `POST sessions/{id}/participation/` its first caller: adding a program to a
+  session that is already set up, from the Calendar.
 
 **Done when:**
 
-- [ ] Setting up a date with two programs creates **one** session with two
-      participations and a roster holding both groups' athletes once each.
+- [ ] `schedule-preview` lists every date and names the other program on each
+      overlapping one; it writes nothing.
+- [ ] Scheduling with `share_sessions: true` onto dates another program holds: setting
+      one of those dates up creates **one** session with two participations and a
+      roster holding both groups' athletes once each.
 - [ ] An athlete in both groups gets the combined movement list — the existing
-      `test_two_groups_combine_and_the_lighter_prescription_wins` passes unchanged, and
-      a new test reaches the same result through the set-up route.
+      `test_two_groups_combine_and_the_lighter_prescription_wins` passes **unchanged**,
+      and a new test reaches the same result through the scheduling and set-up routes.
 - [ ] An athlete in only one of the groups sees only that group's plan.
-- [ ] Unticking a program leaves its slot planned and off the session.
-- [ ] A slot from a different date, or one already set up, is refused and nothing is created.
-- [ ] *(Browser)* Two programs on one date → set the day up → one Training Session in
-      SESSION, with both groups' athletes.
+- [ ] `share_sessions: false`: the same dates set up as two separate sessions, as today.
+- [ ] Scheduling onto a date whose session is already set up adds the program to it; a
+      session that has **ended** is never joined.
+- [ ] Flipping `shares_session` on a slot that already has a session is refused.
+- [ ] Existing calendar days (created before the migration) default to sharing, and a
+      date with a single program behaves exactly as before.
+- [ ] `git diff` shows no change to `services/plan_resolution.py`.
 
 **Stop. Devin reviews.**
 
@@ -275,8 +290,7 @@ Frontend, on the components from spec 06. Mockups `V3a`, `V3g`, `V3b`, `V3e`, `V
   or dates of its own." The open block is the focus card; its button is **Create a
   Training Program →**. Days are labelled "Days in this template · copied into every
   Training Program you create from it". Other blocks are quiet rows.
-- **Create a Training Program** (dialog, `V3g`): name; Training Group (several only if
-  the Phase 3 convenience is kept); planned start, filled with `suggested_start`. "Nothing goes on the
+- **Create a Training Program** (dialog, `V3g`): name; one Training Group; planned start, filled with `suggested_start`. "Nothing goes on the
   calendar until you schedule it."
 - **Step 2 · Create a Training Program** — the open program is the focus card: a
   **NOT SCHEDULED** / **SCHEDULED** badge beside its name; its groups and planned start,
@@ -290,7 +304,13 @@ Frontend, on the components from spec 06. Mockups `V3a`, `V3g`, `V3b`, `V3e`, `V
 - **Scheduling screen** (`V3e`, on the Calendar tab): "Confirm the day it starts" with
   the planned start selected, the program's days previewed on its weekly pattern,
   other programs' sessions shown in grey, and **Schedule N Training Sessions**. Clicking
-  another day moves the preview. If scheduling returns `422`, show the reason and do
+  another day moves the preview. **If any of those dates already has another program's
+  session, pressing the button first opens "Add to the existing sessions?"** (`V3h`):
+  how many dates overlap and with which program; **Add to the existing sessions**
+  (selected by default — "an athlete in both groups gets both workouts together; where
+  the two plans share a movement, the lighter one is used") or **Keep them separate**
+  ("only one session can run at a time, so the two would be run one after the other").
+  The Calendar shows a date's programs together when they share. If scheduling returns `422`, show the reason and do
   not offer the button.
 - Delete a movement an athlete has an exception on → warn before, naming how many.
 - The word "deploy" appears nowhere.

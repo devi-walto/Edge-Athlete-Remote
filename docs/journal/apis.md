@@ -19,7 +19,7 @@ Full detail in {doc}`../reference/database`; the reasoning in {doc}`database`.
 ## The permission rule
 
 **Anything a rack tablet must do is open. Anything that changes the plan or the room
-needs a coach login.** 15 routes open, 36 coach-only.
+needs a coach login.** 21 routes open, 32 need a login, and 9 more need a staff login (counted October 6, 2026).
 
 **What forced it.** A rack tablet is a kiosk. It boots unattended into full-screen
 mode, nobody signs in to it, and there is no keyboard in front of a squat rack. But it

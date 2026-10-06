@@ -54,7 +54,7 @@ The Django suite had 447 tests in `tests.py` on 2026-10-06.
 | 03 | [Athlete login links](remote/03-athlete-login-links.md) | 4 | 02, 05 | Written |
 | 04 | [Session link and virtual racks](remote/04-session-link-and-virtual-racks.md) | 3, 4 | 02, 03, 05 | Written |
 | 06 | [Design rules for the coach interface](ui/06-design-rules.md) | 11 | — | Written |
-| 07 | [Planning](ui/07-planning.md) | 11 | 06, 01 | Written, one decision open (recommended: no model change) |
+| 07 | [Planning](ui/07-planning.md) | 11 | 06, 01 | Written |
 | 08 | [Session](ui/08-session.md) | 11 | 06 | Written |
 | 09 | [Analytics](ui/09-analytics.md) | 11 | 06 | Written |
 
@@ -193,7 +193,8 @@ Checked on 2026-10-06 against commit `31f0573`.
 - **Several groups already share a session on the server.** A session holds one
   `SessionParticipation` per program; `plan_resolution.py` gives an athlete in two of
   those groups both plans combined, lighter percentage winning on a shared movement.
-  The front end has no way to put two programs on one session yet. See spec 07.
+  The front end has no way to put two programs on one session yet; spec 07 Phase 3
+  adds it ("Add to the existing sessions?"). Explained in `docs/journal/database.md`.
 - **A program's days cannot be edited through the API today.** Blocks have routes for
   adding, reordering, editing and deleting days; programs have only "create" and
   "promote". See spec 07.
