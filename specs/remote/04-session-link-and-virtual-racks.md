@@ -5,7 +5,9 @@
 - Status: Written — not started. **One decision open** (who may join; see below)
 - Form items: Definition of Done #3 and #4
 - Depends on: [02 Roles](02-roles.md), [05 Hosted mode](05-hosted-mode.md), [03 Login links](03-athlete-login-links.md)
-- Mockup: `Main` (live remote room) on the Remote page of the canvas
+- Mockup: coach side `F_Remote_Session` on the canvas's Final designs page. Athlete side:
+  the `B_*` boards (lifting) and `A_Waiting`, `A_NotOnSession`, `A_Ended` on the
+  "Remote athlete view (proposed)" page, each beside a screenshot of today's rack screen
 
 ## Why
 
@@ -41,6 +43,14 @@ already connected.
   (`react/src/rack/RackScreen.jsx`, the effect that subscribes "ONLY while a set is
   active"). No new code is needed for this; it gets a test.
 - **Hosted only.** On a gym box none of this is reachable.
+- **The athlete uses the same rack screen as the gym, not a second one** (Devin,
+  2026-10-06). It was built to be portable and is already a phone-width column. A rack
+  that has an owner simply skips choosing an athlete. See Phase 3.
+- **A rack with an owner always has that athlete selected.** This is a fact the server
+  keeps (`RackRuntime.owner_athlete`), not a guess such as "only one person checked in
+  recently". That guess was considered and rejected: in the gym the first athlete to
+  check in would trip it, it depends on a timer, and it would still let a remote
+  athlete reach a list of names.
 
 ### Open decision — who may join?
 
@@ -77,7 +87,8 @@ lock everyone out of a quick one. **Confirm before Phase 1.**
 - Sensor ownership: `Node.owner`.
 - `POST /api/sessions/{id}/join/`: the membership check, the rack, the sensor.
 - Releasing virtual racks when a session ends.
-- The rack screen in "my rack" mode.
+- The rack screen on a rack that has an owner (Phase 3), plus two changes to the rack
+  screen in both versions: rep bars in, the WT901 card out.
 - The ownership half of spec 05's rules for rack endpoints.
 - The coach's live room: virtual racks, sensor status, **Not joined yet**, **Copy
   session link**.
@@ -124,7 +135,9 @@ constant, `VIRTUAL_RACK_BASE`.
 3. Find this athlete's virtual rack for this session; if there is none, take the next
    free number from `VIRTUAL_RACK_BASE` and create the `RackRuntime` with
    `owner_athlete` and `session`. Take a row lock so two joins cannot pick one number.
-4. Write a `RackCheckIn` for the athlete on that rack.
+4. Check the athlete in on that rack **through the same service the check-in route
+   uses**, so the rack's state already names them as the selected athlete when their
+   screen opens.
 5. If the athlete owns an active sensor, point it at the rack.
 6. Return `{rack_number, sensor: {node_id, last_seen} | null}`.
 
@@ -154,6 +167,9 @@ Calling it again returns the same rack. Nothing else in the response.
   page must get their rack back without the recovery prompt, because nobody else can
   hold it. On a virtual rack, `rack_controller_acquire` treats "same owner athlete" as
   "same holder". The gym-box lease is unchanged.
+- **An owned rack cannot lose its athlete.** Clearing the selected athlete, or
+  checking a different athlete in, on a rack with an `owner_athlete` is refused
+  (`409 owned_rack`), whoever asks.
 - Ending a session releases its virtual racks: detach sensors, end any open set the way
   `_end_open_sets_on_rack` already does, delete the `RackRuntime` rows. Hook it into the
   existing end-of-session path.
@@ -162,6 +178,8 @@ Calling it again returns the same rack. Nothing else in the response.
 
 - [ ] Athlete A calling any rack endpoint for athlete B's rack gets `403`.
 - [ ] Athlete A cannot check athlete B in, or post a set for athlete B.
+- [ ] On an owned rack, an update that clears the selected athlete, and a check-in
+      for anyone but the owner, both return `409` and change nothing.
 - [ ] An athlete who reloads mid-set regains control of their rack and their set is
       still open and unharmed.
 - [ ] After the session ends: no virtual `RackRuntime` rows remain, the sensors have no
@@ -171,31 +189,87 @@ Calling it again returns the same rack. Nothing else in the response.
 
 **Stop. Devin reviews.**
 
-## Phase 3 — The rack screen in "my rack" mode
+## Phase 3 — The same rack screen, on a rack that has an owner
 
-Route `/session/<id>` (the session link): if not signed in, go to `/athlete` and come
-back. Then call `join` and render the existing rack screen with:
+Mockups `B_Ready`, `B_Countdown`, `B_Active`, `B_Summary`, `B_Rest`, drawn from the
+rack screen's own styles and set beside screenshots of it as it is today.
 
-- no device setup, no "which rack" step, no sensor picker, no athlete picker — the
-  athlete is fixed;
-- the athlete's own plan for this session (the existing prescriptions and progress
-  calls, now answering for the signed-in athlete);
-- a **sensor line**: "Sensor connected" / "Sensor not connected — check it is on", from
-  the sensor's heartbeat. Lifting is allowed either way;
-- `403 not_in_session` → "You're not on this session. Ask your coach."; `409` → "Your
-  coach hasn't started this session yet", retried every few seconds.
+**How the screen already works** (checked in `react/src/rack/RackScreen.jsx`): the
+lifting athlete is not chosen on the screen. Tapping a name sends a check-in, the
+server records the athlete on the rack, and the screen draws whatever the rack's state
+says. The list of names shows in exactly two cases: nobody is selected while idle, or
+the rack is resting. So a rack whose state already names an athlete opens straight on
+the Ready view. **There is no second flow and no second component.**
 
-Reuse `RackScreen.jsx` and its durable rep buffer; do not fork it. The differences are
-props.
+**3a. Getting there.** Route `/session/<id>` (the session link, and the home screen's
+Join button): if not signed in, go to `/athlete` and come back. Call `join`, then
+render the existing `RackLive` → `RackScreen` for the returned rack number, skipping
+`RackNodeSetup` (there is no device or sensor to set up). Before that:
+
+- `409 not_started` → "Your coach hasn't started this session yet", with the day's
+  plan, retried every few seconds (`A_Waiting`);
+- `403 not_in_session` → "You're not on this session. Ask your coach." (`A_NotOnSession`);
+- the session ending while the athlete is on the screen → what they did today (`A_Ended`).
+
+**3b. One new fact on the rack's state.** `GET racks/{n}/state/` and the controller
+snapshot gain `owner_athlete: {id, name} | null`. It is added, nothing is renamed or
+removed. **Before building, check this against the merge canon's frozen rack contract
+(§6.3)**: that freeze covers the plan the rack reads, but confirm an added field on
+rack state is allowed, and update `docs/reference/message-contract.md`.
+
+**3c. What an owner changes on the screen.** One value, `owned = snapshot.owner_athlete != null`,
+read in `RackScreen.jsx` and passed to `Idle.jsx`:
+
+| When the rack has an owner | Where |
+|---|---|
+| The header shows the athlete's name where it says "Rack 7" | `RackScreen.jsx`, top bar |
+| "Lifting · name · Not here?" is not drawn (the name is in the header; the button would clear an athlete who cannot be cleared) | `Idle.jsx` |
+| The "or, next lifter" divider and list are not drawn on the rest screen | `RestPhase` |
+| The check-in list and the card-reader polling never run (`showCheckInList` is false) | `RackScreen.jsx` |
+
+Everything else is untouched: the session title, the phase badge, the day view, the
+number pad for changing the load, the countdown, End Set and False Set, the summary,
+the rest timer, the durable rep buffer, and **the footer (`phase`, `node`, `buffered`),
+which stays word for word** because it is how you see that reps are being kept on the
+device.
+
+**3d. Changes to the rack screen in BOTH versions** (gym and remote; Devin, 2026-10-06):
+
+- **The "WT901 movement" card is removed.** Local and remote both read reps from the
+  MQTT sensor only, so the diagnostic has no job. This removes the card from
+  `ActivePhase` and its two props; the separate WT901 rack agent under
+  `scripts/hardware/` is not touched by this spec.
+- **A "Velocity by rep" card takes its place**: one bar per rep in the running set,
+  the value above it, coloured by the same green/yellow/red zone as the big number.
+  The same card appears on the set summary, between Avg/Peak and Start Rest Timer.
+  The screen already receives every rep; it keeps their velocities in a list for the
+  current set. After a reload mid-set, bars show for the reps the snapshot can restore
+  and for every rep after; if the snapshot cannot restore them, that is acceptable and
+  the count and averages are still right.
+- **A dot beside `node:` in the footer**, mint when the sensor's heartbeat is fresh and
+  amber when it is not. This replaces the "Sensor checking" line that lived in the
+  removed card. With no sensor the footer reads `node: —` as it does today, and
+  lifting is still allowed.
 
 **Done when:**
 
-- [ ] *(Frontend test)* In my-rack mode the athlete picker, rack setup and sensor
-      picker are not rendered.
-- [ ] *(Browser)* Opening the session link signed out → sign in → rack screen, in one flow.
+- [ ] *(Frontend test)* Rendered with an owner: no check-in list, no "Not here?", no
+      next-lifter list, no card-reader request, and the header shows the athlete's name.
+- [ ] *(Frontend test)* Rendered with no owner: the screen is the same as before this
+      spec apart from 3d. The existing rack tests pass with only the WT901 assertions removed.
+- [ ] *(Frontend test)* The footer shows `phase`, `node` and `buffered` in both cases.
+- [ ] *(Frontend test)* Five reps arriving draw five bars in zone colours; the summary
+      shows the same five.
+- [ ] *(Frontend test)* No "WT901" text is rendered in either mode.
+- [ ] `RackScreen.jsx` is one component; there is no `MyRackScreen` or copy of it.
+- [ ] *(Browser)* Opening the session link signed out → sign in → Ready view for that
+      athlete, in one flow, with no list of names at any point.
 - [ ] *(Browser)* With the simulator standing in for the athlete's sensor, a set runs
-      and saves, and the coach's live room shows the reps.
-- [ ] *(Browser)* The gym rack screen (`/rack/...`) is unchanged.
+      and saves, the bars fill in, and the coach's live room shows the reps.
+- [ ] *(Browser)* Pulling the network mid-set raises `buffered`, and it drains when the
+      connection returns.
+- [ ] *(Browser)* The gym rack screen (`/rack/...`) still offers the check-in list and
+      rotates lifters.
 
 **Stop. Devin reviews.**
 
@@ -258,7 +332,8 @@ By hand, hosted mode, two browsers:
 | Two joins race for one rack number | A row lock in Phase 1, and the fifty-at-once test |
 | A remote athlete is stranded as a read-only observer after a reload — the bug that already happened in the gym | Phase 2 ties the lease to the login on virtual racks; Phase 5 rehearses it |
 | Virtual racks leak when a session is never ended | Release also runs when a stale session is ended late; rows carry `session`, so a cleanup command can find orphans |
-| The rack screen is forked and the two copies drift | Phase 3 reuses `RackScreen.jsx` with props; a test renders both modes |
+| The rack screen is forked and the two copies drift | Phase 3 uses the one `RackScreen.jsx`, switched by a fact in the rack's state; a test renders it with and without an owner |
+| Adding `owner_athlete` to rack state breaks the frozen rack contract | It is additive; Phase 3b checks the canon first and stops if it is not allowed |
 
 ## Docs to update when done
 
