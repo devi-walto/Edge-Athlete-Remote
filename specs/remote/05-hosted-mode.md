@@ -1,0 +1,167 @@
+# Feature Spec 5: Hosted mode
+
+- Owner: Devin Walton
+- Date: 2026-10-06
+- Status: Written — not started
+- Form item: Definition of Done #3
+- Depends on: [02 Roles](02-roles.md)
+- **Build this before 03 and 04**, which both need its switch
+
+## Why
+
+On a gym box the network is the lock: only devices on the box's own Wi-Fi can connect,
+so 21 endpoints are open to anyone and a rack tablet needs no login. `docs/journal/apis.md`
+records that trade and says it must be revisited "if this ever runs on a network that
+is not private". A hosted installation is that network.
+
+The gym box must keep working exactly as it does. So the same endpoints need two
+behaviours, chosen by one setting, with both tested.
+
+## User story
+
+As the person running a hosted installation, I want everything a stranger could reach
+to require a login, without changing how a rack tablet works in a gym.
+
+## Decisions this spec locks in
+
+- **One setting decides.** `EA_DEPLOYMENT`, read from the environment: `gymbox` (the
+  default) or `hosted`. Nothing else in the code asks "am I on the internet?".
+- **Not two copies of the routes.** Each open endpoint gets a permission class that
+  asks the setting. Same view, same URL.
+- **The default is the gym box.** A missing or misspelled value must not open a hosted
+  installation by accident — so an unknown value **refuses to start**, and the hosted
+  manifests set it explicitly.
+- **The frontend is told, it does not guess.** One small endpoint reports the mode, and
+  remote-only controls key off it.
+
+## The 21 open endpoints, and what each becomes when hosted
+
+| Endpoint (view name) | Gym box | Hosted |
+|---|---|---|
+| `rack_register`, `rack_racknumber` | open | **refused** — hosted racks are created by joining a session (spec 04) |
+| `rack_state`, `rack_sensor_health` | open | coach, or the athlete whose rack it is |
+| `rack_controller_acquire`, `_heartbeat`, `_release` | open | coach, or the athlete whose rack it is |
+| `rack_checkin`, `rack_checkins` | open | coach, or the athlete whose rack it is; an athlete can only check **themselves** in |
+| `rack_nfc_tap` | open | **refused** — no shared rack to tap at |
+| `set_create`, `set_complete` | open | coach, or an athlete creating/completing **their own** set on **their own** rack |
+| `athlete_progress` | open | coach, or that athlete |
+| `prescriptions_view` | open | coach, or an athlete (their own only) |
+| `exercises_list` | open | any signed-in role |
+| `sessions_active`, `session_status` | open | any signed-in role |
+| `athletes_view` (`GET` lists every athlete; `POST` creates one) | open | **coach only** — it is a list of names, many of them minors |
+| `nodes_list`, `node_register` | open | coach only (per-sensor credentials are the sensors work) |
+| `room_state` | open | coach only |
+
+"The athlete whose rack it is" is answered by spec 04, which records which athlete a
+hosted rack was created for. Until spec 04 lands, **an athlete is refused** on those
+rows and only a coach passes; that is safe and lets this spec ship first.
+
+## Scope
+
+- The setting, its validation, and a startup failure on an unknown value.
+- A permission class, `OpenOnGymBox`, plus the per-endpoint hosted rule from the table.
+- `GET /api/system/info/` reporting the mode (open; it reveals nothing else).
+- Hosted-only refusals: the connection-test page, the demo login (already refused
+  outside development by spec 01), the NFC tap route.
+- Hosts, CORS and CSRF trusted origins read from the environment for hosted.
+- Rate limits on sign-in for hosted.
+
+## Non-goals
+
+- TLS, certificates, the cluster (hosting work).
+- Broker logins for browsers and sensors (sensors work).
+- Which athlete owns which rack (spec 04).
+
+---
+
+## Phase 0 — The setting
+
+- `settings.py` reads `EA_DEPLOYMENT`; allowed values `gymbox`, `hosted`; default
+  `gymbox`. Any other value raises at startup with a message naming the allowed values.
+- `deployment.py` (new) with `is_hosted()` — the one place that reads the setting.
+- `GET /api/system/info/` → `{"deployment": "gymbox" | "hosted", "version": "..."}`.
+- `.env.example` documents the variable.
+
+**Done when:**
+
+- [ ] With the variable unset, the app starts as `gymbox` and every existing test passes.
+- [ ] `EA_DEPLOYMENT=hosted` starts; `EA_DEPLOYMENT=cloud` fails to start with a clear error.
+- [ ] `/api/system/info/` returns the mode in both, with no login.
+
+**Stop. Devin reviews.**
+
+## Phase 1 — The 21 endpoints
+
+- `OpenOnGymBox(hosted=<rule>)`: on a gym box, allow. Hosted, apply the rule from the
+  table (`coach`, `any_role`, `coach_or_owner`, `refuse`).
+- Replace `AllowAny` on all 21 views. No view logic changes.
+- Ownership checks for `coach_or_owner` are stubs that refuse athletes until spec 04.
+
+**Done when:**
+
+- [ ] **A test walks every route that uses `OpenOnGymBox`, in both modes.** Gym box: no
+      login is needed (today's behaviour, byte for byte). Hosted: no login gets `401`
+      on every one.
+- [ ] A test fails if any view still uses `AllowAny` other than sign-in, the setup
+      routes from spec 01, and `/api/system/info/`. New open routes have to be added to
+      that short allow-list on purpose.
+- [ ] Hosted: a coach passes every row marked coach; an athlete gets `403` on
+      `athletes_view`, `nodes_list`, `node_register`, `room_state`.
+- [ ] Hosted: `rack_register`, `rack_racknumber` and `rack_nfc_tap` return `403` for everyone.
+- [ ] The full suite passes in **both** modes (run it twice in CI).
+
+**Stop. Devin reviews.**
+
+## Phase 2 — Hosted hardening
+
+- `ALLOWED_HOSTS`, CORS origins and CSRF trusted origins come from the environment when
+  hosted, and startup fails if they are empty.
+- `DEBUG` on with `hosted` refuses to start.
+- Sign-in is rate-limited when hosted (DRF throttling; a small number per minute per address).
+- The frontend's connection-test page (`/connection-test`) renders a "not available"
+  notice when the mode is hosted. It is the one screen that publishes to the broker.
+
+**Done when:**
+
+- [ ] `hosted` with `DEBUG=True`, or with empty hosts, fails to start.
+- [ ] Repeated wrong sign-ins get `429` when hosted, and are unlimited on a gym box.
+- [ ] *(Frontend test)* The connection-test page shows the notice in hosted mode.
+
+**Stop. Devin reviews.**
+
+## Phase 3 — The frontend learns the mode
+
+- A small hook, `useDeployment()`, fetches `/api/system/info/` once and caches it.
+- Nothing visible changes yet. Specs 03, 04 and 07 use the hook to show remote-only
+  controls: login-link status, sensor ownership, the session link.
+
+**Done when:**
+
+- [ ] *(Frontend test)* The hook returns the mode and does not refetch on every render.
+- [ ] *(Browser)* The gym-box app looks and works exactly as before.
+
+---
+
+## Acceptance criteria
+
+- [ ] A gym box behaves exactly as it did, with no login at the rack.
+- [ ] Hosted, nothing answers without a login except sign-in, first-run setup and
+      `/api/system/info/`.
+- [ ] Hosted, no endpoint returns a list of athlete names to anyone but a coach.
+- [ ] A mis-set or missing configuration cannot produce an open hosted installation.
+- [ ] Both modes are tested on every change.
+
+## Risks
+
+| Risk | What reduces it |
+|---|---|
+| A new endpoint is added open and nobody notices it is open when hosted | The allow-list test in Phase 1 |
+| The gym box regresses because tests only ran in one mode | CI runs the suite in both modes |
+| A rack tablet in the gym is suddenly asked to log in | Phase 1's gym-box walk asserts no login is needed on all 21 |
+
+## Docs to update when done
+
+`docs/journal/apis.md` — *The permission rule* (the "15 routes open" count there is
+already stale; it is 21). `docs/remote/access.md` — "the open routes behave differently
+in the two shapes" becomes a description of `EA_DEPLOYMENT`. Regenerate the route table
+with `docs/refresh-routes.py`.

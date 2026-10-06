@@ -1,0 +1,182 @@
+# Feature Spec 2: Roles — administrator, coach, athlete
+
+- Owner: Devin Walton
+- Date: 2026-10-06
+- Status: Written — not started
+- Form item: Definition of Done #3
+- Depends on: [01 Secure coach accounts](01-coach-accounts.md)
+- Next: [05 Hosted mode](05-hosted-mode.md), then 03 and 04
+
+## Why
+
+Today "coach" means "logged in" and nothing more. The check is one line in
+`django/event_handler/permissions.py` and it guards 32 endpoints. That was a recorded,
+accepted trade for a gym with two staff logins.
+
+It stops being acceptable the moment an athlete has a login: that login would be able
+to edit the roster, end sessions and delete plans. **This spec has to be finished
+before the first athlete login can exist.** Spec 03 creates those logins; it must not
+start until this one is merged.
+
+## User story
+
+As a coach, I want athlete logins to be able to do only athlete things, so that giving
+an athlete access to their own rack can never give them my controls.
+
+## Decisions this spec locks in
+
+**A login's role is decided by what it is attached to.** Nothing is stored as a "role".
+
+| Role | How the server knows | Can do |
+|---|---|---|
+| **Administrator** | Active, has a coach profile, and Django's `is_staff` is on | Everything a coach can, plus manage coach logins |
+| **Coach** | Active and has a coach profile (`CoachProfile`, from spec 01) | The whole coach workspace |
+| **Athlete** | Active and attached to an athlete record (`Athlete.user`, new) | Their own rack in a session they belong to; reading their program's published results |
+| **None of these** | — | **Refused everywhere** |
+
+- **One coach role.** No head/assistant powers. The head/assistant label on a training
+  group (`TrainingGroupCoach.role`) stays a display label and is never checked.
+- **A login is a coach or an athlete, never both.** A coach who also lifts gets a
+  separate athlete record with no login, the same as any gym athlete.
+- **Refused by default.** A login with neither a coach profile nor an athlete record
+  gets nothing. That is the safe answer to a half-created account.
+- **Rejected:** Django's built-in groups as role labels (a label and the athlete link
+  could disagree); a `role` column on the user table (means swapping the user model in a
+  project that already has data).
+
+## What exists today
+
+- `permissions.py`: `IsCoach` (authenticated), `IsActiveStaff` (authenticated, active,
+  staff). After spec 01: also `IsInstallationAdmin`, the same test as `IsActiveStaff`.
+- `settings.py`: `DEFAULT_PERMISSION_CLASSES = IsAuthenticated`. JWT access token 8
+  hours, refresh 7 days.
+- `models.py`: `Athlete` has no link to a login. After spec 01 it has `is_active`.
+- After spec 01, the sign-in response and `GET` on the coach-session route already
+  return `username`, `is_staff` and `must_change_password`.
+
+## Scope
+
+- `Athlete.user`: an optional one-to-one link to a login.
+- Permission classes that test for a real role.
+- Every coach-only endpoint refuses an athlete.
+- The sign-in response says which role signed in.
+- Archiving an athlete turns their login off.
+- The coach app refuses to load for an athlete login, and says why.
+
+## Non-goals
+
+- Creating athlete logins (spec 03).
+- The 21 open endpoints (spec 05).
+- What an athlete may read or do on a rack (specs 04 and 05).
+- The athlete's own screens.
+
+---
+
+## Phase 0 — The link and the role helper
+
+- Migration `0026`: add `Athlete.user`, a nullable one-to-one to the user model.
+  `on_delete=SET_NULL`: deleting a login must never delete an athlete's history.
+- `django/event_handler/roles.py` (new), with one function, `role_of(user)`, returning
+  `"administrator"`, `"coach"`, `"athlete"` or `None`. Every permission class and every
+  view that needs to know asks this one function.
+- A login with both a coach profile and an athlete link is a data error: `role_of`
+  returns `None` for it and logs a warning.
+
+**Done when:**
+
+- [ ] `0026` applies to an empty database and to a copy of an existing one, and
+      `makemigrations --check` reports no drift.
+- [ ] `role_of` returns the right answer for: an administrator; a coach; an athlete; a
+      login with neither; a login with both; an inactive login of each kind (all
+      `None`); an anonymous request (`None`).
+- [ ] Deleting a login leaves its athlete record, sets and reps untouched.
+- [ ] The full Django suite still passes.
+
+**Stop. Devin reviews.**
+
+## Phase 1 — The checks
+
+Rewrite `permissions.py` on top of `role_of`:
+
+| Class | Lets through |
+|---|---|
+| `IsCoach` | administrator, coach |
+| `IsInstallationAdmin` (and `IsActiveStaff`, kept as an alias) | administrator |
+| `IsAthlete` | athlete |
+| `IsCoachOrAthlete` | any of the three |
+
+`IsCoach` keeps its name on purpose: 32 endpoints already use it, and its meaning
+becomes the one the name always claimed.
+
+**Done when:**
+
+- [ ] **One test walks every route that uses `IsCoach`** — discovered from the URL
+      configuration, not typed out — and asserts, for each allowed method: a coach is
+      not refused for permission; an athlete gets `403`; a login with no role gets
+      `403`; no login gets `401`. A new coach route added later is covered without
+      anyone remembering to add a test.
+- [ ] The same walk for the administrator-only routes: a coach gets `403`.
+- [ ] Every existing test that signs in as a plain user still passes — which means the
+      test fixtures give that user a coach profile. Fix the fixtures, not the checks.
+- [ ] The full Django suite passes.
+
+**Stop. Devin reviews.**
+
+## Phase 2 — Signing in, and archiving
+
+- The sign-in response and the session route add `role`, and for an athlete
+  `athlete_id` and `athlete_name`.
+- A login with no role is refused **at sign-in** with a plain message, not handed a
+  token that then fails everywhere.
+- Archiving an athlete (`is_active = False`, from spec 01) also sets their login's
+  `is_active` to false; unarchiving turns it back on. Inactive logins are already
+  refused by the JWT layer on every request, so access ends at once.
+
+**Done when:**
+
+- [ ] Sign-in returns the right `role` for all three; `athlete_id` only for an athlete.
+- [ ] A login with no role cannot sign in.
+- [ ] After an athlete is archived, a request made with a token issued **before** the
+      archive gets `401`.
+- [ ] Unarchiving restores sign-in. The athlete's history is unchanged throughout.
+
+**Stop. Devin reviews.**
+
+## Phase 3 — The coach app
+
+- After sign-in, if `role` is `athlete`, the coach app shows a short screen — "This is
+  the coach workspace. Use the session link your coach sent you." — with a sign-out
+  button, and loads nothing else.
+- The Coaches entry in the account menu keys off `role === "administrator"`.
+
+**Done when:**
+
+- [ ] *(Frontend test)* An athlete sign-in on `/coach` renders the notice and makes no
+      coach API requests.
+- [ ] *(Browser)* A coach and an administrator see exactly what they saw before.
+- [ ] The frontend suite passes and the production build succeeds.
+
+---
+
+## Acceptance criteria
+
+- [ ] An athlete login is refused by every coach-only and administrator-only endpoint.
+- [ ] A login attached to nothing is refused everywhere, including at sign-in.
+- [ ] Archiving an athlete ends their access immediately and keeps their history.
+- [ ] No coach or administrator loses anything they could do before.
+- [ ] Nothing behaves differently between a gym box and a hosted installation.
+
+## Risks
+
+| Risk | What reduces it |
+|---|---|
+| A coach route is missed and stays open to athletes | The Phase 1 test discovers routes from the URL configuration rather than a list |
+| Existing coaches are locked out because they have no coach profile | Spec 01's migration `0025` gives every existing login one; Phase 1 fails loudly if a fixture user lacks it |
+| Someone adds a third kind of login later and it silently becomes a coach | Refused-by-default: a new kind gets nothing until a class lets it through |
+
+## Docs to update when done
+
+`docs/journal/apis.md` — the section titled *"Coach" means "logged in", and nothing
+more* is no longer true; rewrite it with what forced the change and what was rejected.
+`docs/remote/access.md` — section 5 (two kinds of login) becomes a description of the
+code rather than a plan.

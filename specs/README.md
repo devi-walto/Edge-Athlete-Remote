@@ -1,0 +1,204 @@
+# Specs
+
+Everything that has been **decided but not built**, one file per feature. Read this page
+first: it is the index, the order to build in, and the decisions every spec assumes.
+
+> Specs live here, outside `docs/`, so they are never published to the public docs
+> site (`docs/publish.sh` copies only `docs/`). When a spec is finished, its lasting
+> reasoning moves into `docs/` and the spec is marked Done.
+
+Written 2026-10-06. Owner: Devin Walton. Project: CSC 4903, due **November 11, 2026**.
+
+---
+
+## How every spec is written
+
+- **Phases.** Each spec is cut into phases small enough to review in one sitting.
+- **Testable criteria at the end of every phase.** A phase is done when its checklist is
+  true, not when the code is written. Each item is an automated test unless it says
+  *(Browser)* or *(By hand)*.
+- **A stop after every phase.** Devin reviews before the next phase starts. Do not run
+  several phases ahead.
+- **Work on a branch, merge at the end.** `main` stays releasable.
+- **Record the baseline first.** Before changing anything, note how many backend and
+  frontend tests pass on `main`.
+
+### Running the tests
+
+```bash
+docker compose build django          # the image BAKES the source: rebuild or you test old code
+docker compose run --rm django python manage.py test event_handler
+docker compose run --rm django python manage.py makemigrations --check --dry-run
+cd react && npx vitest run && npm run build
+./docs/build.sh                      # docs, warnings fatal
+```
+
+The Django suite had 447 tests in `tests.py` on 2026-10-06.
+
+### House rules (from earlier sessions, still in force)
+
+- Commit messages are short notes-to-self, lower case, no ticket language.
+- **No co-author or AI attribution lines on commits.**
+- Every code file opens with a plain-language comment saying why it exists.
+- Credit Braydon wherever his work is described.
+
+---
+
+## The specs, in build order
+
+| # | Spec | Form item | Depends on | Status |
+|---|---|---|---|---|
+| 01 | [Secure coach accounts](remote/01-coach-accounts.md) | 2 | — | Approved, not started |
+| 02 | [Roles: administrator, coach, athlete](remote/02-roles.md) | 3 | 01 | Written |
+| 05 | [Hosted mode](remote/05-hosted-mode.md) | 3 | 02 | Written |
+| 03 | [Athlete login links](remote/03-athlete-login-links.md) | 4 | 02, 05 | Written |
+| 04 | [Session link and virtual racks](remote/04-session-link-and-virtual-racks.md) | 3, 4 | 02, 03, 05 | Written |
+| 06 | [Design rules for the coach interface](ui/06-design-rules.md) | 11 | — | Written |
+| 07 | [Planning](ui/07-planning.md) | 11 | 06, 01 | Written, one decision open |
+| 08 | [Session](ui/08-session.md) | 11 | 06 | Written |
+| 09 | [Analytics](ui/09-analytics.md) | 11 | 06 | Written |
+
+**Build 05 before 03 and 04.** It is numbered 05 because it was listed fifth, but 03
+and 04 both need its "is this installation hosted?" switch.
+
+**The two tracks can interleave.** Specs 01–05 are the remote access work. Specs 06–09
+are the coach interface cleanup. They touch different files for the most part; the
+overlaps are called out inside each spec.
+
+### Not specced yet
+
+| Work | Form item | Why not yet |
+|---|---|---|
+| Hosting on k3s, HTTPS, CI/CD | 1 | Devin's hands-on learning; the design is in `docs/remote/hosting.md` |
+| The demo installation | 5 | Part of the hosting template |
+| Sensors over the internet | 6 | Design is in `docs/remote/sensors.md`; firmware not started |
+| The athlete's screens | 4 | No mockup yet. Spec 04 covers the server side |
+| The remote coach page in the final look | 4, 11 | The mockup's Remote page is a first draft in an older style |
+
+---
+
+## The project's Definition of Done
+
+From the submitted form (`~/Downloads/4903 Student Project- Devin Walton.pdf`),
+in priority order:
+
+1. The app runs on k3s at a public HTTPS link, with automatic certificates and CI/CD.
+2. Coach accounts secured: setup code, administrator manages coach logins, no
+   well-known demo login in production.
+3. Coach and athlete roles; athletes join only sessions assigned to their group, each
+   on their own rack.
+4. Remote athlete access: personal login link, session link from any network,
+   encrypted live updates.
+5. A separate demo installation from the same template.
+6. Remote sensors over MQTT with TLS, one credential each, settings stored on the sensor.
+7. End to end, live or on video, from a different network with a real sensor.
+8. Developer documentation.
+9. Weekly progress reports to Dr. Prather, with commit links.
+10. Final presentation: slides, 20 minutes plus 10 of questions.
+
+**Item 11, added 2026-10-06 (goes on the next weekly report):** a unified coach
+interface. The front end and back end need to agree, and the local and hosted versions
+need to look and behave alike, before a version is published. Specs 06–09.
+
+---
+
+## Decisions every spec assumes
+
+### One codebase, two deployments
+
+A **gym box** (one machine in the gym, its own Wi-Fi, no internet needed) and a
+**hosted installation** (on a k3s cluster, reached over the internet) run the same
+code, the same database schema and the same message topics. **Every decision must work
+in both.** The only intended difference is spec 05's switch.
+
+One database per installation. The code never knows another installation exists.
+
+### The training model — use these words in the interface
+
+| Term | What it is | Rules |
+|---|---|---|
+| **Training Block** | A template: an ordered list of days, plus a weekly pattern and a length | **Only ever a template.** No group, no dates. Never "deployed" to a group directly |
+| **Training Program** | An instance: your own copy of a block, for one or more groups, with a start date | Freely editable; edits never touch the block. Can be **saved as a new Training Block** (promoted) |
+| **Training Session** | One day of a program on the calendar; later, the day as it was actually run | Created when a program is **scheduled**, not when it is created |
+| **Training Group** | Athletes who train together | Filtered, never fenced: every coach sees every group |
+| **Roster** | Everyone you coach | The only place athletes are created |
+
+The flow in Planning is **1 Build a Training Block → 2 Create a Training Program →
+3 Schedule Training Sessions.** Do not use the word "deploy" for block → group.
+
+A program is **not scheduled** until the coach confirms its start date on the
+calendar. Until then its days and date can change freely. Once scheduled, what is *in*
+a day can still change, but days cannot be added, removed or reordered.
+
+### People and access
+
+- **One coach role.** Every coach can see and do everything in the coach workspace.
+- **One administrator flag** (Django `is_staff`), used only for managing coach logins.
+  The interface says **Administrator**, never "head coach" for this flag.
+- **Coaches create every athlete.** No public sign-up, in either deployment.
+- **The gym stays account-free.** No athlete logs in at a gym rack.
+- **Remote athletes** get a login through a personal, single-use **login link** the
+  coach sends. The same button handles a forgotten password. A link replaces the login,
+  never the training data.
+- **The session link** is not a secret. An athlete gets in only if their login is
+  linked to an athlete who belongs in that session.
+- **A remote athlete's device is their rack.** The server creates a rack for them when
+  they join and releases it when the session ends.
+- **A sensor belongs to an athlete** once it leaves the gym, and attaches to that
+  athlete's rack on its own.
+- **No list of athlete names is ever shown to someone who is not signed in.**
+
+### The interface
+
+- The state machine redesign (PLANNING / SESSION / ANALYTICS, the glass navbar) takes
+  precedence over Braydon's screens. His screens are fitted into it.
+- **Reduce buried buttons.** Anything pressable must look pressable; anything a coach
+  needs to see must be visible without drilling.
+- The session strip stays on all three states and the header card stays on every tab.
+  Both are intentional.
+- Full rules in [spec 06](ui/06-design-rules.md).
+
+---
+
+## The mockups
+
+- **In this repo:** [`ui/mockups/coach-ui-final.html`](ui/mockups/coach-ui-final.html).
+  Open it in a browser. Static, sample data only.
+- **Live canvas (private to Devin):** https://claude.ai/artifact/Hz3PHLTwRv52aUVe9U4gsG
+  — three pages: Remote coach view, Current local UI (real screenshots), Proposed local
+  UI. The rows titled **Final version** are the agreed design.
+- **Source and screenshots:** `~/Desktop/Coding Projects/Edge Athlete Remote/mockups/`
+  and `.../ui-captures/` (outside the repo).
+
+Specs refer to mockup screens by file name, for example `V3b_DesignStep2`.
+
+---
+
+## Facts about the code worth knowing before starting
+
+Checked on 2026-10-06 against commit `31f0573`.
+
+- **Permissions today:** `IsCoach` means only "is logged in" and guards 32 endpoints;
+  `IsActiveStaff` guards 9; **21 endpoints are open to anyone**
+  (`django/event_handler/permissions.py`, `views.py`).
+- **Logins:** Django's built-in users, JWT through `rest_framework_simplejwt`. Access
+  token 8 hours, refresh token 7 days, rotating.
+- **Braydon's coach-account work** is on the team repo's `main`, fetched here as
+  `refs/tmp/team-main`: commits `78260b4`, `b59a531`, `5a35928`.
+- **Migrations stop at `0022`.** Spec 01 adds `0023`–`0025`.
+- **The rack screen** listens to one sensor, and only while a set is running
+  (`react/src/rack/RackScreen.jsx`, around line 540).
+- **`instantiate_block()`** creates a program and, as its last line, calls
+  `generate_schedule()` (`django/event_handler/services/planning.py`).
+- **A program's days cannot be edited through the API today.** Blocks have routes for
+  adding, reordering, editing and deleting days; programs have only "create" and
+  "promote". See spec 07.
+- **`promote_program_to_block()`** copies days and movements up into a new block. It
+  copies no dates and no group. A block has no date field.
+- **"Behind"** (an athlete trending down) is worked out in the browser, one request per
+  athlete, in `react/src/coach/groupHistory.js`. See spec 09.
+- **Design and Workout catalog are one component** (`react/src/WorkoutCatalog.jsx`)
+  shown twice with a different `section` value.
+- **The local app** runs from the team clone at
+  `~/Desktop/Coding Projects/Edge Athlete/Edge-Athlete` (same app code as this repo).
+  Demo login `coach` / `coachpass` until spec 01 lands.

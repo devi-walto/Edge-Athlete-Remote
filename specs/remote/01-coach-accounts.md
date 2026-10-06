@@ -2,7 +2,9 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-05
-- Status: Draft — waiting on review
+- Status: **Approved 2026-10-05, not started.** Waiting on Devin's go to begin Phase 0
+- Mockup: `FirstRun`, `SignIn`, `Coaches`, `AccountMenu` on the Remote page of the canvas (first-draft styling; follow [spec 06](../ui/06-design-rules.md) for the look)
+- Index and shared decisions: [specs/README.md](../README.md)
 - Form item: Definition of Done #2 ("Coach accounts are secured")
 - Next spec: 02 — roles (coach, athlete, everyone else refused)
 
@@ -264,11 +266,22 @@ No new screen is wired up yet.
 | An upgrade locks existing coaches out | Phase 0 tests the migrations on a copy of a real database; Phase 3B rehearses the whole upgrade |
 | The demo login is still needed for local development | It still works with `DEBUG` on; the seed service keeps its explicit override |
 
-## Open questions for Devin
+## Decided (2026-10-05)
 
-1. **Skip the laptop preview compose file?** It is a convenience for running on a
-   laptop at `localhost:8088`. Recommended: skip; bring it over later if wanted.
-2. **Archive in PLANNING → Groups, rather than his separate roster tab?** Recommended:
-   yes — one roster, not two.
-3. **Merge to `main` only after Phase 4**, with each phase reviewed on the branch first?
-   Recommended: yes.
+1. **The laptop preview compose file (`b59a531`) is skipped.** Bring it over later if wanted.
+2. **Archive lives with the roster, not in a separate roster tab of Braydon's.** When
+   this spec was written that meant PLANNING → Groups. [Spec 07](../ui/07-planning.md)
+   moves the roster to its own **Roster** tab; put Archive wherever the roster is when
+   Phase 2 is built.
+3. **Merge to `main` only after Phase 4**, with each phase reviewed on the branch first.
+4. **The state-machine redesign takes precedence over Braydon's screens.** His screens
+   are fitted into PLANNING / SESSION / ANALYTICS, never the other way round.
+
+## Notes added 2026-10-06
+
+- The role rules this spec prepares for are in [spec 02](02-roles.md). This spec only
+  lays the groundwork (every login has a coach profile; the coach list is filtered).
+- On a hosted installation the operator runs `setup_code` when creating the
+  installation and passes the code to that program's coach. Same command, same code path.
+- Count check: `IsCoach` guards 32 endpoints, `IsActiveStaff` 9, and 21 are open
+  (2026-10-06). Earlier notes said 34 and 15.
