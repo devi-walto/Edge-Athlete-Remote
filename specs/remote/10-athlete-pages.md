@@ -2,13 +2,14 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: Written — not started. **One decision open** (does an athlete see "Recent"; see below)
+- Status: Written — not started. No decisions open
 - Form item: Definition of Done #4 (remote athlete access)
 - Depends on: [03 Login links](03-athlete-login-links.md) (the sign-in pages),
   [04 Session link](04-session-link-and-virtual-racks.md) (the join rule and the rack screen),
   [05 Hosted mode](05-hosted-mode.md). Reads what [07 Planning](../ui/07-planning.md) schedules
 - Mockup: the **REMOTE flow** row on the canvas's Final designs page —
-  `F_Ath_R3` (home), `F_Ath_R3b` (home, a session is live), `F_Ath_R10` (session ended)
+  `F_Ath_R3` (home), `F_Ath_R3b` (home, a session is live), `F_Ath_R3c` (a past
+  session), `F_Ath_R10` (session ended)
 
 ## Why
 
@@ -44,15 +45,12 @@ depend on finding a link.
   ([spec 06](../ui/06-design-rules.md) rule 9), sized for a phone held upright. The
   lifting screen keeps the rack screen's own look, because it *is* the rack screen.
 
-### Open decision — does an athlete see "Recent"?
+### Decided 2026-10-06 — an athlete sees "Recent", as a summary
 
-The mockup shows a short **Recent** list under "Coming up", tagged TO DECIDE: the
-athlete's last few finished sessions, each with sets, reps and average speed.
-
-- **Recommendation: yes, at that summary level only.** It costs one more query over
-  the athlete's own sets, it gives them a reason to open the app, and it shows nothing
-  a coach has not already seen. No drill-down, no charts, no comparing to anyone.
-- If the answer is no, Phase 3 is dropped and nothing else changes.
+Home shows the athlete's last three finished sessions, each with sets, reps and
+average speed. It shows nothing a coach has not already seen and nothing about anyone
+else. **Opening one to see its sets (Phase 4) is wanted but comes last**, and is built
+only if there is time before November 11.
 
 ## What exists (after specs 03, 04 and 05)
 
@@ -78,7 +76,7 @@ athlete's last few finished sessions, each with sets, reps and average speed.
   (spec 04 Phase 3).
 - A calendar file or feed. Times on sessions.
 - Any athlete editing: their plan, their maxes, their groups.
-- A history page with charts or set-by-set detail.
+- Charts, trends, or comparing one session with another.
 - Notifications that a session has started.
 
 ---
@@ -188,7 +186,7 @@ counted.
 
 **Stop. Devin reviews.**
 
-## Phase 3 — Recent *(only if the open decision is yes)*
+## Phase 3 — Recent
 
 The route gains `"recent"`: the athlete's last three ended sessions, each
 `{date, title, sets, reps, avg_velocity | null}`, counted from their own sets (false
@@ -201,6 +199,40 @@ sets left out). Home shows them as solid rows under "Coming up".
 - [ ] The numbers match the athlete's rows in each session's daily report.
 - [ ] A session where every set was typed in shows "not measured" for speed.
 - [ ] The route still makes a fixed number of queries.
+
+**Stop. Devin reviews.**
+
+## Phase 4 — Opening a past session *(built last, only if there is time)*
+
+Mockup `F_Ath_R3c`. This is small but not free, so it is its own phase:
+
+- **Why it is small:** the data is already there. Every set is saved with its load,
+  reps and speeds, and the coach's Analytics already reads them.
+- **Why it is not free:** that reading is coach-only, and the rows that show a set live
+  inside the coach's large `Dashboard.jsx`, not in a piece that can be reused. So this
+  needs one new athlete-scoped route and one new, simple page. It does not reuse or
+  touch the coach's screens.
+
+`GET /api/athlete/sessions/{id}/` — athlete only, hosted only. The caller's own sets
+in that session, grouped by movement in the order lifted:
+`{date, title, groups, totals: {sets, reps, avg_velocity | null},
+movements: [{name, sets: [{set_number, weight_lbs, reps, avg_velocity | null}]}]}`.
+False sets are left out. A session the athlete did not lift in returns `404`, the same
+as a session that does not exist, so the route cannot be used to discover sessions.
+
+Page `/athlete/sessions/<id>`: the banner (date, group, title), the three totals, one
+card per movement with a row per set ("Set 2 · 225 lb × 5 · 0.66 m/s"), and **Back to
+home**. A typed-in set reads "not measured". In Recent, each row becomes pressable and
+gains a chevron. No bars per rep, no compare, no charts.
+
+**Done when:**
+
+- [ ] The route returns only the caller's sets; athlete A asking for a session only
+      athlete B lifted in gets `404`.
+- [ ] The totals match the athlete's rows in that session's daily report.
+- [ ] *(Frontend test)* A typed-in set shows "not measured", not 0.00.
+- [ ] *(Browser)* Recent → a session → Back to home works on a 390-pixel-wide phone.
+- [ ] The coach's Analytics screens and `Dashboard.jsx` are unchanged (`git diff`).
 
 **Stop. Devin reviews.**
 
@@ -221,7 +253,7 @@ sets left out). Home shows them as solid rows under "Coming up".
 | Another athlete's name leaks through a shared session or a group roster | The route sends group names and movement names only; a test searches the response |
 | Polling every 15 seconds from many phones loads the server | The route makes a fixed, small number of queries and stops when the tab is hidden |
 | "Coming up" is wrong on a shared date before spec 07 Phase 3 exists | It degrades to one row per program, which is still true; it tightens when that phase lands |
-| Scope grows into an athlete history app before November 11 | Recent is three summary rows or nothing; everything else is a non-goal |
+| Scope grows into an athlete history app before November 11 | Recent is three summary rows; the detail page is Phase 4, built last and only if there is time; charts and comparisons are non-goals |
 
 ## Docs to update when done
 
