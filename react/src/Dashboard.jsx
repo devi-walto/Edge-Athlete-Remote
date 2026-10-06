@@ -32,7 +32,10 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import "./App.css";
 import { navigate } from "./router.js";
-import { coachFetch, coachLogin, getCoachToken, setCoachToken } from "./coach/api.js";
+import { coachFetch, fetchCurrentCoach, getCoachToken, setCoachToken } from "./coach/api.js";
+import AccountMenu from "./coach/AccountMenu.jsx";
+import ChangePassword from "./coach/ChangePassword.jsx";
+import SignIn from "./coach/SignIn.jsx";
 import useLiveRoomState from "./useLiveRoomState.js";
 import { compareReps, groupHistorySets, summariseTrainingDays } from "./historyView.js";
 import WorkoutCatalog from "./WorkoutCatalog.jsx";
@@ -361,32 +364,6 @@ function WallView({ monitor }) {
         <span>Saved results update automatically after each set</span>
         <span>Snapshot {timeLabel(roomState.generated_at)} · Revision {roomState.revision}</span>
       </footer>
-    </main>
-  );
-}
-
-function CoachLogin({ onLogin, error, busy }) {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  return (
-    <main className="monitor coach-login-screen">
-      <section className="coach-login-card">
-        {/* The coach app's own icon, matching the workspace topbar and the icon
-            this device installs to a home screen — the "EA" lettermark it
-            replaced belonged to no particular app. Larger here than in the
-            topbar because it is the only mark on the screen. */}
-        <div className="monitor-brand"><img src="/icon-coach-192.png" alt="" width="52" height="52" /><span>Edge Athlete</span></div>
-        <p className="coach-eyebrow">Coach workspace</p>
-        <h1>See the whole room.<br />Coach the next rep.</h1>
-        <p>Live saved performance, rack comparisons, and hardware health in one focused view.</p>
-        <form onSubmit={(event) => { event.preventDefault(); onLogin(username, password); }}>
-          <label>Username<input value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" required /></label>
-          <label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required /></label>
-          {error && <p className="coach-login-error" role="alert">{error}</p>}
-          <button disabled={busy}>{busy ? "Signing in..." : "Open coach view"}</button>
-        </form>
-      </section>
-      <aside className="coach-login-art"><span>VELOCITY</span><strong>0.86</strong><b>m/s</b></aside>
     </main>
   );
 }
@@ -746,9 +723,8 @@ function RackSelectionControls({ rack }) {
   </section>;
 }
 
-function CoachView({ monitor, accessToken, onLogout, coachState }) {
+function CoachView({ monitor, accessToken, onLogout, coachState, me }) {
   const { roomState, requestState, connectionState, lastError, refresh } = monitor;
-  const [brandMenuOpen,setBrandMenuOpen]=useState(false);
   const [selectedRackNumber,setSelectedRackNumber]=useState(null),[requestedTab,setRequestedTab]=useState("room"),[athletes,setAthletes]=useState([]),[selectedAthleteId,setSelectedAthleteId]=useState(null),[context,setContext]=useState(null),[note,setNote]=useState(null),[draft,setDraft]=useState(""),[loading,setLoading]=useState(false),[saving,setSaving]=useState(false),[error,setError]=useState("");
   const headers={Accept:"application/json",Authorization:`Bearer ${accessToken}`};
   useEffect(()=>{fetch("/api/athletes/",{headers}).then(r=>r.json()).then(setAthletes).catch(()=>setAthletes([]));},[accessToken]);
@@ -865,17 +841,9 @@ function CoachView({ monitor, accessToken, onLogout, coachState }) {
   // `coach-states-clearance` is room for the navbar to float over. Without it
   // the last card on every screen sits under the glass and cannot be reached.
   return <main className="monitor coach-monitor coach-states-clearance"><header className="coach-topbar">
-    {/* The logo is the account menu. Log out is a once-a-day action and did not
-        earn permanent space in the toolbar; "Change device" is gone entirely
-        because Room Layout already owns it (CoachTablet.jsx). */}
-    <div className="monitor-brand coach-brand-menu">
-      <button type="button" className="coach-brand-button" onClick={()=>setBrandMenuOpen(!brandMenuOpen)} aria-expanded={brandMenuOpen} aria-haspopup="menu">
-        <img src="/icon-coach-192.png" alt="" width="38" height="38" /><span>Edge Athlete</span>
-      </button>
-      {brandMenuOpen && <div className="coach-brand-dropdown" role="menu">
-        <button type="button" role="menuitem" onClick={onLogout}>Log out</button>
-      </div>}
-    </div>
+    {/* The top-left corner is the account menu: who is signed in, Coaches for an
+        administrator, Change password, Log out. See coach/AccountMenu.jsx. */}
+    <AccountMenu me={me} onLogout={onLogout} />
     <div className="coach-session-title"><span>Coach workspace</span><h1>{roomState.session?.label||"No active session"}</h1></div>
     <div className="coach-topbar-actions">
       <ConnectionBadge connectionState={connectionState} requestState={requestState}/>
@@ -985,8 +953,9 @@ export default function Dashboard({ mode = "wall", coachState = "planning" }) {
   // not throw the coach back to a login screen mid-session. It is the same
   // stored token /coach/setup uses, so the two screens share one login.
   const [accessToken, setAccessToken] = useState(() => getCoachToken());
-  const [loginError, setLoginError] = useState("");
-  const [loginBusy, setLoginBusy] = useState(false);
+  // Who is signed in: their username, whether they are an administrator, and whether
+  // they are still on a temporary password. Asked once per login.
+  const [me, setMe] = useState(null);
   const monitor = useLiveRoomState({ mode, accessToken, onAuthRequired: () => forget() });
 
   // One place to drop the login, so the stored copy can never outlive the
@@ -995,25 +964,32 @@ export default function Dashboard({ mode = "wall", coachState = "planning" }) {
   function forget() {
     setCoachToken(null);
     setAccessToken(null);
+    setMe(null);
   }
 
-  async function login(username, password) {
-    setLoginBusy(true);
-    setLoginError("");
-    try {
-      setAccessToken(await coachLogin(username, password));
-    } catch (error) {
-      setLoginError(error.message || "The base station could not be reached.");
-    } finally {
-      setLoginBusy(false);
-    }
-  }
+  useEffect(() => {
+    if (mode !== "coach" || !accessToken) return undefined;
+    let cancelled = false;
+    fetchCurrentCoach(accessToken)
+      .then((reply) => { if (!cancelled) setMe(reply); })
+      // 401: the stored login is no longer good. Anything else (the network
+      // dropping mid-session) must NOT sign a coach out; the menu just shows
+      // no name until the next successful answer.
+      .catch((error) => { if (!cancelled && error.status === 401) forget(); });
+    return () => { cancelled = true; };
+  }, [mode, accessToken]);
 
   if (mode === "coach" && !accessToken) {
-    return <CoachLogin onLogin={login} error={loginError} busy={loginBusy} />;
+    return <SignIn onSignedIn={setAccessToken} />;
+  }
+  // A temporary password opens this form and nothing else. The server enforces the
+  // same thing on every coach route, so this is the polite version of a locked door.
+  if (mode === "coach" && me?.must_change_password) {
+    return <ChangePassword accessToken={accessToken} forced onLogout={forget}
+      onChanged={() => setMe({ ...me, must_change_password: false })} />;
   }
   if (mode === "coach") {
-    return <CoachView monitor={monitor} accessToken={accessToken} onLogout={forget} coachState={coachState} />;
+    return <CoachView monitor={monitor} accessToken={accessToken} onLogout={forget} coachState={coachState} me={me} />;
   }
   return <WallView monitor={monitor} />;
 }

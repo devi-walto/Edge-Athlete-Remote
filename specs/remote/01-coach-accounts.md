@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-05
-- Status: **Phases 0 and 1 done 2026-10-06 on branch `feature-coach_accounts`, every check passed. Waiting on Devin's review before Phase 2**
+- Status: **Phases 0, 1 and 2 done 2026-10-06 on branch `feature-coach_accounts`. Phase 2: every check passed but one, which is met only in part (an archived athlete's history; see Phase 2 result). Waiting on Devin's review before Phase 3**
 - Mockup: `F_SignIn`, `F_FirstRun`, `F_Coaches`, `F_AccountMenu` on the canvas's **Final designs** page ("The same in both: accounts and access"), also in [`specs/ui/mockups/coach-ui-final.html`](../ui/mockups/coach-ui-final.html). Look: [spec 06](../ui/06-design-rules.md) rule 9
 - Index and shared decisions: [specs/README.md](../README.md)
 - Form item: Definition of Done #2 ("Coach accounts are secured")
@@ -302,23 +302,99 @@ files that nothing imports are deleted, and so is the dead `coachTabs.js`.
 
 **Done when:**
 
-- [ ] His screen tests are rewritten against the new screens and pass, along with the
+- [x] His screen tests are rewritten against the new screens and pass, along with the
       full frontend suite and the production build. No behaviour he tested is dropped
       without a line here saying why.
-- [ ] *(Browser)* Sign in, first-run setup, Coaches and the account menu match their
+- [x] *(Browser)* Sign in, first-run setup, Coaches and the account menu match their
       Final design boards.
-- [ ] *(Browser)* On an empty database the site shows first-run setup and nothing else.
-- [ ] *(Browser)* The sign-in form is empty when it loads.
-- [ ] *(Browser)* An administrator sees **Coaches** in the account menu; a regular
+- [x] *(Browser)* On an empty database the site shows first-run setup and nothing else.
+- [x] *(Browser)* The sign-in form is empty when it loads.
+- [x] *(Browser)* An administrator sees **Coaches** in the account menu; a regular
       coach does not.
-- [ ] *(Browser)* Creating a coach shows a temporary password once. Signing in with it
+- [x] *(Browser)* Creating a coach shows a temporary password once. Signing in with it
       forces a password change, and the workspace opens only after that.
 - [ ] *(Browser)* Archiving an athlete removes them from the session picker and the
-      roster; their past sets still open in ANALYTICS.
-- [ ] *(Browser)* All three states — SESSION, ANALYTICS, PLANNING — still work as
+      roster; their past sets still open in ANALYTICS. **Met in part; see below.**
+- [x] *(Browser)* All three states — SESSION, ANALYTICS, PLANNING — still work as
       before for a regular coach.
-- [ ] The word "head coach" does not appear on the Coaches screen or in its messages.
-- [ ] No file under `react/src/coach/` is left that nothing imports.
+- [x] The word "head coach" does not appear on the Coaches screen or in its messages.
+- [x] No file under `react/src/coach/` is left that nothing imports.
+
+### Phase 2 result — 2026-10-06
+
+**Frontend: 281 tests pass, production build succeeds. Django: 491 pass** (unchanged).
+
+| Screen | File | Notes |
+|---|---|---|
+| Sign in | `coach/SignIn.jsx` | Replaces the dashboard's two-column sign-in and the Room Layout page's form (the one that arrived with `coach` / `coachpass` typed in). Always empty |
+| First-run setup | `coach/FirstRun.jsx`, `coach/FirstRunGate.jsx` | The gate wraps the whole app in `main.jsx` |
+| Change password | `coach/ChangePassword.jsx` | Forced after a temporary password; also at `/coach/account/password` |
+| Coaches | `coach/Coaches.jsx` in `coach/AccountPage.jsx` | At `/coach/account/coaches` |
+| Account menu | `coach/AccountMenu.jsx` | In the workspace top bar and on the Coaches page |
+| Archive athlete | `coach/archiveAthlete.js`, a row action in `coach/GroupsView.jsx` | |
+| Shared look | `coach/account.css` | Solid surfaces, from the boards |
+
+Deleted: Braydon's `CoachAccess`, `FirstRunSetup`, `CoachManagement`, `RosterWorkspace`
+(and their stylesheets), and the dead `coachTabs.js` with its test.
+
+**Checked in a browser**, on a second copy of the app against a copy of the database
+and against an empty one:
+
+- **Empty database:** `/`, `/coach/planning`, `/rack/1`, `/dashboard` and the Coaches
+  address all show first-run setup. With no code issued the screen says how to get one.
+  A wrong code is refused with a sentence; a too-weak password is refused with the
+  reason; the right code creates the administrator, opens the workspace, and the setup
+  screen does not come back. `coach` / `coachpass` does not sign in.
+- **Existing database:** the sign-in form loads empty; a wrong password gets "The
+  username or password was not accepted."; the administrator's menu shows the badge and
+  **Coaches**; adding a coach shows the temporary password once and **Done** removes it
+  from the page.
+- **The new coach:** signing in with the temporary password shows "Choose your own
+  password" and nothing else; a coach route called directly with that login answers
+  `403 password_change_required`; after changing it the workspace opens. Their menu has
+  no badge and no **Coaches**, and typing the Coaches address shows "Only an
+  administrator can manage coach logins."
+- **Three states as a regular coach:** no failed request, no page error.
+- **Archive:** while the athlete is in a running session the server refuses and the
+  screen shows its sentence, "End the active training session before removing this
+  athlete." With no session running, the athlete leaves the roster and every picker;
+  their sets are still stored, and the list including archived athletes still has them.
+
+**The check met only in part: an archived athlete's history.** Their sets are kept, and
+every frozen daily report that includes them still opens from ANALYTICS → Reports. But
+ANALYTICS → Athlete and History pick an athlete from a list, and an archived athlete is
+no longer on it, so their own page cannot be opened. Fixing that means the Analytics
+picker offering archived athletes, which is a decision for spec 09 (it changes the
+picker for everyone). **Devin to decide:** fix it here, in spec 09, or accept it.
+
+**Found and fixed while building:**
+
+- **A temporary password would have signed the coach straight back out.** The live
+  room feed asks for coach detail. With a change due, the server answered "not signed
+  in" (`401`), and the workspace reacts to that by discarding the login. The server now
+  answers `403 password_change_required` there and on adding an athlete, like every
+  other coach route, and a test pins it. (A Phase 1 rule, corrected here.)
+- **The workspace's own button styles were overriding the account menu's** (it was
+  drawn in the wrong size and weight). The menu's rules are now specific enough to win.
+- **Logging out on the Coaches page** now returns to the workspace's address, so the
+  next person to sign in lands on the workspace and not on a page about someone else's
+  account.
+
+**Where it differs from the boards, and why:**
+
+- **No installation name on the sign-in card.** The board shows one under "Edge
+  Athlete". Nothing stores a name for an installation yet (that is the parent registry,
+  in the hosting work), so the line reads "Coach workspace".
+- **Add coach opens a one-field form** (username) above the table. The board shows only
+  the button. Braydon's optional "choose the temporary password yourself" field is
+  gone: the server always makes one.
+- **Deactivate and Reset password ask first**, in the browser's own confirm box. A
+  styled dialog is spec 06's shared-pieces work.
+- **The session strip is not on the Coaches page**, matching the board. The bottom
+  navbar is, with nothing selected.
+- **Of Braydon's 14 screen tests, 13 are carried over** to the new screens, and 4 are
+  added. Not carried over: creating and editing an athlete in his separate roster
+  page, because that page was not built.
 
 **Stop. Devin reviews before Phase 3.**
 

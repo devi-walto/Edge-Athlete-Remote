@@ -35,6 +35,7 @@ import AthleteWorkoutPlanning from '../AthleteWorkoutPlanning.jsx'
 import {
   FILTER_ALL, FILTER_UNASSIGNED, filterRoster, indexMembership, isMember, unassignedCount,
 } from './roster.js'
+import { archiveAthlete } from './archiveAthlete.js'
 import './GroupsView.css'
 
 const TRAINING_GROUPS_URL = '/api/training-groups/'
@@ -197,6 +198,25 @@ export default function GroupsView({ accessToken, onLogout }) {
     }
   }
 
+  // Archive: the athlete leaves the roster for good but keeps their history. See
+  // archiveAthlete.js for why it is never a delete.
+  async function archive(athlete) {
+    setBusy(`a-${athlete.id}`)
+    setError('')
+    const result = await archiveAthlete(athlete, accessToken)
+    setBusy('')
+    if (result.status === 'signed-out') { onLogout(); return }
+    if (result.status === 'refused') { setError(result.message); return }
+    if (result.status !== 'archived') return
+    setAthletes((current) => current.filter((a) => a.id !== athlete.id))
+    setMembersByGroup((current) => Object.fromEntries(Object.entries(current)
+      .map(([groupId, members]) => [groupId, members.filter((m) => m.id !== athlete.id)])))
+    setGroups((current) => current.map((g) => {
+      const wasMember = (membersByGroup[g.id] || []).some((m) => m.id === athlete.id)
+      return wasMember ? { ...g, athlete_count: Math.max(0, (g.athlete_count || 1) - 1) } : g
+    }))
+  }
+
   // Add or remove one athlete. Both are the same route with a different method
   // and the same {athletes:[id]} body — membership is current-state only, so
   // taking someone out never rewrites what they already trained.
@@ -325,6 +345,7 @@ export default function GroupsView({ accessToken, onLogout }) {
                 <thead><tr>
                   <th scope="col">Athlete</th><th scope="col">Groups</th>
                   <th scope="col">{filterGroup ? filterGroup.name : ''}</th>
+                  <th scope="col"><span className="groups-visually-hidden">Archive</span></th>
                 </tr></thead>
                 <tbody>{rows.map((athlete) => {
                   const memberOf = index.get(athlete.id) || []
@@ -342,6 +363,14 @@ export default function GroupsView({ accessToken, onLogout }) {
                         onClick={() => setMembership(filterGroup, athlete, !isMember(index, athlete.id, filterGroup.id))}>
                         {busy === `m-${athlete.id}` ? '…' : inFilterGroup ? 'Remove' : 'Add'}
                       </button>}
+                    </td>
+                    <td>
+                      {/* Leaves the roster, keeps the history. Quiet on purpose: it
+                          is rare, and it asks before doing anything. */}
+                      <button type="button" className="groups-archive" disabled={busy === `a-${athlete.id}`}
+                        onClick={() => archive(athlete)}>
+                        {busy === `a-${athlete.id}` ? '…' : 'Archive'}
+                      </button>
                     </td>
                   </tr>
                 })}</tbody>

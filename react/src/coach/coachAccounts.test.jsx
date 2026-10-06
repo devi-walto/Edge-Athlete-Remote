@@ -2,20 +2,30 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import CoachAccess from './CoachAccess.jsx'
-import RosterWorkspace from './RosterWorkspace.jsx'
-import FirstRunSetup from './FirstRunSetup.jsx'
+import AccountMenu from './AccountMenu.jsx'
 import ChangePassword from './ChangePassword.jsx'
-import CoachManagement from './CoachManagement.jsx'
+import Coaches from './Coaches.jsx'
+import FirstRun from './FirstRun.jsx'
+import FirstRunGate from './FirstRunGate.jsx'
+import SignIn from './SignIn.jsx'
+import { archiveAthlete } from './archiveAthlete.js'
 import {
   changePassword, coachFetch, coachLogin, createCoach, listCoaches,
   resetCoachPassword, setCoachToken, updateCoach,
 } from './api.js'
 
+// These tests began as Braydon's, written for his coach-accounts screens. The screens
+// were rebuilt to the Final designs (spec 01, Phase 2), so each test here is his test
+// pointed at the screen that now does that job. One of his is not carried over:
+// creating and editing an athlete in his separate roster page, because that page was
+// not built (the workspace already has a roster). Archiving, the part that was new,
+// is tested below.
 vi.mock('./api.js', () => ({
   coachFetch: vi.fn(),
   coachLogin: vi.fn(),
   setCoachToken: vi.fn(),
+  getCoachToken: vi.fn(),
+  fetchCurrentCoach: vi.fn(),
   changePassword: vi.fn(),
   listCoaches: vi.fn(),
   createCoach: vi.fn(),
@@ -72,181 +82,251 @@ async function click(text) {
   await act(async () => button.click())
 }
 
-it('requires the one-time setup code and matching passwords before creating the first admin', async () => {
-  coachFetch.mockResolvedValueOnce({ setup_required: true, setup_code_pending: true }).mockResolvedValueOnce({ access: 'setup-token' })
-  const loggedIn = vi.fn()
-  await render(<CoachAccess onLoggedIn={loggedIn} />)
-  const inputs = container.querySelectorAll('input')
-  await fill(inputs[0], 'firstcoach')
-  await fill(inputs[1], 'unique-password')
-  await fill(inputs[2], 'different')
-  await fill(inputs[3], 'ABC234')
+const ME = { username: 'head', is_staff: true, must_change_password: false }
+const COACHES = [
+  { id: 1, username: 'head', is_active: true, is_staff: true, must_change_password: false },
+  { id: 2, username: 'assistant', is_active: true, is_staff: false, must_change_password: false },
+]
+const labels = () => [...container.querySelectorAll('button')].map(b => b.textContent)
+
+// ---------- first-run setup ----------
+
+it('requires matching passwords and the setup code before creating the first administrator', async () => {
+  coachFetch.mockResolvedValueOnce({ access: 'setup-token' })
+  const claimed = vi.fn()
+  await render(<FirstRun codePending onRecheck={vi.fn()} onClaimed={claimed} onAlreadyClaimed={vi.fn()} />)
+  const [code, username, password, again] = container.querySelectorAll('input')
+  await fill(code, 'ABC234')
+  await fill(username, 'firstcoach')
+  await fill(password, 'unique-password')
+  await fill(again, 'different')
   await submit()
   expect(container.querySelector('[role=alert]').textContent).toContain('do not match')
-  expect(coachFetch).toHaveBeenCalledTimes(1)
-  await fill(inputs[2], 'unique-password')
+  expect(coachFetch).not.toHaveBeenCalled()
+  await fill(again, 'unique-password')
   await submit()
   expect(coachFetch).toHaveBeenLastCalledWith('/api/auth/setup/', {
     method: 'POST',
     body: { username: 'firstcoach', password: 'unique-password', setup_code: 'ABC234' },
   })
   expect(setCoachToken).toHaveBeenCalledWith('setup-token')
-  expect(loggedIn).toHaveBeenCalledWith('setup-token')
+  expect(claimed).toHaveBeenCalledWith('setup-token')
 })
 
-it('tells the operator to issue a setup code when none is pending yet', async () => {
-  coachFetch.mockResolvedValueOnce({ setup_required: true, setup_code_pending: false }).mockResolvedValueOnce({ setup_required: true, setup_code_pending: true })
-  await render(<CoachAccess onLoggedIn={vi.fn()} />)
-  expect(container.textContent).toContain('manage.py setup_code')
-  await click('I\u2019ve run it — check again')
+it('says how to get a setup code when none has been issued, and lets the operator check again', async () => {
+  const recheck = vi.fn()
+  await render(<FirstRun codePending={false} onRecheck={recheck} onClaimed={vi.fn()} onAlreadyClaimed={vi.fn()} />)
+  expect(container.querySelector('[role=note]').textContent).toContain('manage.py setup_code')
+  await click('I’ve run it — check again')
+  expect(recheck).toHaveBeenCalledTimes(1)
+  await render(<FirstRun codePending onRecheck={recheck} onClaimed={vi.fn()} onAlreadyClaimed={vi.fn()} />)
   expect(container.querySelector('[role=note]')).toBeNull()
 })
 
-it('shows login errors and accepts valid credentials', async () => {
-  coachFetch.mockResolvedValue({ setup_required: false })
-  coachLogin.mockRejectedValueOnce(new Error('The username or password was not accepted.')).mockResolvedValueOnce('login-token')
-  const loggedIn = vi.fn()
-  await render(<CoachAccess onLoggedIn={loggedIn} />)
-  const inputs = container.querySelectorAll('input')
-  await fill(inputs[0], 'coach')
-  await fill(inputs[1], 'password')
-  await submit()
-  expect(container.querySelector('[role=alert]').textContent).toContain('not accepted')
-  expect(loggedIn).not.toHaveBeenCalled()
-  await submit()
-  expect(loggedIn).toHaveBeenCalledWith('login-token')
-})
-
-it('recovers when another browser completes setup first', async () => {
+it('steps aside when another browser finishes setup first', async () => {
   coachFetch.mockResolvedValueOnce({ setup_required: true, setup_code_pending: true })
     .mockRejectedValueOnce(Object.assign(new Error('Setup is complete.'), { status: 409 }))
-  await render(<CoachAccess onLoggedIn={vi.fn()} />)
+  await render(<FirstRunGate><p>the app</p></FirstRunGate>)
+  expect(container.textContent).toContain('Set up this installation')
+  const [code, username, password, again] = container.querySelectorAll('input')
+  await fill(code, 'ABC234'); await fill(username, 'late'); await fill(password, 'unique-password'); await fill(again, 'unique-password')
   await submit()
-  expect(container.textContent).toContain('Coach login')
-  expect(container.querySelectorAll('input')).toHaveLength(2)
+  expect(container.textContent).toBe('the app')
+  expect(setCoachToken).not.toHaveBeenCalled()
 })
+
+it('does not show the app before it knows whether the installation is set up, and offers a retry', async () => {
+  let answer
+  coachFetch.mockReturnValueOnce(new Promise((resolve) => { answer = resolve }))
+  await render(<FirstRunGate><p>the app</p></FirstRunGate>)
+  expect(container.textContent).not.toContain('the app')
+  expect(container.querySelector('[role=status]')).toBeTruthy()
+  await act(async () => answer({ setup_required: false }))
+  expect(container.textContent).toBe('the app')
+})
+
+it('offers a retry when the server cannot be reached on a device that has never seen it set up', async () => {
+  coachFetch.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ setup_required: false })
+  await render(<FirstRunGate><p>the app</p></FirstRunGate>)
+  expect(container.querySelector('[role=alert]').textContent).toContain('could not be reached')
+  expect(container.textContent).not.toContain('the app')
+  await click('Retry connection')
+  expect(container.textContent).toBe('the app')
+})
+
+it('lets a rack that has already seen a set-up installation reopen while the server is unreachable', async () => {
+  localStorage.setItem('edge_setup_complete', 'true')
+  coachFetch.mockRejectedValueOnce(new Error('offline'))
+  await render(<FirstRunGate><p>the rack screen</p></FirstRunGate>)
+  expect(container.textContent).toBe('the rack screen')
+})
+
+// ---------- sign in ----------
+
+it('starts empty, shows a sign-in error, and accepts valid credentials', async () => {
+  coachLogin.mockRejectedValueOnce(new Error('The username or password was not accepted.')).mockResolvedValueOnce('login-token')
+  const signedIn = vi.fn()
+  await render(<SignIn onSignedIn={signedIn} />)
+  const [username, password] = container.querySelectorAll('input')
+  expect(container.querySelectorAll('input')).toHaveLength(2)
+  expect(username.value).toBe('')          // no "coach" / "coachpass" waiting in the form
+  expect(password.value).toBe('')
+  await fill(username, 'coach')
+  await fill(password, 'password')
+  await submit()
+  expect(container.querySelector('[role=alert]').textContent).toContain('not accepted')
+  expect(signedIn).not.toHaveBeenCalled()
+  await fill(password, 'password')
+  await submit()
+  expect(coachLogin).toHaveBeenLastCalledWith('coach', 'password')
+  expect(signedIn).toHaveBeenCalledWith('login-token')
+})
+
+// ---------- change password ----------
 
 it('changes a temporary password and reports success', async () => {
   changePassword.mockResolvedValue(null)
   const changed = vi.fn()
   await render(<ChangePassword accessToken="token" forced onChanged={changed} onLogout={vi.fn()} />)
-  const inputs = container.querySelectorAll('input')
-  await fill(inputs[0], 'temp-pass')
-  await fill(inputs[1], 'new-pass')
-  await fill(inputs[2], 'mismatch')
+  expect(container.textContent).toContain('Temporary password')
+  const [current, next, again] = container.querySelectorAll('input')
+  await fill(current, 'temp-pass')
+  await fill(next, 'my-own-password')
+  await fill(again, 'not-the-same')
   await submit()
   expect(container.querySelector('[role=alert]').textContent).toContain('do not match')
   expect(changePassword).not.toHaveBeenCalled()
-  await fill(inputs[2], 'new-pass')
+  await fill(again, 'my-own-password')
   await submit()
-  expect(changePassword).toHaveBeenCalledWith('token', 'temp-pass', 'new-pass')
-  expect(changed).toHaveBeenCalled()
+  expect(changePassword).toHaveBeenCalledWith('token', 'temp-pass', 'my-own-password')
+  expect(changed).toHaveBeenCalledTimes(1)
 })
+
+it('shows why a password change was refused', async () => {
+  changePassword.mockRejectedValue(new Error('That password is incorrect.'))
+  const changed = vi.fn()
+  await render(<ChangePassword accessToken="token" onChanged={changed} onCancel={vi.fn()} />)
+  const [current, next, again] = container.querySelectorAll('input')
+  await fill(current, 'wrong'); await fill(next, 'my-own-password'); await fill(again, 'my-own-password')
+  await submit()
+  expect(container.querySelector('[role=alert]').textContent).toContain('incorrect')
+  expect(changed).not.toHaveBeenCalled()
+})
+
+// ---------- the Coaches page ----------
 
 it('creates a coach and shows the temporary password exactly once', async () => {
-  listCoaches.mockResolvedValue([])
-  createCoach.mockResolvedValue({ id: 2, username: 'assistant', is_staff: false, is_active: true, must_change_password: true, temporary_password: 'TEMP-abc123' })
-  await render(<CoachManagement accessToken="token" currentUsername="head" onLogout={vi.fn()} onChangePassword={vi.fn()} />)
-  const inputs = container.querySelectorAll('input')
-  await fill(inputs[0], 'assistant')
+  listCoaches.mockResolvedValue(COACHES)
+  createCoach.mockResolvedValue({ username: 'newcoach', temporary_password: 'Temp-Pass-123!' })
+  await render(<Coaches accessToken="token" me={ME} onLogout={vi.fn()} onChangePassword={vi.fn()} />)
+  await click('Add coach')
+  await fill(container.querySelector('form input'), 'newcoach')
   await submit()
-  expect(createCoach).toHaveBeenCalledWith('token', 'assistant', '')
-  expect(container.textContent).toContain('TEMP-abc123')
-  await click('Dismiss')
-  expect(container.textContent).not.toContain('TEMP-abc123')
+  expect(createCoach).toHaveBeenCalledWith('token', 'newcoach')
+  expect(container.querySelector('[role=status]').textContent).toContain('Temp-Pass-123!')
+  expect(container.querySelector('[role=status]').textContent).toContain('cannot be shown again')
+  await click('Done')
+  expect(container.textContent).not.toContain('Temp-Pass-123!')
 })
 
-it('does not let an administrator change their own access or reset their own password from the list', async () => {
-  listCoaches.mockResolvedValue([{ id: 1, username: 'head', is_staff: true, is_active: true, must_change_password: false }])
-  await render(<CoachManagement accessToken="token" currentUsername="head" onLogout={vi.fn()} onChangePassword={vi.fn()} />)
-  expect(container.textContent).toContain('This is you')
-  expect([...container.querySelectorAll('button')].some(b => b.textContent === 'Deactivate')).toBe(false)
-  expect([...container.querySelectorAll('button')].some(b => b.textContent === 'Make coach')).toBe(false)
+it('does not let an administrator deactivate, demote or reset themselves from the list', async () => {
+  listCoaches.mockResolvedValue([COACHES[0]])
+  const changeOwn = vi.fn()
+  await render(<Coaches accessToken="token" me={ME} onLogout={vi.fn()} onChangePassword={changeOwn} />)
+  expect(labels()).toEqual(['Add coach', 'Change password'])
+  await click('Change password')
+  expect(changeOwn).toHaveBeenCalledTimes(1)
 })
 
-const assistant = (overrides = {}) => (
-  { id: 2, username: 'assistant', is_staff: false, is_active: true, must_change_password: false, ...overrides })
-
-it('deactivates and reactivates another coach', async () => {
-  listCoaches
-    .mockResolvedValueOnce([assistant()])
-    .mockResolvedValueOnce([assistant({ is_active: false })])
-    .mockResolvedValueOnce([assistant()])
+it('deactivates another coach after asking, and reactivates them', async () => {
+  listCoaches.mockResolvedValueOnce(COACHES)
+    .mockResolvedValueOnce([COACHES[0], { ...COACHES[1], is_active: false }])
+    .mockResolvedValue(COACHES)
   updateCoach.mockResolvedValue({})
-  await render(<CoachManagement accessToken="token" currentUsername="head" onLogout={vi.fn()} onChangePassword={vi.fn()} />)
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValue(true)
+  await render(<Coaches accessToken="token" me={ME} onLogout={vi.fn()} onChangePassword={vi.fn()} />)
   await click('Deactivate')
-  expect(updateCoach).toHaveBeenCalledWith('token', 2, { is_active: false })
+  expect(updateCoach).not.toHaveBeenCalled()             // said no: nothing happens
+  await click('Deactivate')
+  expect(confirm.mock.calls[1][0]).toContain('Nothing they recorded is removed')
+  expect(updateCoach).toHaveBeenLastCalledWith('token', 2, { is_active: false })
+  expect(container.textContent).toContain('Deactivated')
   await click('Reactivate')
   expect(updateCoach).toHaveBeenLastCalledWith('token', 2, { is_active: true })
 })
 
-it('promotes a coach to administrator and shows the admin badge', async () => {
-  listCoaches
-    .mockResolvedValueOnce([assistant()])
-    .mockResolvedValueOnce([assistant({ is_staff: true })])
+it('makes a coach an administrator and shows the Administrator badge', async () => {
+  listCoaches.mockResolvedValueOnce(COACHES).mockResolvedValue([COACHES[0], { ...COACHES[1], is_staff: true }])
   updateCoach.mockResolvedValue({})
-  await render(<CoachManagement accessToken="token" currentUsername="head" onLogout={vi.fn()} onChangePassword={vi.fn()} />)
+  await render(<Coaches accessToken="token" me={ME} onLogout={vi.fn()} onChangePassword={vi.fn()} />)
+  expect(container.querySelectorAll('.acct-row .acct-badge')).toHaveLength(1)
   await click('Make administrator')
   expect(updateCoach).toHaveBeenCalledWith('token', 2, { is_staff: true })
-  expect(container.textContent).toContain('administrator')
-  expect([...container.querySelectorAll('button')].some(b => b.textContent === 'Make coach')).toBe(true)
+  expect(container.querySelectorAll('.acct-row .acct-badge')).toHaveLength(2)
+  expect(labels()).toContain('Remove administrator')
 })
 
-it('resets another coach password after confirmation', async () => {
-  listCoaches.mockResolvedValue([{ id: 2, username: 'assistant', is_staff: false, is_active: true, must_change_password: false }])
-  resetCoachPassword.mockResolvedValue({ id: 2, username: 'assistant', temporary_password: 'RESET-xyz' })
-  vi.spyOn(window, 'confirm').mockReturnValue(true)
-  await render(<CoachManagement accessToken="token" currentUsername="head" onLogout={vi.fn()} onChangePassword={vi.fn()} />)
+it('resets another coach password only after confirmation', async () => {
+  listCoaches.mockResolvedValue(COACHES)
+  resetCoachPassword.mockResolvedValue({ username: 'assistant', temporary_password: 'Fresh-Temp-9!' })
+  vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValue(true)
+  await render(<Coaches accessToken="token" me={ME} onLogout={vi.fn()} onChangePassword={vi.fn()} />)
+  await click('Reset password')
+  expect(resetCoachPassword).not.toHaveBeenCalled()
   await click('Reset password')
   expect(resetCoachPassword).toHaveBeenCalledWith('token', 2)
-  expect(container.textContent).toContain('RESET-xyz')
+  expect(container.querySelector('[role=status]').textContent).toContain('Fresh-Temp-9!')
 })
 
-it('creates, edits without clearing a tag, and removes a member with history-retention confirmation', async () => {
-  let roster = []
-  coachFetch.mockImplementation(async (path, options) => {
-    if (!options.method) return roster
-    if (options.method === 'POST') roster = [{ id: 1, name: options.body.name, is_active: true }]
-    if (options.method === 'PATCH') roster = [{ ...roster[0], name: options.body.name }]
-    if (options.method === 'DELETE') roster = [{ ...roster[0], is_active: false }]
-    return options.method === 'DELETE' ? null : roster[0]
-  })
-  const onChanged = vi.fn()
-  await render(<RosterWorkspace accessToken="token" onLogout={vi.fn()} onChanged={onChanged} />)
-  await fill(container.querySelector('input'), 'Jordan')
-  await submit()
-  expect(container.querySelector('li').textContent).toContain('Jordan')
-  await click('Edit')
-  await fill(container.querySelector('input'), 'Jordan Smith')
-  await submit()
-  expect(coachFetch).toHaveBeenCalledWith('/api/athletes/1/', { token: 'token', method: 'PATCH', body: { name: 'Jordan Smith' } })
-  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
-  await click('Remove')
-  expect(confirm).toHaveBeenCalledWith(expect.stringContaining('Saved workouts and reports will be retained'))
-  expect(container.querySelector('li').textContent).toContain('No team members yet')
-  expect(onChanged).toHaveBeenCalledTimes(3)
+it('hands back to sign in when the server says this login may not manage coaches', async () => {
+  listCoaches.mockRejectedValue(Object.assign(new Error('forbidden'), { status: 403 }))
+  const logout = vi.fn()
+  await render(<Coaches accessToken="token" me={ME} onLogout={logout} onChangePassword={vi.fn()} />)
+  expect(logout).toHaveBeenCalledTimes(1)
 })
 
-it('keeps a member visible when the server refuses removal during a session', async () => {
-  coachFetch.mockResolvedValueOnce([{ id: 1, name: 'Jordan', is_active: true }]).mockRejectedValueOnce(new Error('End the active training session before removing this athlete.'))
-  vi.spyOn(window, 'confirm').mockReturnValue(true)
-  await render(<RosterWorkspace accessToken="token" onLogout={vi.fn()} onChanged={vi.fn()} />)
-  await click('Remove')
-  expect(container.querySelector('[role=alert]').textContent).toContain('End the active training session')
-  expect(container.querySelector('li').textContent).toContain('Jordan')
+it('never calls the administrator a head coach', async () => {
+  listCoaches.mockResolvedValue(COACHES)
+  await render(<Coaches accessToken="token" me={ME} onLogout={vi.fn()} onChangePassword={vi.fn()} />)
+  expect(container.textContent.toLowerCase()).not.toContain('head coach')
+  expect(container.textContent).toContain('Administrator')
 })
 
-it('does not expose the app before first-run status is known and offers a retry on failure', async () => {
-  coachFetch.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ setup_required: false })
-  await render(<FirstRunSetup><p>Application ready</p></FirstRunSetup>)
-  expect(container.textContent).not.toContain('Application ready')
-  await click('Retry connection')
-  expect(container.textContent).toContain('Application ready')
+// ---------- the account menu ----------
+
+it('shows Coaches in the account menu to an administrator only', async () => {
+  await render(<AccountMenu me={ME} onLogout={vi.fn()} />)
+  await click('Edge Athlete')
+  expect(container.textContent).toContain('head')
+  expect(container.querySelector('.acct-badge').textContent).toBe('Administrator')
+  expect(labels().some(l => l.startsWith('Coaches'))).toBe(true)
+
+  await render(<AccountMenu me={{ username: 'assistant', is_staff: false }} onLogout={vi.fn()} />)
+  expect(container.textContent).toContain('assistant')
+  expect(container.querySelector('.acct-badge')).toBeNull()
+  expect(labels().some(l => l.startsWith('Coaches'))).toBe(false)
+  expect(labels()).toContain('Change password')
+  expect(labels()).toContain('Log out')
 })
 
-it('allows a previously configured rack to reopen its offline shell', async () => {
-  localStorage.setItem('edge_setup_complete', 'true')
-  coachFetch.mockRejectedValue(new Error('offline'))
-  await render(<FirstRunSetup><p>Offline shell</p></FirstRunSetup>)
-  expect(container.textContent).toContain('Offline shell')
+// ---------- archiving an athlete ----------
+
+const reply = (status, body) => ({ status, json: async () => body })
+
+it('archives an athlete only after a question that says their history is kept', async () => {
+  const fetchImpl = vi.fn().mockResolvedValue(reply(204))
+  const confirm = vi.fn().mockReturnValueOnce(false).mockReturnValue(true)
+  const athlete = { id: 7, name: 'Jordan Avery' }
+  expect(await archiveAthlete(athlete, 'token', { confirm, fetchImpl })).toEqual({ status: 'cancelled' })
+  expect(fetchImpl).not.toHaveBeenCalled()
+  expect(await archiveAthlete(athlete, 'token', { confirm, fetchImpl })).toEqual({ status: 'archived' })
+  expect(confirm.mock.calls[0][0]).toContain('Jordan Avery')
+  expect(confirm.mock.calls[0][0]).toContain('is kept')
+  expect(fetchImpl).toHaveBeenCalledWith('/api/athletes/7/', expect.objectContaining({ method: 'DELETE' }))
+})
+
+it('passes on the reason when the server refuses to archive during a session', async () => {
+  const fetchImpl = vi.fn().mockResolvedValue(reply(409, { detail: 'End the active training session before removing this athlete.' }))
+  const result = await archiveAthlete({ id: 7, name: 'Jordan Avery' }, 'token', { confirm: () => true, fetchImpl })
+  expect(result).toEqual({ status: 'refused', message: 'End the active training session before removing this athlete.' })
 })

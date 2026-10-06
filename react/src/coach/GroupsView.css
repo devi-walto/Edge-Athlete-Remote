@@ -153,3 +153,9 @@
 
 .groups-roster button:hover { border-color: #a9f04d; }
 .groups-roster button.is-on { background: #a9f04d; border-color: #a9f04d; color: #071006; font-weight: 800; }
+
+/* Archive an athlete: a quiet text action at the end of a roster row. */
+.groups-archive { background: transparent; border: 0; color: var(--muted); cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; min-height: 44px; padding: 0 10px; }
+.groups-archive:hover { color: var(--ink); }
+.groups-archive:disabled { cursor: default; opacity: .55; }
+.groups-visually-hidden { border: 0; clip: rect(0 0 0 0); height: 1px; margin: -1px; overflow: hidden; padding: 0; position: absolute; width: 1px; }

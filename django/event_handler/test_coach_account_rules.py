@@ -197,8 +197,15 @@ class TemporaryPasswordTests(APITestCase):
             refused = self.client.get(route)
             self.assertEqual(refused.status_code, 403, route)
             self.assertEqual(refused.data['code'], 'password_change_required', route)
-        # Adding an athlete is open to read and coach-only to write: still refused.
-        self.assertIn(self.client.post('/api/athletes/', {'name': 'Nope'}, format='json').status_code, (401, 403))
+        # Routes that are open to read and coach-only for more must say "change your
+        # password", never "you are not signed in": a 401 makes the screens discard the
+        # login and show the sign-in form again, which the coach could never get past.
+        for refused in (self.client.post('/api/athletes/', {'name': 'Nope'}, format='json'),
+                        self.client.get('/api/room-state/?details=true')):
+            self.assertEqual(refused.status_code, 403)
+            self.assertEqual(refused.data['code'], 'password_change_required')
+        # The public room picture is still public.
+        self.assertEqual(self.client.get('/api/room-state/').status_code, 200)
 
         # The way out stays open.
         self.assertEqual(self.client.get('/api/auth/me/').status_code, 200)

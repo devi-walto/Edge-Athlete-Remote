@@ -33,6 +33,7 @@ import { getActiveSession } from './api/client.js'
 import { subscribeRackCommand } from './mqtt/client.js'
 import { navigate, usePathname } from './router.js'
 import { coachStateFromPath, pathForCoachState, resumeCoachState } from './coach/coachState.js'
+import AccountPage, { accountPageFromPath } from './coach/AccountPage.jsx'
 import { applyRoleIdentity, getDeviceId, roleFromPath } from './device.js'
 import { Centered } from './ui.jsx'
 import { T } from './theme.js'
@@ -267,6 +268,11 @@ function route(pathname) {
   // coach view is the working tool (login, athletes, planning, reports); the
   // wall view is the read-only room display. Same file, same live room feed,
   // different `mode`.
+  // A coach's own login: Coaches (administrators) and Change password. Not a
+  // training state, so it is not one of the three; see coach/AccountPage.jsx.
+  const accountPage = accountPageFromPath(pathname)
+  if (accountPage) return <AccountPage page={accountPage} />
+
   const coachState = coachStateFromPath(pathname)
   if (coachState) return <Dashboard mode="coach" coachState={coachState} />
   // A bare /coach names no state, so send this device back to the one it left.

@@ -13,10 +13,13 @@ import { createRoot } from 'react-dom/client'
 import '@fontsource-variable/inter'
 import './index.css'
 import App from './App.jsx'
+import FirstRunGate from './coach/FirstRunGate.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    {/* Until an installation has been claimed with its setup code, every device
+        sees first-run setup and nothing else. See coach/FirstRunGate.jsx. */}
+    <FirstRunGate><App /></FirstRunGate>
   </StrictMode>,
 )
 

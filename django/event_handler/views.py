@@ -53,7 +53,7 @@ from .models import (Node, RackScreen, Athlete, TrainingSession, Set, Rep, Athle
 
 # Coaches are Django users; there is no separate coach table. See docs/reference/spec.md.
 User = get_user_model()
-from .permissions import IsActiveStaff, IsCoach, password_change_due
+from .permissions import IsActiveStaff, IsCoach, refuse_while_password_change_due
 from .serializers import (SetSerializer, SetCompleteSerializer, RackScreenSerializer,
                           AthleteSerializer, TrainingSessionSerializer,
                           NodeSerializer, ExerciseSerializer, TrainingGroupSerializer,
@@ -261,10 +261,17 @@ def _save_receipt(request, runtime, command_id, response_body, response_status):
 
 def _require_coach(request):
     """Small helper for endpoints that are open to read but coach-only to write:
-    returns True if the caller is a logged-in coach who is past their temporary
-    password (the same rule the IsCoach permission applies)."""
-    return bool(request.user and request.user.is_authenticated
-                and not password_change_due(request.user))
+    returns True if the caller is a logged-in coach.
+
+    A coach who is still on a temporary password is NOT answered "not logged in":
+    that reply makes the screens throw away a perfectly good login and show the
+    sign-in form again, forever. They get the same 403 "change your password
+    first" that the IsCoach permission gives, which the screens know how to act on.
+    """
+    if not (request.user and request.user.is_authenticated):
+        return False
+    refuse_while_password_change_due(request.user)
+    return True
 
 
 # ─────────────────────────── tablet: racks ───────────────────────────
