@@ -191,13 +191,17 @@ existing roster in PLANNING → Groups), **only when `useDeployment()` says host
 
 ## Phase 4 — The athlete's two pages
 
+Mockups `F_Ath_R1` (login link), `F_Ath_R1b` (a link that no longer works) and
+`F_Ath_R2` (sign in), on the canvas's Final designs page, REMOTE flow.
+
 - `/login-link/<link>`: calls `lookup`; shows "Hi <name>"; username, password, password
   again; **Create my login**. An invalid link shows one message for every cause: "This
   link doesn't work any more. Ask your coach for a new one."
 - `/athlete`: username and password; a line under it — "Forgot it? Ask your coach for a
   new login link." The coach sign-in page links here ("Athlete? …").
-- Both use the app's existing look. After either, the athlete lands on a placeholder
-  ("You're signed in. Open the session link your coach sent.") until spec 04.
+- Both use the solid look (spec 06 rule 9), sized for a phone. After either, the
+  athlete lands on a placeholder ("You're signed in. Open the session link your coach
+  sent.") until [spec 10](10-athlete-pages.md) replaces it with the home page.
 
 **Done when:**
 

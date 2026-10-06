@@ -53,12 +53,13 @@ The Django suite had 447 tests in `tests.py` on 2026-10-06.
 | 05 | [Hosted mode](remote/05-hosted-mode.md) | 3 | 02 | Written |
 | 03 | [Athlete login links](remote/03-athlete-login-links.md) | 4 | 02, 05 | Written |
 | 04 | [Session link and virtual racks](remote/04-session-link-and-virtual-racks.md) | 3, 4 | 02, 03, 05 | Written |
+| 10 | [The athlete's home page](remote/10-athlete-pages.md) | 4 | 03, 04, 05 | Written, one decision open (does an athlete see Recent) |
 | 06 | [Design rules for the coach interface](ui/06-design-rules.md) | 11 | — | Written |
 | 07 | [Planning](ui/07-planning.md) | 11 | 06, 01 | Written |
 | 08 | [Session](ui/08-session.md) | 11 | 06 | Written |
 | 09 | [Analytics](ui/09-analytics.md) | 11 | 06 | Written |
 
-**Build 05 before 03 and 04.** It is numbered 05 because it was listed fifth, but 03
+**Build 05 before 03 and 04, and 10 after 04.** It is numbered 05 because it was listed fifth, but 03
 and 04 both need its "is this installation hosted?" switch.
 
 **The two tracks can interleave.** Specs 01–05 are the remote access work. Specs 06–09
@@ -72,7 +73,7 @@ overlaps are called out inside each spec.
 | Hosting on k3s, HTTPS, CI/CD | 1 | Devin's hands-on learning; the design is in `docs/remote/hosting.md` |
 | The demo installation | 5 | Part of the hosting template |
 | Sensors over the internet | 6 | Design is in `docs/remote/sensors.md`; firmware not started |
-| The athlete's home, sign-in and login-link pages | 4 | Drawn and agreed (Final designs page, REMOTE flow steps 1–4b and 10); not specced yet. Needs one new read-only "coming up" route. The lifting screen (steps 5–9) is spec 04 Phase 3 |
+| Moving an installation between a gym box and hosted (copying the database across, both directions) | 1 | Tabled 2026-10-06: it is an operator job that needs the hosting template, so it is specced with the k3s work. The model is in `docs/remote/databases.md` |
 
 ---
 
