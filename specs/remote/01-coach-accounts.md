@@ -101,8 +101,8 @@ cleanly; the screens have to be re-homed. That is Phase 2.
 **Goal:** his backend is in the repository and everything that worked still works.
 No new screen is wired up yet.
 
-- Work on a branch, `remote/coach-accounts`. `main` stays releasable.
-- Record the baseline first: how many Django tests and frontend tests pass on `main`.
+- Work on the branch `feature-coach_accounts`, started from `SprintBranch`.
+- Record the baseline first: how many Django tests and frontend tests pass on `SprintBranch`.
 - Bring over `78260b4`. For the `Dashboard.jsx` conflict, **keep the redesigned
   version**; his new screen files come in but are not attached to anything yet.
 - Bring over the demo guard from `5a35928` by hand (`ensure_demo_coach.py`, its tests,
@@ -240,7 +240,8 @@ No new screen is wired up yet.
 - [ ] Following the install guide on an empty database, word for word, ends at a
       working coach workspace.
 - [ ] The route table lists every new route with the right lock.
-- [ ] The branch is merged to `main`, pushed, and the docs are published.
+- [ ] The branch is merged into `SprintBranch` and pushed. (`main` is updated from
+      `SprintBranch` by CI/CD, or by Devin until that exists; the docs are published from `main`.)
 - [ ] The weekly report's Definition of Done shows item 2 as **Done**.
 
 ---
@@ -273,7 +274,7 @@ No new screen is wired up yet.
    this spec was written that meant PLANNING → Groups. [Spec 07](../ui/07-planning.md)
    moves the roster to its own **Roster** tab; put Archive wherever the roster is when
    Phase 2 is built.
-3. **Merge to `main` only after Phase 4**, with each phase reviewed on the branch first.
+3. **Merge into `SprintBranch` only after Phase 4**, with each phase reviewed on the branch first.
 4. **The state-machine redesign takes precedence over Braydon's screens.** His screens
    are fitted into PLANNING / SESSION / ANALYTICS, never the other way round.
 

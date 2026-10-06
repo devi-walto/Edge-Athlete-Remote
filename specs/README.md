@@ -19,9 +19,27 @@ Written 2026-10-06. Owner: Devin Walton. Project: CSC 4903, due **November 11, 2
   *(Browser)* or *(By hand)*.
 - **A stop after every phase.** Devin reviews before the next phase starts. Do not run
   several phases ahead.
-- **Work on a branch, merge at the end.** `main` stays releasable.
+- **Work on a feature branch, merge into `SprintBranch` at the end.** See "Branches" below.
 - **Record the baseline first.** Before changing anything, note how many backend and
-  frontend tests pass on `main`.
+  frontend tests pass on `SprintBranch`.
+
+### Branches
+
+Devin's convention, set 2026-10-06:
+
+| Branch | What it is |
+|---|---|
+| `SprintBranch` | **The working trunk for this project.** Every feature branch starts from it and merges back into it. It must always pass the tests. |
+| `feature-xyz` | One branch per spec, named `feature-` plus a short name, with underscores between words: `feature-coach_accounts`. Reviewed phase by phase, merged into `SprintBranch` after its last phase. |
+| `main` | **What is deployed.** Nobody commits or merges to it by hand. CI/CD will update it from `SprintBranch` and deploy it (set up with the hosting work). Until that exists, `main` is moved forward from `SprintBranch` only when Devin says so. |
+
+Feature branch for each spec: `feature-coach_accounts` (01), `feature-roles` (02),
+`feature-deployment_switch` (05), `feature-login_links` (03), `feature-session_link`
+(04), `feature-athlete_home` (10), `feature-design_rules` (06), `feature-planning`
+(07), `feature-session` (08), `feature-analytics` (09).
+
+Spec and mockup edits that are not part of a feature are committed straight to
+`SprintBranch`. Release tags and the public docs are cut from `main`.
 
 ### Running the tests
 
