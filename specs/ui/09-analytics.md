@@ -219,6 +219,34 @@ Mockups `V4e`, `V4h`.
 
 ---
 
+## Carried in from spec 01 — archived athletes in the picker
+
+Decided 2026-10-06. Spec 01 added archiving: an archived athlete leaves the roster and
+every picker, and their sets are kept. That left a gap on this side: ANALYTICS → Athlete
+and History choose an athlete from a list, an archived athlete is no longer on it, so
+their own page cannot be opened even though all of their data is still there. (Their
+sets do still show inside each saved daily report.)
+
+Build it with whichever phase of this spec reworks the athlete picker:
+
+- The picker lists active athletes as it does now, then, under a divider labelled
+  **Archived**, the archived ones. `GET /api/athletes/?include_archived=true` already
+  returns them, each with `is_active`.
+- An archived athlete's page is read-only and says so in one line under their name:
+  "Archived. Their history is kept." No notes can be added and no plan edited.
+- Archived athletes never appear in the SESSION or PLANNING pickers. This is for
+  looking back only.
+
+**Done when:**
+
+- [ ] *(Frontend test)* The Analytics picker shows archived athletes under their own
+      heading, after the active ones.
+- [ ] *(Browser)* Archive an athlete who has sets; open them from the Archived part of
+      the picker; Athlete and History show their data.
+- [ ] *(Frontend test)* An archived athlete's page offers no way to add a note or edit
+      a plan.
+- [ ] No picker in PLANNING or SESSION lists an archived athlete.
+
 ## Acceptance criteria
 
 - [ ] ANALYTICS has three tabs and one picker.

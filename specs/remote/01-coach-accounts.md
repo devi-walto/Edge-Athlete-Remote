@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-05
-- Status: **Phases 0, 1 and 2 done 2026-10-06 on branch `feature-coach_accounts`. Phase 2: every check passed but one, which is met only in part (an archived athlete's history; see Phase 2 result). Waiting on Devin's review before Phase 3**
+- Status: **Phases 0, 1 and 2 done 2026-10-06 on branch `feature-coach_accounts`. Phase 2: every check passed; the archived-athlete history item moved to spec 09 by Devin's decision. Waiting on Devin's go for Phase 3**
 - Mockup: `F_SignIn`, `F_FirstRun`, `F_Coaches`, `F_AccountMenu` on the canvas's **Final designs** page ("The same in both: accounts and access"), also in [`specs/ui/mockups/coach-ui-final.html`](../ui/mockups/coach-ui-final.html). Look: [spec 06](../ui/06-design-rules.md) rule 9
 - Index and shared decisions: [specs/README.md](../README.md)
 - Form item: Definition of Done #2 ("Coach accounts are secured")
@@ -313,8 +313,9 @@ files that nothing imports are deleted, and so is the dead `coachTabs.js`.
       coach does not.
 - [x] *(Browser)* Creating a coach shows a temporary password once. Signing in with it
       forces a password change, and the workspace opens only after that.
-- [ ] *(Browser)* Archiving an athlete removes them from the session picker and the
-      roster; their past sets still open in ANALYTICS. **Met in part; see below.**
+- [x] *(Browser)* Archiving an athlete removes them from the session picker and the
+      roster, and their sets are kept. *(Opening an archived athlete's own page in
+      ANALYTICS moved to spec 09; see below.)*
 - [x] *(Browser)* All three states — SESSION, ANALYTICS, PLANNING — still work as
       before for a regular coach.
 - [x] The word "head coach" does not appear on the Coaches screen or in its messages.
@@ -365,7 +366,8 @@ every frozen daily report that includes them still opens from ANALYTICS → Repo
 ANALYTICS → Athlete and History pick an athlete from a list, and an archived athlete is
 no longer on it, so their own page cannot be opened. Fixing that means the Analytics
 picker offering archived athletes, which is a decision for spec 09 (it changes the
-picker for everyone). **Devin to decide:** fix it here, in spec 09, or accept it.
+picker for everyone). **Decided 2026-10-06: left for spec 09**, which already reworks
+that picker.
 
 **Found and fixed while building:**
 
