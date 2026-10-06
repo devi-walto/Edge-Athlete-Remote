@@ -345,7 +345,7 @@ By hand, hosted mode, two browsers:
       set, no reps lost.
 - [ ] The coach ends the session: both racks vanish from the room; the report shows
       both athletes' sets.
-- [ ] The same build, switched to `gymbox`, runs a normal gym session with a rack
+- [ ] The same build, switched to `local`, runs a normal gym session with a rack
       tablet and no logins.
 
 ---

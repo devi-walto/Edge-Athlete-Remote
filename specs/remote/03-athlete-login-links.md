@@ -135,7 +135,7 @@ installation without configuration.
 - [ ] The athlete list never includes a token or a hash.
 - [ ] `login_status` is right in each of the three states, and `link_sent` becomes
       `none` once the link expires.
-- [ ] On a gym box (`EA_DEPLOYMENT=gymbox`) the routes exist but the roster does not
+- [ ] On a gym box (`EA_DEPLOYMENT=local`) the routes exist but the roster does not
       show them (Phase 3); the tests still pass in both modes.
 
 **Stop. Devin reviews.**

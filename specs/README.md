@@ -109,7 +109,8 @@ need to look and behave alike, before a version is published. Specs 06–09.
 A **gym box** (one machine in the gym, its own Wi-Fi, no internet needed) and a
 **hosted installation** (on a k3s cluster, reached over the internet) run the same
 code, the same database schema and the same message topics. **Every decision must work
-in both.** The only intended difference is spec 05's switch.
+in both.** The only intended difference is spec 05's switch: `EA_DEPLOYMENT`, set to
+`local` (a gym box, the default) or `remote` (hosted).
 
 One database per installation. The code never knows another installation exists.
 

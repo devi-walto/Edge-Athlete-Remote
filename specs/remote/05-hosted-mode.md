@@ -24,8 +24,11 @@ to require a login, without changing how a rack tablet works in a gym.
 
 ## Decisions this spec locks in
 
-- **One setting decides.** `EA_DEPLOYMENT`, read from the environment: `gymbox` (the
-  default) or `hosted`. Nothing else in the code asks "am I on the internet?".
+- **One setting decides.** `EA_DEPLOYMENT`, read from the environment: `local` (the
+  default) or `remote`. Nothing else in the code asks "am I on the internet?".
+- **The two values are `local` and `remote`** (Devin, 2026-10-06). In these specs and the
+  docs, "gym box" means an installation running as `local`, and "hosted" means one
+  running as `remote`. The words describe where it runs; the setting is what the code reads.
 - **Not two copies of the routes.** Each open endpoint gets a permission class that
   asks the setting. Same view, same URL.
 - **The default is the gym box.** A missing or misspelled value must not open a hosted
@@ -59,7 +62,7 @@ rows and only a coach passes; that is safe and lets this spec ship first.
 ## Scope
 
 - The setting, its validation, and a startup failure on an unknown value.
-- A permission class, `OpenOnGymBox`, plus the per-endpoint hosted rule from the table.
+- A permission class, `OpenOnLocal`, plus the per-endpoint hosted rule from the table.
 - `GET /api/system/info/` reporting the mode (open; it reveals nothing else).
 - Hosted-only refusals: the connection-test page, the demo login (already refused
   outside development by spec 01), the NFC tap route.
@@ -76,30 +79,30 @@ rows and only a coach passes; that is safe and lets this spec ship first.
 
 ## Phase 0 — The setting
 
-- `settings.py` reads `EA_DEPLOYMENT`; allowed values `gymbox`, `hosted`; default
-  `gymbox`. Any other value raises at startup with a message naming the allowed values.
+- `settings.py` reads `EA_DEPLOYMENT`; allowed values `local`, `remote`; default
+  `local`. Any other value raises at startup with a message naming the allowed values.
 - `deployment.py` (new) with `is_hosted()` — the one place that reads the setting.
-- `GET /api/system/info/` → `{"deployment": "gymbox" | "hosted", "version": "..."}`.
+- `GET /api/system/info/` → `{"deployment": "local" | "remote", "version": "..."}`.
 - `.env.example` documents the variable.
 
 **Done when:**
 
-- [ ] With the variable unset, the app starts as `gymbox` and every existing test passes.
-- [ ] `EA_DEPLOYMENT=hosted` starts; `EA_DEPLOYMENT=cloud` fails to start with a clear error.
+- [ ] With the variable unset, the app starts as `local` and every existing test passes.
+- [ ] `EA_DEPLOYMENT=remote` starts; `EA_DEPLOYMENT=cloud` fails to start with a clear error.
 - [ ] `/api/system/info/` returns the mode in both, with no login.
 
 **Stop. Devin reviews.**
 
 ## Phase 1 — The 21 endpoints
 
-- `OpenOnGymBox(hosted=<rule>)`: on a gym box, allow. Hosted, apply the rule from the
+- `OpenOnLocal(remote=<rule>)`: on a gym box, allow. Hosted, apply the rule from the
   table (`coach`, `any_role`, `coach_or_owner`, `refuse`).
 - Replace `AllowAny` on all 21 views. No view logic changes.
 - Ownership checks for `coach_or_owner` are stubs that refuse athletes until spec 04.
 
 **Done when:**
 
-- [ ] **A test walks every route that uses `OpenOnGymBox`, in both modes.** Gym box: no
+- [ ] **A test walks every route that uses `OpenOnLocal`, in both modes.** Gym box: no
       login is needed (today's behaviour, byte for byte). Hosted: no login gets `401`
       on every one.
 - [ ] A test fails if any view still uses `AllowAny` other than sign-in, the setup
@@ -116,14 +119,14 @@ rows and only a coach passes; that is safe and lets this spec ship first.
 
 - `ALLOWED_HOSTS`, CORS origins and CSRF trusted origins come from the environment when
   hosted, and startup fails if they are empty.
-- `DEBUG` on with `hosted` refuses to start.
+- `DEBUG` on with `remote` refuses to start.
 - Sign-in is rate-limited when hosted (DRF throttling; a small number per minute per address).
 - The frontend's connection-test page (`/connection-test`) renders a "not available"
   notice when the mode is hosted. It is the one screen that publishes to the broker.
 
 **Done when:**
 
-- [ ] `hosted` with `DEBUG=True`, or with empty hosts, fails to start.
+- [ ] `remote` with `DEBUG=True`, or with empty hosts, fails to start.
 - [ ] Repeated wrong sign-ins get `429` when hosted, and are unlimited on a gym box.
 - [ ] *(Frontend test)* The connection-test page shows the notice in hosted mode.
 
