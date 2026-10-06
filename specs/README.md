@@ -72,7 +72,7 @@ overlaps are called out inside each spec.
 | Hosting on k3s, HTTPS, CI/CD | 1 | Devin's hands-on learning; the design is in `docs/remote/hosting.md` |
 | The demo installation | 5 | Part of the hosting template |
 | Sensors over the internet | 6 | Design is in `docs/remote/sensors.md`; firmware not started |
-| The athlete's home, sign-in and login-link pages | 4 | Proposed on the canvas ("Remote athlete view"), login and home approved 2026-10-06; not copied to Final designs or specced yet. The lifting screen is spec 04 Phase 3 |
+| The athlete's home, sign-in and login-link pages | 4 | Drawn and agreed (Final designs page, REMOTE flow steps 1–4b and 10); not specced yet. Needs one new read-only "coming up" route. The lifting screen (steps 5–9) is spec 04 Phase 3 |
 
 ---
 
