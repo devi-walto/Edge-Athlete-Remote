@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-05
-- Status: **Phase 0 done 2026-10-06 on branch `feature-coach_accounts`, every check passed. Waiting on Devin's review before Phase 1**
+- Status: **Phases 0 and 1 done 2026-10-06 on branch `feature-coach_accounts`, every check passed. Waiting on Devin's review before Phase 2**
 - Mockup: `F_SignIn`, `F_FirstRun`, `F_Coaches`, `F_AccountMenu` on the canvas's **Final designs** page ("The same in both: accounts and access"), also in [`specs/ui/mockups/coach-ui-final.html`](../ui/mockups/coach-ui-final.html). Look: [spec 06](../ui/06-design-rules.md) rule 9
 - Index and shared decisions: [specs/README.md](../README.md)
 - Form item: Definition of Done #2 ("Coach accounts are secured")
@@ -193,24 +193,57 @@ No new screen is wired up yet.
 
 **Done when** (each is an automated test unless marked):
 
-- [ ] After `0025`, every pre-existing login has exactly one coach profile, and running
+- [x] After `0025`, every pre-existing login has exactly one coach profile, and running
       the migration twice changes nothing.
-- [ ] Claiming an installation creates a login that is an administrator **and** has a
+- [x] Claiming an installation creates a login that is an administrator **and** has a
       coach profile.
-- [ ] A wrong setup code is refused. An expired one is refused. A used one cannot be
+- [x] A wrong setup code is refused. An expired one is refused. A used one cannot be
       used again. Issuing a new code makes the old one stop working.
-- [ ] Once an installation is claimed, the setup route refuses to create another
+- [x] Once an installation is claimed, the setup route refuses to create another
       administrator.
-- [ ] A login with no coach profile does **not** appear in the coach list.
-- [ ] A coach who is not an administrator gets `403` from every account-management
+- [x] A login with no coach profile does **not** appear in the coach list.
+- [x] A coach who is not an administrator gets `403` from every account-management
       route — list, create, reset, change.
-- [ ] The last administrator cannot be deactivated or demoted. Nobody can deactivate or
+- [x] The last administrator cannot be deactivated or demoted. Nobody can deactivate or
       demote themselves.
-- [ ] A coach created by an administrator must change their password before any other
+- [x] A coach created by an administrator must change their password before any other
       coach route answers them.
-- [ ] `make_admin` promotes an existing login, and fails clearly on an unknown one.
-- [ ] `ensure_demo_coach` refuses to run with `DEBUG` off, and runs with it on.
-- [ ] The full Django suite still passes.
+- [x] `make_admin` promotes an existing login, and fails clearly on an unknown one.
+- [x] `ensure_demo_coach` refuses to run with `DEBUG` off, and runs with it on.
+- [x] The full Django suite still passes.
+
+### Phase 1 result — 2026-10-06
+
+**Django suite: 491 pass** (468 after Phase 0, plus 23 new in
+`test_coach_account_rules.py`). No migration drift. No frontend file changed.
+
+Run against the Phase 0 code, 8 of the 23 new tests fail, which is the point: they are
+the rules that were missing. The other 15 pin rules Braydon's code already kept (the
+setup code, claiming, self-demotion), so they cannot quietly stop being true.
+
+| What | How |
+|---|---|
+| **Profiles for existing logins** | Migration `0025`. On a copy of the running database both logins got one profile each, "must change password" off. Adds only what is missing; going backwards does nothing, on purpose |
+| **Coaches only** | `coach_logins()` in `coach_accounts.py`: the list, the detail route and the reset route all start from logins that have a coach profile. A login without one is not listed and answers `404` to reset, promote and deactivate |
+| **`make_admin <username>`** | New command. Promotes, never creates, never touches the password. An unknown name fails and lists the logins that do exist |
+| **The temporary password is a lock, not a suggestion** | `IsCoach`, `IsActiveStaff` and `IsInstallationAdmin` now refuse with `403` and `code: password_change_required` while a change is due. Signing in, `GET /api/auth/me/` and the change-password route stay reachable. Open routes are unaffected |
+| **Who am I** | `GET /api/auth/me/` → `username`, `is_staff`, `must_change_password` (Braydon's, now tested). The sign-in reply carries `must_change_password` |
+
+**Found while doing it:**
+
+- **The forced password change was only in the screen.** In the code as brought over,
+  a coach holding a temporary password could call every coach route directly. The
+  spec's rule ("before any other coach route answers them") needed the server to
+  refuse, so it now does. Phase 2's screens should treat that `403` code as "show the
+  change-password form".
+- **The "last administrator" rule can only ever be hit by an administrator acting on
+  themselves**, because only an administrator may call these routes at all. It is
+  still checked separately, and tested directly, so it holds if that ever changes.
+
+**One thing added beyond the spec:** `make_admin --reactivate`. Promoting a
+deactivated login would let nobody sign in, so the command refuses it unless asked to
+switch the login back on too. Without that, a box whose only administrator was
+deactivated in the database would have no way back.
 
 **Stop. Devin reviews before Phase 2.**
 

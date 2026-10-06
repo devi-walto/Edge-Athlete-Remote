@@ -1,6 +1,6 @@
 """Administrator-only management of coach logins.
 
-The head coach (a staff account) creates individual logins for the rest of the
+An administrator (a staff account) creates individual logins for the rest of the
 staff, hands out a temporary password, and can deactivate an account. Everybody
 shares ONE database — an account identifies a person, it does not partition the
 data. Ordinary coaches may use the whole coach workspace but cannot create
@@ -49,6 +49,18 @@ def _would_remove_last_admin(user, *, is_active=None, is_staff=None):
     return not others.exists()
 
 
+def coach_logins():
+    """Every login that belongs to a coach: the ones with a coach profile.
+
+    Today that is every login. It stops being true the day athletes get logins
+    (spec 03), and from then on listing "all users" here would put athletes in the
+    coaches screen and let an administrator reset an athlete's password from it.
+    The profile is the line between the two, so everything in this file starts
+    from this queryset.
+    """
+    return get_user_model().objects.filter(coach_profile__isnull=False)
+
+
 def serialize_coach(user):
     profile = getattr(user, 'coach_profile', None)
     return {
@@ -82,7 +94,7 @@ class CoachListView(APIView):
     permission_classes = [IsInstallationAdmin]
 
     def get(self, request):
-        users = get_user_model().objects.select_related('coach_profile').order_by('username')
+        users = coach_logins().select_related('coach_profile').order_by('username')
         return Response([serialize_coach(user) for user in users])
 
     def post(self, request):
@@ -110,7 +122,7 @@ class CoachDetailView(APIView):
     permission_classes = [IsInstallationAdmin]
 
     def patch(self, request, user_id):
-        user = get_user_model().objects.filter(pk=user_id).first()
+        user = coach_logins().filter(pk=user_id).first()
         if user is None:
             return Response({'detail': 'Coach not found.'}, status=404)
         is_active = request.data.get('is_active')
@@ -137,7 +149,7 @@ class CoachResetPasswordView(APIView):
     permission_classes = [IsInstallationAdmin]
 
     def post(self, request, user_id):
-        user = get_user_model().objects.filter(pk=user_id).first()
+        user = coach_logins().filter(pk=user_id).first()
         if user is None:
             return Response({'detail': 'Coach not found.'}, status=404)
         temporary_password = generate_temporary_password()
