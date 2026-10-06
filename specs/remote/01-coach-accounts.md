@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-05
-- Status: **Phase 0 done 2026-10-06 on branch `feature-coach_accounts`, waiting on Devin's review.** Two browser checks are his to do (see Phase 0)
+- Status: **Phase 0 done 2026-10-06 on branch `feature-coach_accounts`, every check passed. Waiting on Devin's review before Phase 1**
 - Mockup: `F_SignIn`, `F_FirstRun`, `F_Coaches`, `F_AccountMenu` on the canvas's **Final designs** page ("The same in both: accounts and access"), also in [`specs/ui/mockups/coach-ui-final.html`](../ui/mockups/coach-ui-final.html). Look: [spec 06](../ui/06-design-rules.md) rule 9
 - Index and shared decisions: [specs/README.md](../README.md)
 - Form item: Definition of Done #2 ("Coach accounts are secured")
@@ -116,10 +116,9 @@ No new screen is wired up yet.
 - [x] `makemigrations --check` reports no drift.
 - [x] The full Django suite passes: the baseline count, plus his new tests.
 - [x] The full frontend suite passes and the production build succeeds.
-- [ ] In a browser, an existing coach can still sign in and use SESSION, ANALYTICS and
-      PLANNING exactly as before. *(Checked at the server only; see below.)*
-- [ ] A rack screen still works with no login (the open routes are untouched).
-      *(Checked at the server only; see below.)*
+- [x] In a browser, an existing coach can still sign in and use SESSION, ANALYTICS and
+      PLANNING exactly as before. *(One visible difference; see below.)*
+- [x] A rack screen still works with no login (the open routes are untouched).
 
 ### Phase 0 result — 2026-10-06
 
@@ -141,10 +140,17 @@ No new screen is wired up yet.
   now also carries `must_change_password`), a wrong password is refused, eight rack
   routes answer with no login exactly as the running app does, and four coach routes
   refuse without a login and answer with one.
-- **Not done: the two browser checks.** The app running on this machine is the team
-  clone, and swapping it to this branch would interrupt it. To do them: build and
-  start this branch (`docker compose up -d --build` from this repository), sign in,
-  walk the three states, and open a rack screen.
+- **The two browser checks**, done by running this branch as a second copy of the app
+  on port 8090 against a copy of the database, beside the running app:
+  - **Coach:** signed in through the form, then opened all three states and every tab
+    (twelve screens). No failed request and no page error. The text on each screen was
+    compared with the running app's: **seven identical, five differ in one way** — the
+    athlete picker in ANALYTICS now lists athletes **alphabetically**. Before, it was
+    in the order the database returned them. That comes from Braydon's change to the
+    athlete list and is kept: a fixed order is better than an accidental one.
+  - **Rack screen, no login:** sensor shown as live, check-in, Ready, countdown, a set
+    with the simulated sensor (4 reps counted), End Set, summary, rest. The set was
+    saved with its four reps.
 
 **Where this differs from "bring `78260b4` over as it is", and why:**
 
