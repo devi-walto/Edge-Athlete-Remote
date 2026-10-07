@@ -236,6 +236,12 @@ class Athlete(models.Model):
     notes = models.TextField(blank=True)
     is_simulated = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+    # The athlete's own login, if they have one. Most athletes never will: a gym
+    # athlete taps in at a rack and needs no account. Being attached here is what
+    # MAKES a login an athlete login (see roles.py); nothing stores a "role".
+    # SET_NULL on purpose: removing a login must never remove the athlete's history.
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                                null=True, blank=True, related_name='athlete')
     # Every group this athlete CURRENTLY trains with. Many-to-many on purpose: a
     # football player can also sit in a speed TrainingGroup, and each group runs its own
     # program. Which of those programs applies on a given day is answered by the

@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: Written — not started
+- Status: In progress — Phase 0 done
 - Form item: Definition of Done #3
 - Depends on: [01 Secure coach accounts](01-coach-accounts.md)
 - Next: [05 Hosted mode](05-hosted-mode.md), then 03 and 04
@@ -111,13 +111,16 @@ an athlete access to their own rack can never give them my controls.
 
 **Done when:**
 
-- [ ] `0026` applies to an empty database and to a copy of an existing one, and
+- [x] `0026` applies to an empty database and to a copy of an existing one, and
       `makemigrations --check` reports no drift.
-- [ ] `role_of` returns the right answer for: an administrator; a coach; an athlete; a
+- [x] `role_of` returns the right answer for: an administrator; a coach; an athlete; a
       login with neither; a login with both; an inactive login of each kind (all
       `None`); an anonymous request (`None`).
-- [ ] Deleting a login leaves its athlete record, sets and reps untouched.
-- [ ] The full Django suite still passes.
+- [x] Deleting a login leaves its athlete record, sets and reps untouched.
+- [x] The full Django suite still passes.
+
+**Result, 2026-10-07.** Built on `feature-roles`. Suite 491 → 502. `0026` was applied
+to an empty throwaway database and to an existing one; no drift.
 
 **Stop. Devin reviews.**
 
