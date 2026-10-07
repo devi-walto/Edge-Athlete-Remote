@@ -5,7 +5,10 @@
 - Status: Written — not started. Phase 5 (coach login codes) added 2026-10-06
 - Form item: Definition of Done #4
 - Depends on: [02 Roles](02-roles.md) (must be merged first), [05 Hosted mode](05-hosted-mode.md)
-- Mockup: `Roster`, `LoginLink` on the Remote page of the canvas
+- Mockup: `F_Remote_Roster`, `F_Remote_LoginLink` and the REMOTE flow on the canvas's Final
+  designs page. Phase 5 (coach login codes): proposed 2026-10-06 on the **Remote coach view**
+  page, top row: `C1_CoachesCodes`, `C2_SignInCode`, `C3_CodeNewCoach`, `C4_CodeReset`.
+  **Not approved yet**
 
 ## Why
 

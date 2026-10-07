@@ -92,6 +92,7 @@ overlaps are called out inside each spec.
 | Hosting on k3s, HTTPS, CI/CD | 1 | Devin's hands-on learning; the design is in `docs/remote/hosting.md` |
 | The demo installation | 5 | Part of the hosting template |
 | Sensors over the internet | 6 | Design is in `docs/remote/sensors.md`; firmware not started |
+| An installation's name (shown under "Edge Athlete" on the sign-in card; reads "Coach workspace" until then) | 1 | Nothing stores a name for an installation yet. It comes with the parent registry in the hosting work. Noted 2026-10-06 |
 | Moving an installation between a gym box and hosted (copying the database across, both directions) | 1 | Tabled 2026-10-06: it is an operator job that needs the hosting template, so it is specced with the k3s work. The model is in `docs/remote/databases.md` |
 
 ---

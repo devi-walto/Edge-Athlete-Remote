@@ -7,8 +7,9 @@
 - Depends on: [02 Roles](../remote/02-roles.md) (a coach is a login with a coach profile),
   [06 Design rules](06-design-rules.md). Touches the screens of [07 Planning](07-planning.md)
   and [09 Analytics](09-analytics.md); build it after them or alongside
-- Mockup: none yet. **Draw the coaches editor and the Mine | Everyone switch on the
-  Final designs page before Phase 2**
+- Mockup: proposed 2026-10-06 on the canvas's **Proposed local UI** page, bottom row:
+  `M1_GroupsMine`, `M2_CoachesEditor`, `M3_NewCoachEveryone`. **Not approved yet**; once
+  approved they are copied to the Final designs page
 
 ## Why
 
@@ -66,6 +67,14 @@ Decided with Devin on 2026-10-06.
 - **A group has at most one head and any number of assistants.** Making someone head
   moves the previous head to assistant (the route already does this). A group may have
   no coaches at all; then it is nobody's and shows only under Everyone.
+- **A coach who leaves is deactivated, never deleted, and their groups are tidied up
+  when that happens** (Devin, 2026-10-06):
+  - deactivating an **assistant** takes them off their groups automatically;
+  - deactivating a **head coach** is refused, with a message naming the groups and
+    saying to hand them over first.
+
+  The database's own refusal to delete a login that is on a group is left as it is. It
+  only matters if a login is deleted by hand, which the app never does.
 - **Any coach may edit a group's coaches.** It is a label, not a permission, so it
   follows the one-coach-role rule.
 - **People are shown by name.** First and last name, falling back to the username when
@@ -133,8 +142,19 @@ Backend, plus three small forms.
 - **Guard on the group-coaches route:** the `coach` it is given must be an active login
   with a coach profile. Anything else is `400`, never silently accepted.
 
+- **Deactivating a coach** (`PATCH /api/coaches/{id}/` with `is_active: false`, spec
+  01): if they are head of any group, refuse with `409` and the group names ("Maria
+  Reyes is head coach of Varsity Football and Receivers. Hand those groups to another
+  coach first."). Otherwise remove their assistant rows in the same transaction.
+  Reactivating does not put them back on anything.
+
 **Done when:**
 
+- [ ] Deactivating an assistant removes them from every group they assisted, and
+      nothing else about those groups changes.
+- [ ] Deactivating a head coach is refused, names every group they head, and changes
+      nothing; once those groups have another head, it succeeds.
+- [ ] Reactivating a coach leaves them on no group.
 - [ ] A login with a name is shown by it everywhere a coach is named; one without is
       shown by username.
 - [ ] A coach can change their own name and nobody else's.
