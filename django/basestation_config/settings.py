@@ -29,6 +29,8 @@ import os
 
 from django.core.exceptions import ImproperlyConfigured
 
+from .deployment_mode import parse_deployment
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 # BASE_DIR points to the /django folder — the root of the Django project
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -59,6 +61,12 @@ if not SECRET_KEY:
             " print(get_random_secret_key())\"\n"
             "then put it in .env as SECRET_KEY=..."
         )
+
+# What kind of installation this is: a gym box ("local", the default) or a hosted
+# one on the internet ("remote"). Read once, here. The rest of the code asks
+# event_handler/deployment.py, never the environment. A misspelled value stops
+# the app from starting; see basestation_config/deployment_mode.py for why.
+EA_DEPLOYMENT = parse_deployment(os.environ.get('EA_DEPLOYMENT'))
 
 # Hosts that Django will respond to — read from .env as a comma separated list
 # Example: ALLOWED_HOSTS=localhost,127.0.0.1

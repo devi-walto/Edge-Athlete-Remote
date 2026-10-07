@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: Written — not started
+- Status: In progress — Phase 0 done (branch `feature-deployment_switch`)
 - Form item: Definition of Done #3
 - Depends on: [02 Roles](02-roles.md)
 - **Build this before 03 and 04**, which both need its switch
@@ -87,9 +87,16 @@ rows and only a coach passes; that is safe and lets this spec ship first.
 
 **Done when:**
 
-- [ ] With the variable unset, the app starts as `local` and every existing test passes.
-- [ ] `EA_DEPLOYMENT=remote` starts; `EA_DEPLOYMENT=cloud` fails to start with a clear error.
-- [ ] `/api/system/info/` returns the mode in both, with no login.
+- [x] With the variable unset, the app starts as `local` and every existing test passes.
+- [x] `EA_DEPLOYMENT=remote` starts; `EA_DEPLOYMENT=cloud` fails to start with a clear error.
+- [x] `/api/system/info/` returns the mode in both, with no login.
+
+**Result, 2026-10-07.** Suite 536 → 545. Started for real three ways: unset → `local`,
+`remote` → `remote`, `cloud` → refuses with a message naming the two allowed values.
+The value is parsed in `basestation_config/deployment_mode.py` (so `settings.py` can use
+it while Django starts) and read by the app only through `event_handler/deployment.py`.
+`version` comes from an `EA_VERSION` environment variable and says `dev` when unset;
+nothing sets it yet, which is the release and hosting work.
 
 **Stop. Devin reviews.**
 

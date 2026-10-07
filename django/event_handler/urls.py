@@ -13,6 +13,7 @@ first or they'd get swallowed.
 from django.urls import path
 
 from . import views
+from . import deployment
 from . import health
 from . import system_status
 from . import wifi_config
@@ -22,6 +23,10 @@ urlpatterns = [
     # container healthcheck in docker-compose.yml, which is why it is open and
     # why it is first — nothing else should have to be working for it to answer.
     path('health/', health.health, name='health'),
+
+    # Which kind of installation this is (gym box or hosted), and which build.
+    # Open: the sign-in screen asks before anyone has signed in.
+    path('system/info/', deployment.system_info, name='system_info'),
 
     # Coach-only: still-default credentials the operator should change before a
     # real gym uses this box. Drives the banner on the coach admin page.
