@@ -85,6 +85,10 @@ cleanly; the screens have to be re-homed. That is Phase 2.
 
 ## Non-goals
 
+- **Coach login codes.** Decided 2026-10-06: the temporary password this spec uses is
+  replaced by a one-time login code in [spec 03, Phase 5](03-athlete-login-links.md).
+  This spec ships the temporary-password flow as it is.
+
 - **Athlete logins, and tightening "coach" to mean "has a coach profile"** — Spec 02.
   This spec only lays the groundwork (profiles exist, the list is filtered).
 - Login links, session links, virtual racks — Specs 03 and 04.

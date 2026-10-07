@@ -69,7 +69,7 @@ The Django suite had 447 tests in `tests.py` on 2026-10-06.
 | 01 | [Secure coach accounts](remote/01-coach-accounts.md) | 2 | — | Approved, not started |
 | 02 | [Roles: administrator, coach, athlete](remote/02-roles.md) | 3 | 01 | Written |
 | 05 | [Hosted mode](remote/05-hosted-mode.md) | 3 | 02 | Written |
-| 03 | [Athlete login links](remote/03-athlete-login-links.md) | 4 | 02, 05 | Written |
+| 03 | [Athlete login links, and coach login codes](remote/03-athlete-login-links.md) | 4, 2 | 02, 05 | Written. Phase 5 replaces temporary coach passwords with one-time login codes |
 | 04 | [Session link and virtual racks](remote/04-session-link-and-virtual-racks.md) | 3, 4 | 02, 03, 05 | Written |
 | 10 | [The athlete's home page](remote/10-athlete-pages.md) | 4 | 03, 04, 05 | Written. Phase 4 (opening a past session) is built last, if time |
 | 06 | [Design rules for the coach interface](ui/06-design-rules.md) | 11 | — | Written |
