@@ -6,9 +6,10 @@
 - Form item: Definition of Done #4
 - Depends on: [02 Roles](02-roles.md) (must be merged first), [05 Hosted mode](05-hosted-mode.md)
 - Mockup: `F_Remote_Roster`, `F_Remote_LoginLink` and the REMOTE flow on the canvas's Final
-  designs page. Phase 5 (coach login codes): proposed 2026-10-06 on the **Remote coach view**
-  page, top row: `C1_CoachesCodes`, `C2_SignInCode`, `C3_CodeNewCoach`, `C4_CodeReset`.
-  **Not approved yet**
+  designs page. Phase 5 (coach login codes): **approved 2026-10-07**, on the Final designs page
+  ("The same in both: accounts and access"): `F_Coaches` (the code in the same dialog an
+  athlete login link uses, with the link icon on **Copy code**; Invited and Reset rows),
+  `F_SignIn` ("I have a login code"), `F_CodeNewCoach`, `F_CodeReset`
 
 ## Why
 
@@ -299,8 +300,11 @@ Both refuse to let the login be deleted. So:
 **Screens** (built in the look of the sign-in card; no new board is needed for the
 card, but draw the Coaches page's "Invited" rows on the Final designs page first):
 
-- **Coaches:** **Add coach** asks for a name, then shows the code in the same bordered
-  card the temporary password uses today, with "Pass it on now. It cannot be shown
+- **Coaches:** **Add coach** asks for a name, then shows the code **in the same dialog
+  the athlete login link uses** (Devin, 2026-10-07): the title "For <name>", the code,
+  a **Copy code** button with the link icon, the three facts (works once, expires, makes
+  them a coach), the amber "Don't post this in a group chat" warning, **Cancel this
+  code** and **Done**. One dialog component serves both. Its text includes "Pass it on now. It cannot be shown
   again. It works once and expires in 3 days." Unused codes show as rows: the label,
   "Invited · expires Oct 9", and **Cancel**. **Reset password** shows a code the same way.
 - **Sign in:** one quiet line under the form, "Have a login code?", opening a card that

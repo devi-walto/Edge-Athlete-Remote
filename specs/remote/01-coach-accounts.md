@@ -3,7 +3,7 @@
 - Owner: Devin Walton
 - Date: 2026-10-05
 - Status: **Phases 0, 1 and 2 done 2026-10-06 on branch `feature-coach_accounts`. Phases 0–3 done; the archived-athlete history item moved to spec 09 by Devin's decision. Room Layout opens to every coach in spec 02 (decided). Waiting on Devin's go for Phase 4**
-- Mockup: `F_SignIn`, `F_FirstRun`, `F_Coaches`, `F_AccountMenu` on the canvas's **Final designs** page ("The same in both: accounts and access"), also in [`specs/ui/mockups/coach-ui-final.html`](../ui/mockups/coach-ui-final.html). Look: [spec 06](../ui/06-design-rules.md) rule 9
+- Mockup: `F_FirstRun`, `F_AccountMenu` on the canvas's **Final designs** page, and `R3_SignIn`, `R3_Coaches` on its Remote coach view page. (On 2026-10-07 the Final page's `F_SignIn` and `F_Coaches` were replaced by the login-code versions that [spec 03 Phase 5](03-athlete-login-links.md) builds; what this spec built matches the `R3_` boards.) Earlier wording: `F_SignIn`, `F_FirstRun`, `F_Coaches`, `F_AccountMenu` on the **Final designs** page ("The same in both: accounts and access"), also in [`specs/ui/mockups/coach-ui-final.html`](../ui/mockups/coach-ui-final.html). Look: [spec 06](../ui/06-design-rules.md) rule 9
 - Index and shared decisions: [specs/README.md](../README.md)
 - Form item: Definition of Done #2 ("Coach accounts are secured")
 - Next spec: 02 — roles (coach, athlete, everyone else refused)

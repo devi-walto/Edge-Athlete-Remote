@@ -7,9 +7,10 @@
 - Depends on: [02 Roles](../remote/02-roles.md) (a coach is a login with a coach profile),
   [06 Design rules](06-design-rules.md). Touches the screens of [07 Planning](07-planning.md)
   and [09 Analytics](09-analytics.md); build it after them or alongside
-- Mockup: proposed 2026-10-06 on the canvas's **Proposed local UI** page, bottom row:
-  `M1_GroupsMine`, `M2_CoachesEditor`, `M3_NewCoachEveryone`. **Not approved yet**; once
-  approved they are copied to the Final designs page
+- Mockup: **approved 2026-10-07**, on the canvas's Final designs page ("The same in both:
+  Planning"): `F_Groups` (the Mine | Everyone switch, coaches by name, the pencil),
+  `F_CoachesEditor` (the pencil pressed), `F_NewCoachEveryone` (a coach on no group).
+  Also in [`mockups/coach-ui-final.html`](mockups/coach-ui-final.html)
 
 ## Why
 
