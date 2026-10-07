@@ -75,6 +75,57 @@ The token is kept in browser storage deliberately, so a page refresh does not dr
 coach mid-session — which, during a live demo in front of a room, matters more than
 it sounds.
 
+## Decision: a coach's own account lives in the corner, not in a tab
+
+Coach accounts arrived in October 2026. The server side, and the first version of
+these screens, are Braydon's work on the team repository; the screens were then
+rebuilt to fit the three-state workspace.
+
+**What forced it.** His screens were written for the old coach page, as two more tabs
+in a row of eight. That row no longer existed. And a coach's login is not training:
+it is not planning, not a session, not analytics.
+
+**What we chose.**
+
+- **The top-left corner is the account menu.** It says who is signed in and whether
+  they are an administrator, and holds Coaches (administrators only), Change password
+  and Log out. It was already the place Log out lived.
+- **Coaches and Change password are their own small pages** (`/coach/account/…`) inside
+  the same top bar and bottom navbar, so a coach never feels they have left the
+  workspace and one press takes them back.
+- **One sign-in form, and it starts empty.** It replaced two, one of which arrived with
+  the demo username and password already typed in.
+- **Until an installation is claimed, every device sees first-run setup**, rack
+  tablets included. Nothing should run on a box nobody owns. A tablet that has already
+  seen a claimed installation remembers that, so it can still reopen its screen while
+  the server is unreachable; that memory decides what is drawn and grants nothing.
+- **A temporary password opens one screen.** "Choose your own password" replaces the
+  whole workspace until it is done, and the server enforces the same thing.
+- **Athletes are archived, never deleted.** Archive is a quiet action on a roster row.
+  The athlete leaves the roster and every picker and their tag is freed; everything
+  they lifted is kept. The server refuses while they are in a running session, and the
+  screen shows its reason.
+
+**What we rejected, and why.**
+
+- **Showing Braydon's screens as he laid them out.** They belonged to a page that is
+  gone. Their logic was kept (the calls, the guards, the error messages); their layout
+  was not.
+- **His separate roster page.** The workspace already has a roster. Only archiving was
+  new, so it was added there.
+- **Hiding Coaches as the only protection.** A regular coach does not see the entry,
+  and the server refuses them anyway. The hidden button is a courtesy.
+
+**What it cost.**
+
+- **An archived athlete's own page cannot be opened in Analytics yet.** Their sets are
+  kept and still appear in every saved daily report, but the athlete picker no longer
+  lists them. Listing archived athletes under their own heading is planned.
+- **The sign-in card does not name the installation.** Nothing stores a name for one
+  yet, so it says "Coach workspace".
+- **Deactivate and Reset password ask in the browser's plain confirm box.** A styled
+  dialog is part of the shared pieces still to be built.
+
 ---
 
 ## The redesign: three states instead of eight tabs

@@ -56,6 +56,62 @@ sudo systemctl restart edgeathlete.service
 
 Join the **EdgeAthlete** network and open **http://basestation**.
 
+## Claim it: the first administrator
+
+A new base station has **no logins at all**, and it will not show the app until
+somebody claims it. Every device that opens it, rack tablets included, sees **Set up
+this installation**.
+
+1. On the base station itself, print a one-time setup code:
+
+   ```bash
+   docker compose exec django python manage.py setup_code
+   ```
+
+   It is shown only on that terminal, works once, and expires after 24 hours. Running
+   the command again replaces the code, which is also how you cancel one that the
+   wrong person saw.
+2. On any device on the network, open **http://basestation**. Type the code, choose a
+   username and a password, and press **Create administrator**.
+3. You are signed in to the coach workspace. The setup screen never appears again.
+
+**Why a code.** Without it, whoever opened the website first would own the gym's
+system. The code proves the person setting it up could reach the machine. Only a
+scrambled copy of it is stored.
+
+### Adding the other coaches
+
+Open the menu in the top-left corner and choose **Coaches** (administrators only).
+**Add coach** asks for a username and shows a **temporary password once**. Give both to
+the coach. The first time they sign in they must choose their own password, and the
+server answers nothing else for them until they do.
+
+From the same page an administrator can reset a forgotten password (another temporary
+one), deactivate a coach who has left, and make another coach an administrator. A
+coach is deactivated, never deleted, so their name stays on what they made.
+
+### Three commands that only work on the machine
+
+Anything an administrator cannot do from the website takes access to the box, on
+purpose.
+
+| Situation | Command |
+|---|---|
+| A brand-new base station needs its first administrator | `docker compose exec django python manage.py setup_code` |
+| **An upgraded base station has coaches but no administrator** | `docker compose exec django python manage.py make_admin <username>` |
+| The only administrator forgot their password | `docker compose exec django python manage.py changepassword <username>` |
+
+`make_admin` promotes a login that already exists; it never creates one or touches a
+password. It refuses a deactivated login unless you add `--reactivate`. **Coaches**
+appears in that coach's menu the next time they reload the workspace.
+
+:::{note}
+**Upgrading a base station that is already in use.** Updating keeps every existing
+coach login and its password, and nobody is asked for a setup code. If the login you
+have been using was the demo one, it is already an administrator. If nobody sees
+**Coaches** in their menu after the update, run `make_admin` for whoever should.
+:::
+
 ## The short commands
 
 On the box, from any shell. No sourcing, no re-login.
@@ -214,6 +270,12 @@ docker compose run --rm seed
 That gives you a live training day ("Thursday — Lower + Push"), four athletes,
 the plan they train, recorded reference maxes, two already-finished sets, and the
 demo coach login (`coach` / `coachpass`).
+
+**That login has a public password, so it is for development only.** Normal start-up
+never creates it, and the command that does refuses to run unless `DEBUG` is on. The
+`seed` service carries an explicit override, because asking for demo data by name is
+asking for a demo box. Never seed a base station a real gym uses; claim it with a
+setup code instead (see "Claim it" above).
 
 **`seed` is a one-shot, and it is invisible to `docker compose up`.** It carries a
 Compose *profile*, which means the service does not exist unless you name it —
@@ -551,7 +613,15 @@ Join the **EdgeAthlete** Wi-Fi (password from step 2), then open:
 http://basestation
 ```
 
-Coach login: **`coach` / `coachpass`**.
+The first time, it shows **Set up this installation**. Print the setup code on the
+base station and create the first administrator:
+
+```bash
+cd /srv/edge-athlete/Edge-Athlete && docker compose exec django python manage.py setup_code
+```
+
+There is no default login. (A demo box filled in step 5 also gets `coach` /
+`coachpass`; a real one must not be seeded.)
 
 ### 5. Fill it with demo data (optional)
 

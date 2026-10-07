@@ -648,7 +648,7 @@ against (names are the canonical spelling; `is_stub=False`):
 >
 > **After `docker compose down -v`:** the exercise catalog returns **by itself**; the demo fixtures do **not** —
 > re-run `docker exec edgeathlete-django python manage.py seed_active_session` (and `ensure_demo_coach` for the
-> `coach`/`coachpass` login). Until then the rack screen shows an empty movement list, because `athlete_progress`
+> `coach`/`coachpass` login, which only runs with `DEBUG` on: it is a development login, never one for a real gym). Until then the rack screen shows an empty movement list, because `athlete_progress`
 > still reads the legacy `Program` rows (until the P5 `% × max` swap).
 >
 > ⚠️ **Keep the names in sync.** `seed_active_session` does `Exercise.objects.get_or_create(name=…)` with

@@ -24,7 +24,7 @@ docker compose exec django python manage.py setup_code
 
 The code proves the person enrolling has access to the machine, so the first
 visitor to the website cannot claim the installation. Additional coach logins are
-created by an administrator under **Coach → coaches**; there is no public
+created by an administrator from **Coaches**, in the menu at the top left; there is no public
 registration. Other devices can use the **role picker**, or you can use **Change
 device** to choose a role:
 
@@ -38,8 +38,8 @@ device** to choose a role:
 > there forever. Change it with **Change device** in the top right.
 
 Normal startup does not create a default login. Existing installations keep their
-accounts. See [Coach accounts and roster management](docs/_COACH_ACCOUNTS.md) for
-first-run setup, login, password recovery, and history-preserving roster removal.
+accounts. See [the install guide](docs/guides/base-station.md) ("Claim it") for first-run
+setup, adding coaches, and the three commands that only work on the machine.
 
 For demonstration data in a development installation:
 

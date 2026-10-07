@@ -92,7 +92,7 @@ that athlete. The coach screen says so beside the button.
 
 | | Coach | Athlete |
 |---|---|---|
-| Created by | the head coach | a coach creates the athlete; the athlete sets the login from a login link |
+| Created by | an administrator | a coach creates the athlete; the athlete sets the login from a login link |
 | Roster, plans, sessions, settings | full control | **none** |
 | Their own rack screen, in a session their group is in | — | yes |
 | Published results of their program | yes | yes — **filtered to themselves by default**, one tap to see everyone |
@@ -104,19 +104,28 @@ the wall, so the two can never disagree.
 
 ### 6. Setting up the coaches
 
-The coach side is not new design — it is being ported from work Braydon did on the
-team repository:
+The coach side is not new design. It is work Braydon did on the team repository,
+brought into this one in October 2026 and built the same way for a gym box and for the
+hosted service:
 
+- **One coach role.** Every coach can see and do everything in the coach workspace.
+  There is no head coach who outranks an assistant; "head coach" is only a label on a
+  training group.
+- **One administrator flag.** It does exactly one thing: an **administrator** can
+  create, reset, deactivate and promote coach logins. More than one coach can have it,
+  and there must always be at least one.
 - **A one-time setup code** printed on the machine itself claims a new installation, so
   the first visitor to the site cannot make themselves the administrator.
-- **No public sign-up.** The head coach creates the other coach logins, with a
-  temporary password that must be changed at first sign-in, and can deactivate, promote
-  or reset them.
+- **No public sign-up.** An administrator creates the other coach logins, each with a
+  temporary password that must be changed at first sign-in. Until it is changed, that
+  login can reach nothing else.
 - **The well-known demo login refuses to exist** outside development. Its password is in
   the repository.
 
-On the hosted service the setup code is read by whoever operates the cluster, not from
-a screen in a gym.
+**On the hosted service the operator hands over the setup code.** Whoever creates the
+installation runs the same command on the cluster and passes the code to that
+program's coach, who types it into the same first-run screen. Nothing about it is
+different online; only who is standing at the machine.
 
 ### 7. The demo is its own installation
 

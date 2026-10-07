@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-05
-- Status: **Phases 0, 1 and 2 done 2026-10-06 on branch `feature-coach_accounts`. Phases 0–3 done; the archived-athlete history item moved to spec 09 by Devin's decision. Room Layout opens to every coach in spec 02 (decided). Waiting on Devin's go for Phase 4**
+- Status: **Done 2026-10-07. All five phases complete; merged into `SprintBranch`.** Two things were handed on by Devin's decisions: an archived athlete's page in Analytics (spec 09) and opening Room Layout to every coach (spec 02). Temporary passwords are replaced by login codes in spec 03 Phase 5
 - Mockup: `F_FirstRun`, `F_AccountMenu` on the canvas's **Final designs** page, and `R3_SignIn`, `R3_Coaches` on its Remote coach view page. (On 2026-10-07 the Final page's `F_SignIn` and `F_Coaches` were replaced by the login-code versions that [spec 03 Phase 5](03-athlete-login-links.md) builds; what this spec built matches the `R3_` boards.) Earlier wording: `F_SignIn`, `F_FirstRun`, `F_Coaches`, `F_AccountMenu` on the **Final designs** page ("The same in both: accounts and access"), also in [`specs/ui/mockups/coach-ui-final.html`](../ui/mockups/coach-ui-final.html). Look: [spec 06](../ui/06-design-rules.md) rule 9
 - Index and shared decisions: [specs/README.md](../README.md)
 - Form item: Definition of Done #2 ("Coach accounts are secured")
@@ -500,28 +500,63 @@ person clicking through once is still worth doing before the merge.
 
 **Done when:**
 
-- [ ] `./docs/build.sh` passes with warnings fatal.
-- [ ] Following the install guide on an empty database, word for word, ends at a
-      working coach workspace.
-- [ ] The route table lists every new route with the right lock.
-- [ ] The branch is merged into `SprintBranch` and pushed. (`main` is updated from
+- [x] `./docs/build.sh` passes with warnings fatal.
+- [x] Following the install guide on an empty database, word for word, ends at a
+      working coach workspace. *(The steps were run in Phase 3's rehearsal A; see below
+      for the one difference.)*
+- [x] The route table lists every new route with the right lock.
+- [x] The branch is merged into `SprintBranch` and pushed. (`main` is updated from
       `SprintBranch` by CI/CD, or by Devin until that exists; the docs are published from `main`.)
-- [ ] The weekly report's Definition of Done shows item 2 as **Done**.
+- [ ] The weekly report's Definition of Done shows item 2 as **Done**. *(Goes on the
+      report due Friday, October 9; the report is generated with Devin.)*
+
+### Phase 4 result — 2026-10-07
+
+Final numbers on the branch before merging: **Django 491 pass, frontend 281 pass,
+production build succeeds, no migration drift, docs build with warnings fatal.**
+
+| Page | What changed |
+|---|---|
+| `docs/guides/base-station.md` | New section "Claim it: the first administrator": the setup code, adding coaches, and the three commands that only work on the machine (`setup_code`, `make_admin`, `changepassword`), with a note for upgrading a box already in use. The two places that said "log in with `coach` / `coachpass`" now say there is no default login and that the demo one is development-only |
+| `docs/journal/apis.md` | New section "Signing in, and coach logins": the eight routes with their locks, then what forced it, what was chosen, what was rejected (a head/assistant hierarchy, any coach creating logins, first-visitor-wins, email recovery) and what it cost. The generated route table was refreshed (the People group changed) |
+| `docs/journal/coach-tablet.md` | New decision: a coach's own account lives in the corner, not in a tab |
+| `docs/remote/access.md` | "Setting up the coaches" says administrator, states the one-coach-role decision, and says the operator hands over the setup code on a hosted installation |
+| `README.md` | Points at the install guide |
+
+Braydon is credited in each of the four pages. His working note
+(`docs/_COACH_ACCOUNTS.md`) was folded into the install guide and the journal, then
+removed.
+
+**Two things that are not literally as the checklist says:**
+
+- **The eight sign-in and coach-login routes are in a hand-written table, not the
+  generated one.** The generator reads the app's `urls.py` and function views; these
+  are class views in the project's `urls.py`, where sign-in already lived (and was
+  never in the generated table either). Teaching the generator about them is a small
+  job for later; the hand-written table is correct today and says where the routes live.
+- **The install guide was followed with `docker exec <container>`, not
+  `docker compose exec django`.** Phase 3 ran the same commands against a second copy
+  of the app, because running `docker compose` from this repository would have replaced
+  the app that was running on the machine. The first time the running app is switched
+  to this version, do the guide's steps once as written.
+
+**Not done here, on purpose:** the public docs site is not republished and `main` is
+not moved. Both happen from `main`, which moves from `SprintBranch` when Devin says so.
 
 ---
 
 ## Acceptance criteria (the whole spec)
 
-- [ ] A new installation can only be claimed with a code printed on the machine.
-- [ ] There is no known password that works outside development.
-- [ ] Only an administrator can create, reset, deactivate, promote or demote a coach —
+- [x] A new installation can only be claimed with a code printed on the machine.
+- [x] There is no known password that works outside development.
+- [x] Only an administrator can create, reset, deactivate, promote or demote a coach —
       enforced by the server, not just hidden in the screen.
-- [ ] An installation can never be left with no administrator through the screen.
-- [ ] An upgraded box keeps every existing coach working and has a documented way to
+- [x] An installation can never be left with no administrator through the screen.
+- [x] An upgraded box keeps every existing coach working and has a documented way to
       get its first administrator.
-- [ ] Every login that exists has a coach profile, and the coach list shows coaches only.
-- [ ] A gym box with no logins at the rack works exactly as before.
-- [ ] Nothing here behaves differently between a gym box and a hosted installation.
+- [x] Every login that exists has a coach profile, and the coach list shows coaches only.
+- [x] A gym box with no logins at the rack works exactly as before.
+- [x] Nothing here behaves differently between a gym box and a hosted installation.
 
 ## Risks
 

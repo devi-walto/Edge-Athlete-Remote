@@ -73,9 +73,6 @@ exclude_patterns = [
     "_HANDOFF.md",
     "_PATCH_NOTES.md",
     "_NAMING_CHANGES.md",
-    # Braydon's coach-accounts note, brought over in spec 01 Phase 0. Private until
-    # its screens are attached and its content moves into docs/remote/.
-    "_COACH_ACCOUNTS.md",
     # Braydon's design docs for the BLE rack agent, merged 2026-08-07.
     #
     # The ADR's REASONING now lives in journal/rack-tablet.md, rewritten in that

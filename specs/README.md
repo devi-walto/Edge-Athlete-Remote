@@ -51,7 +51,7 @@ cd react && npx vitest run && npm run build
 ./docs/build.sh                      # docs, warnings fatal
 ```
 
-The Django suite had 447 tests in `tests.py` on 2026-10-06.
+The Django suite had 447 tests on 2026-10-06 and **491 after spec 01** (2026-10-07); the frontend suite has 281.
 
 ### House rules (from earlier sessions, still in force)
 
@@ -66,7 +66,7 @@ The Django suite had 447 tests in `tests.py` on 2026-10-06.
 
 | # | Spec | Form item | Depends on | Status |
 |---|---|---|---|---|
-| 01 | [Secure coach accounts](remote/01-coach-accounts.md) | 2 | — | Approved, not started |
+| 01 | [Secure coach accounts](remote/01-coach-accounts.md) | 2 | — | **Done 2026-10-07**, merged into `SprintBranch` |
 | 02 | [Roles: administrator, coach, athlete](remote/02-roles.md) | 3 | 01 | Written |
 | 05 | [Hosted mode](remote/05-hosted-mode.md) | 3 | 02 | Written |
 | 03 | [Athlete login links, and coach login codes](remote/03-athlete-login-links.md) | 4, 2 | 02, 05 | Written. Phase 5 replaces temporary coach passwords with one-time login codes |
@@ -215,7 +215,7 @@ Checked on 2026-10-06 against commit `31f0573`.
   token 8 hours, refresh token 7 days, rotating.
 - **Braydon's coach-account work** is on the team repo's `main`, fetched here as
   `refs/tmp/team-main`: commits `78260b4`, `b59a531`, `5a35928`.
-- **Migrations stop at `0022`.** Spec 01 adds `0023`–`0025`.
+- **Migrations stop at `0025`** (spec 01 added `0023`–`0025`).
 - **The rack screen** listens to one sensor, and only while a set is running
   (`react/src/rack/RackScreen.jsx`, around line 540).
 - **`instantiate_block()`** creates a program and, as its last line, calls
@@ -236,4 +236,4 @@ Checked on 2026-10-06 against commit `31f0573`.
   shown twice with a different `section` value.
 - **The local app** runs from the team clone at
   `~/Desktop/Coding Projects/Edge Athlete/Edge-Athlete` (same app code as this repo).
-  Demo login `coach` / `coachpass` until spec 01 lands.
+  Demo login `coach` / `coachpass` there until that app is switched to `SprintBranch`; after that it exists only on a seeded development database.

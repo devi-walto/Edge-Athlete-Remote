@@ -19,7 +19,7 @@ Full detail in {doc}`../reference/database`; the reasoning in {doc}`database`.
 ## The permission rule
 
 **Anything a rack tablet must do is open. Anything that changes the plan or the room
-needs a coach login.** 21 routes open, 32 need a login, and 9 more need a staff login (counted October 6, 2026).
+needs a coach login.** 21 routes open, 32 need a login, and 9 more need an administrator's login (counted October 6, 2026; the eight sign-in and coach-login routes below are counted separately).
 
 **What forced it.** A rack tablet is a kiosk. It boots unattended into full-screen
 mode, nobody signs in to it, and there is no keyboard in front of a squat rack. But it
@@ -39,7 +39,8 @@ the first decision to revisit — and the hosted service is that network: see
 
 ## "Coach" means "logged in", and nothing more
 
-The check is one line: is this request authenticated?
+The check is one line: is this request authenticated? (Since October 2026 it also
+refuses a login that is still on a temporary password; see the next section.)
 
 **What we rejected.** A role system — coach, assistant, athlete, admin. There is
 exactly one kind of privileged user in a weight room running this, and a role system
@@ -48,6 +49,72 @@ that is never exercised is a system that is wrong the first time someone needs i
 **What it cost.** Any authenticated account has full coach powers. Fine for one gym
 with two staff logins; not fine the moment athletes get accounts — which the hosted
 service needs ({doc}`../remote/access`).
+
+## Signing in, and coach logins
+
+These eight routes are not in the generated tables further down, because they live in
+the project's own `urls.py` (`django/basestation_config/urls.py`) beside sign-in, not
+in the app's. They came with the coach-accounts work, written by Braydon and brought
+into this repository in October 2026.
+
+| Route | Methods | Access | What it does |
+|---|---|---|---|
+| `/api/auth/login/` | `POST` | open | Username and password in; tokens out, plus whether a password change is due |
+| `/api/auth/refresh/` | `POST` | open | A fresh access token from a refresh token |
+| `/api/auth/setup/` | `GET` | open | Whether this installation still needs claiming, and whether a setup code is waiting |
+| `/api/auth/setup/` | `POST` | open, **needs the setup code** | Creates the first administrator. Refused for good once anyone exists |
+| `/api/auth/me/` | `GET` | 🔒 any login | Who is signed in: username, administrator or not, password change due or not |
+| `/api/auth/password/` | `POST` | 🔒 any login | Change your own password |
+| `/api/coaches/` | `GET` `POST` | 🔒 administrator | List the coaches; add one with a temporary password, shown once |
+| `/api/coaches/{id}/` | `PATCH` | 🔒 administrator | Deactivate, reactivate, make or remove an administrator |
+| `/api/coaches/{id}/reset/` | `POST` | 🔒 administrator | A new temporary password for that coach |
+
+`POST` to sign-in, setup and password is limited by the web server to ten attempts a
+minute from one address.
+
+**What forced it.** There was one login, `coach` / `coachpass`, typed into the form
+for you. On a gym's closed Wi-Fi that was an accepted shortcut. On a server on the
+internet it is an open door.
+
+**What we chose.**
+
+- **A new installation is claimed with a one-time code that only the machine prints.**
+  Reaching the website is not enough to own it.
+- **One coach role, and one administrator flag.** Every coach can do everything in the
+  workspace. The flag does exactly one thing: it lets a coach manage coach logins.
+- **A temporary password opens the change-password route and nothing else.** While a
+  change is due, every coach route answers `403` with `code: password_change_required`.
+  It is `403` and never `401` on purpose: the screens treat `401` as "your login is
+  gone" and throw it away, which would bounce the coach back to the sign-in form
+  forever.
+- **The coaches list is the logins that have a coach profile**, not every login. They
+  are the same thing today. They stop being the same the day athletes can sign in.
+- **What the website cannot do takes the machine.** `setup_code`, `make_admin` and
+  Django's own `changepassword` are commands, not routes.
+
+**What we rejected, and why.**
+
+- **A head coach who outranks assistant coaches.** One kind of coach is enough, and a
+  hierarchy nobody exercises is wrong the first time someone needs it. "Head coach"
+  stays what it was: a label on a training group that no route checks.
+- **Letting any coach create logins.** Then a single leaked coach password becomes as
+  many logins as the finder likes.
+- **Letting the first visitor become the administrator.** That is a race a student
+  can win.
+- **Email password recovery.** It means collecting email addresses and sending mail
+  from a box that is often offline. An administrator resets a coach's password and
+  hands them a temporary one.
+
+**What it cost.**
+
+- **A box whose only administrator forgets their password needs someone at the
+  machine.** There is no way round that from the website, and there is not meant to be.
+- **For a moment, two people know a new coach's password.** It is temporary and it is
+  locked to the change-password form, but it does not expire. One-time login codes
+  that expire are planned to replace it.
+- **Room Layout still needs an administrator.** Assigning tablets to racks and linking
+  sensors were locked to the old staff flag before any of this existed. With more than
+  one coach that is wrong, and it is being opened to every coach.
 
 ## One path through authentication
 
@@ -151,8 +218,8 @@ Athletes, the groups they train in, and the staff who run those groups.
 <!-- routes:people:start -->
 | Route | Methods | Access | What it does | Handler |
 |---|---|---|---|---|
-| `/api/athletes/` | `GET,POST` | open | GET: list all lifters (open) | `athletes_view` |
-| `/api/athletes/<int:athlete_id>/` | `GET,PATCH` | 🔒 coach | Coach-only: read or update one lifter | `athlete_detail` |
+| `/api/athletes/` | `GET,POST` | open | GET: list lifters (open) | `athletes_view` |
+| `/api/athletes/<int:athlete_id>/` | `GET,PATCH,DELETE` | 🔒 coach | Coach-only: read or update one lifter | `athlete_detail` |
 | `/api/training-groups/` | `GET,POST` | 🔒 coach | Coach-only: list or create TrainingGroups | `training_groups_view` |
 | `/api/training-groups/<int:group_id>/athletes/` | `GET,POST,DELETE` | 🔒 coach | Coach-only: who is in this TrainingGroup | `training_group_athletes_view` |
 | `/api/training-groups/<int:group_id>/coaches/` | `GET,POST,PATCH,DELETE` | 🔒 coach | Coach-only: who runs this TrainingGroup | `training_group_coaches_view` |
