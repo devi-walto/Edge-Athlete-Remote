@@ -251,6 +251,30 @@ class Athlete(models.Model):
     # whatever they were actually created under.
     training_groups = models.ManyToManyField('TrainingGroup', related_name='athletes', blank=True)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # read without triggering a database load if the field was left out
+        self._active_when_loaded = self.__dict__.get('is_active')
+
+    def save(self, *args, **kwargs):
+        """Archiving an athlete switches their login off; bringing them back
+        switches it on again.
+
+        It lives here, not in the archive screen's code, so there is no way to
+        archive an athlete and forget the login. A switched-off login is refused
+        on its very next request, so access ends at once. The login is only
+        touched when archived-or-not actually CHANGES: editing an athlete's
+        notes never turns a login back on.
+        """
+        super().save(*args, **kwargs)
+        fields = kwargs.get('update_fields')
+        saved_active = fields is None or 'is_active' in fields
+        if saved_active and self.is_active != self._active_when_loaded:
+            if self.user_id:
+                from django.contrib.auth import get_user_model
+                get_user_model().objects.filter(pk=self.user_id).update(is_active=self.is_active)
+            self._active_when_loaded = self.is_active
+
     def __str__(self):
         return self.name
 

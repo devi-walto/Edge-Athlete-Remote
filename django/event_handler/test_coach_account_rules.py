@@ -242,11 +242,13 @@ class TemporaryPasswordTests(APITestCase):
     def test_who_am_i(self):
         self.sign_in('admin', PASSWORD)
         self.assertEqual(self.client.get('/api/auth/me/').data, {
-            'username': 'admin', 'is_staff': True, 'must_change_password': False})
+            'username': 'admin', 'is_staff': True, 'must_change_password': False,
+            'role': 'administrator'})
         temp = self.new_coach()
         self.sign_in('newcoach', temp)
         self.assertEqual(self.client.get('/api/auth/me/').data, {
-            'username': 'newcoach', 'is_staff': False, 'must_change_password': True})
+            'username': 'newcoach', 'is_staff': False, 'must_change_password': True,
+            'role': 'coach'})
         self.client.credentials()
         self.assertEqual(self.client.get('/api/auth/me/').status_code, 401)
 

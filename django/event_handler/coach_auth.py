@@ -15,14 +15,17 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework import serializers
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
+from rest_framework_simplejwt.settings import api_settings as jwt_settings
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .models import CoachProfile, InstallationSetup
+from .roles import ATHLETE, role_of
 
 # How long a locally-issued setup code stays valid. Long enough to walk a
 # head coach through booting the box, short enough that a code left on a
@@ -147,8 +150,25 @@ class SetupView(APIView):
         return response
 
 
+def who_signed_in(user):
+    """What a screen needs to know about the login: its role, and for an athlete,
+    which athlete record it belongs to. Used by sign-in and by "who am I"."""
+    role = role_of(user)
+    info = {'role': role}
+    if role == ATHLETE:
+        info['athlete_id'] = user.athlete.pk
+        info['athlete_name'] = user.athlete.name
+    return info
+
+
 class CoachTokenObtainPairSerializer(TokenObtainPairSerializer):
-    """Adds the first-login password-change requirement to the login response."""
+    """Sign-in. Adds who signed in, and the first-login password-change requirement.
+
+    A login attached to nothing (no coach profile, no athlete record) is refused
+    HERE, with a plain sentence. Without this it would be handed a token that
+    every route then refuses, and the person would see a signed-in screen where
+    nothing works.
+    """
 
     @classmethod
     def get_token(cls, user):
@@ -158,7 +178,13 @@ class CoachTokenObtainPairSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs):
         data = super().validate(attrs)
+        info = who_signed_in(self.user)
+        if info['role'] is None:
+            raise AuthenticationFailed(
+                'This login is not set up as a coach or an athlete. '
+                'Ask an administrator to set it up.', code='no_role')
         data['must_change_password'] = must_change_password(self.user)
+        data.update(info)
         return data
 
 
@@ -166,7 +192,30 @@ class CoachTokenObtainPairView(TokenObtainPairView):
     serializer_class = CoachTokenObtainPairSerializer
 
 
+class CheckedTokenRefreshSerializer(TokenRefreshSerializer):
+    """Renewing a sign-in, with the same question sign-in asks: is this login
+    still switched on, and is it still a coach or an athlete?
+
+    The stock renewal only checks that the renewal token itself is genuine. That
+    would keep handing fresh tokens to a deactivated coach or an archived athlete
+    for up to a week. Each of those tokens is refused when used, so nothing leaks,
+    but the honest answer to "renew me" is no.
+    """
+
+    def validate(self, attrs):
+        claim = RefreshToken(attrs['refresh']).get(jwt_settings.USER_ID_CLAIM)
+        user = get_user_model().objects.filter(**{jwt_settings.USER_ID_FIELD: claim}).first()
+        if role_of(user) is None:
+            raise AuthenticationFailed('This login can no longer sign in.', code='user_inactive')
+        return super().validate(attrs)
+
+
+class CheckedTokenRefreshView(TokenRefreshView):
+    serializer_class = CheckedTokenRefreshSerializer
+
+
 class CoachSessionView(APIView):
+    """ "Who am I": any signed-in login may ask, whatever its role."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -174,6 +223,7 @@ class CoachSessionView(APIView):
             'username': request.user.username,
             'is_staff': request.user.is_staff,
             'must_change_password': must_change_password(request.user),
+            **who_signed_in(request.user),
         })
 
 

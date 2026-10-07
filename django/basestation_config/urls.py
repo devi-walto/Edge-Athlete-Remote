@@ -32,9 +32,9 @@ URL flow example:
 """
 from django.contrib import admin
 from django.urls import path, include
-from rest_framework_simplejwt.views import TokenRefreshView
 from event_handler.coach_auth import (
-    CoachSessionView, CoachTokenObtainPairView, PasswordChangeView, SetupView)
+    CheckedTokenRefreshView, CoachSessionView, CoachTokenObtainPairView, PasswordChangeView,
+    SetupView)
 from event_handler.coach_accounts import (
     CoachDetailView, CoachListView, CoachResetPasswordView)
 
@@ -59,6 +59,7 @@ urlpatterns = [
     # (plus must_change_password, so a first sign-in can be forced to change it)
     path('api/auth/login/', CoachTokenObtainPairView.as_view(), name='token_obtain_pair'),
 
-    # Silent token refresh - POST {refresh} returns a new {access} token
-    path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    # Silent token refresh - POST {refresh} returns a new {access} token.
+    # Refused for a login that has been switched off or is no longer a coach or athlete.
+    path('api/auth/refresh/', CheckedTokenRefreshView.as_view(), name='token_refresh'),
 ]

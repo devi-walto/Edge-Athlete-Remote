@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: In progress — Phases 0 and 1 done
+- Status: In progress — Phases 0, 1 and 2 done
 - Form item: Definition of Done #3
 - Depends on: [01 Secure coach accounts](01-coach-accounts.md)
 - Next: [05 Hosted mode](05-hosted-mode.md), then 03 and 04
@@ -177,11 +177,25 @@ own tests. The last-administrator rule now counts coach logins only.
 
 **Done when:**
 
-- [ ] Sign-in returns the right `role` for all three; `athlete_id` only for an athlete.
-- [ ] A login with no role cannot sign in.
-- [ ] After an athlete is archived, a request made with a token issued **before** the
+- [x] Sign-in returns the right `role` for all three; `athlete_id` only for an athlete.
+- [x] A login with no role cannot sign in.
+- [x] After an athlete is archived, a request made with a token issued **before** the
       archive gets `401`.
-- [ ] Unarchiving restores sign-in. The athlete's history is unchanged throughout.
+- [x] Unarchiving restores sign-in. The athlete's history is unchanged throughout.
+
+**Result, 2026-10-07.** Suite 520 → 536, using real sign-in tokens.
+
+- The login link lives in `Athlete.save()`, not in the archive route, so no code path can
+  archive an athlete and forget the login. It acts only when archived-or-not changes:
+  editing an athlete never switches a login back on.
+- **There is no un-archive route or screen yet.** The server rule is built and tested at
+  the model; the button belongs with the archived-athletes work in spec 09.
+- **Found and fixed: renewing a sign-in ignored a switched-off login.** The stock renewal
+  route kept issuing tokens to a deactivated coach or archived athlete for up to a week.
+  Each token was refused on use, so nothing leaked. `/api/auth/refresh/` now asks
+  `role_of` first. This also closes it for deactivated coaches (spec 01).
+- **For Phase 3:** the sign-in screen replaces every `401` with "The username or password
+  was not accepted", so the plain no-role sentence is sent but not yet shown.
 
 **Stop. Devin reviews.**
 
@@ -191,6 +205,8 @@ own tests. The last-administrator rule now counts coach logins only.
   the coach workspace. Use the session link your coach sent you." — with a sign-out
   button, and loads nothing else.
 - The Coaches entry in the account menu keys off `role === "administrator"`.
+- The sign-in screen shows the server's sentence when a login is refused for having no
+  role (`code: no_role`), not the wrong-password message.
 
 **Done when:**
 
