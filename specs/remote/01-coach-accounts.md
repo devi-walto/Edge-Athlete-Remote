@@ -92,7 +92,7 @@ cleanly; the screens have to be re-homed. That is Phase 2.
 - **Athlete logins, and tightening "coach" to mean "has a coach profile"** — Spec 02.
   This spec only lays the groundwork (profiles exist, the list is filtered).
 - Login links, session links, virtual racks — Specs 03 and 04.
-- The "my groups" filter.
+- The "my groups" filter. It is [spec 11, Mine first](../ui/11-mine-first.md).
 - The laptop preview compose file (`b59a531`).
 - The parent registry of installations — hosting work.
 - His `RosterWorkspace` screen as a tab. The redesign already has a roster in

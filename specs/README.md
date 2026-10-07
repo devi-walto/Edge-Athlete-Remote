@@ -36,7 +36,7 @@ Devin's convention, set 2026-10-06:
 Feature branch for each spec: `feature-coach_accounts` (01), `feature-roles` (02),
 `feature-deployment_switch` (05), `feature-login_links` (03), `feature-session_link`
 (04), `feature-athlete_home` (10), `feature-design_rules` (06), `feature-planning`
-(07), `feature-session` (08), `feature-analytics` (09).
+(07), `feature-session` (08), `feature-analytics` (09), `feature-mine_first` (11).
 
 Spec and mockup edits that are not part of a feature are committed straight to
 `SprintBranch`. Release tags and the public docs are cut from `main`.
@@ -76,6 +76,7 @@ The Django suite had 447 tests in `tests.py` on 2026-10-06.
 | 07 | [Planning](ui/07-planning.md) | 11 | 06, 01 | Written |
 | 08 | [Session](ui/08-session.md) | 11 | 06 | Written |
 | 09 | [Analytics](ui/09-analytics.md) | 11 | 06 | Written |
+| 11 | [Mine first](ui/11-mine-first.md) | 11 | 02, 06 | Written. A coach's own groups, programs, sessions and athletes come first; coaches on a group can be edited; coaches shown by name |
 
 **Build 05 before 03 and 04, and 10 after 04.** It is numbered 05 because it was listed fifth, but 03
 and 04 both need its "is this installation hosted?" switch.
