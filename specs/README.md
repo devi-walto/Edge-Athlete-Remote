@@ -93,7 +93,7 @@ overlaps are called out inside each spec.
 | The demo installation | 5 | Part of the hosting template |
 | Sensors over the internet | 6 | Design is in `docs/remote/sensors.md`; firmware not started |
 | An installation's name (shown under "Edge Athlete" on the sign-in card; reads "Coach workspace" until then) | 1 | Nothing stores a name for an installation yet. It comes with the parent registry in the hosting work. Noted 2026-10-06 |
-| Moving an installation between a gym box and hosted (copying the database across, both directions) | 1 | Tabled 2026-10-06: it is an operator job that needs the hosting template, so it is specced with the k3s work. The model is in `docs/remote/databases.md` |
+| Moving an installation between a gym box and hosted (copying the database across, both directions) | 1 | Tabled 2026-10-06: it is an operator job that needs the hosting template, so it is specced with the k3s work. The model is in `docs/remote/databases.md`. **Gap to close in that spec (noted 2026-10-07):** the model says athlete logins are hosted only, but not what happens to them when a hosted database is copied down to a gym box. Starting point: the copy strips them, or the box ignores them, so a gym box never holds a working athlete login |
 
 ---
 
