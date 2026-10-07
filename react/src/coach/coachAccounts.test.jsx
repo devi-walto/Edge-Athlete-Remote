@@ -82,7 +82,7 @@ async function click(text) {
   await act(async () => button.click())
 }
 
-const ME = { username: 'head', is_staff: true, must_change_password: false }
+const ME = { username: 'head', is_staff: true, role: 'administrator', must_change_password: false }
 const COACHES = [
   { id: 1, username: 'head', is_active: true, is_staff: true, must_change_password: false },
   { id: 2, username: 'assistant', is_active: true, is_staff: false, must_change_password: false },
@@ -301,7 +301,7 @@ it('shows Coaches in the account menu to an administrator only', async () => {
   expect(container.querySelector('.acct-badge').textContent).toBe('Administrator')
   expect(labels().some(l => l.startsWith('Coaches'))).toBe(true)
 
-  await render(<AccountMenu me={{ username: 'assistant', is_staff: false }} onLogout={vi.fn()} />)
+  await render(<AccountMenu me={{ username: 'assistant', is_staff: false, role: 'coach' }} onLogout={vi.fn()} />)
   expect(container.textContent).toContain('assistant')
   expect(container.querySelector('.acct-badge')).toBeNull()
   expect(labels().some(l => l.startsWith('Coaches'))).toBe(false)

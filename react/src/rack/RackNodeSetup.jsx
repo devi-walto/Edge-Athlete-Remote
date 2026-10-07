@@ -108,7 +108,7 @@ export default function RackNodeSetup({ rackNumber, onReady, onObserve }) {
     setStatus('authenticating')
     setError('')
     try {
-      const token = await coachLogin(username.trim(), password, { persist: false })
+      const token = await coachLogin(username.trim(), password, { persist: false, coachOnly: true })
       setCoachToken(token)
       setPassword('')
       resetSelection()

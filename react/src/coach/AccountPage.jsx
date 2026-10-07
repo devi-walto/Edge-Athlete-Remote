@@ -9,13 +9,14 @@
 // who may do what; these only choose what to draw.
 import { useEffect, useState } from 'react'
 import { navigate } from '../router.js'
-import { fetchCurrentCoach, getCoachToken, setCoachToken } from './api.js'
+import { fetchCurrentCoach, getSignedInRole, setSignedInRole, getCoachToken, setCoachToken } from './api.js'
 import { pathForCoachState, resumeCoachState } from './coachState.js'
 import AccountMenu, { COACHES_PATH, PASSWORD_PATH } from './AccountMenu.jsx'
 import ChangePassword from './ChangePassword.jsx'
 import Coaches from './Coaches.jsx'
 import SignIn from './SignIn.jsx'
 import StateNavbar from './StateNavbar.jsx'
+import NotACoach from './NotACoach.jsx'
 import './account.css'
 
 export default function AccountPage({ page }) {
@@ -33,12 +34,13 @@ export default function AccountPage({ page }) {
     let cancelled = false
     setError('')
     fetchCurrentCoach(token)
-      .then((reply) => { if (!cancelled) setMe(reply) })
+      .then((reply) => { if (!cancelled) { setSignedInRole(reply.role); setMe(reply) } })
       .catch((err) => { if (cancelled) return; if (err.status === 401) signOut(); else setError(err.message || 'The server could not be reached.') })
     return () => { cancelled = true }
   }, [token])
 
   if (!token) return <SignIn onSignedIn={setToken} />
+  if ((me?.role || getSignedInRole()) === 'athlete') return <NotACoach onSignOut={signOut} />
   // A temporary password comes first, whatever page was asked for.
   if (me?.must_change_password) {
     return <ChangePassword accessToken={token} forced onLogout={signOut}
@@ -54,11 +56,11 @@ export default function AccountPage({ page }) {
       <div className="acct-topbar-title"><span className="acct-label">Account</span><b>Coaches</b></div>
     </header>
     {error && <section className="acct-body"><p className="acct-error" role="alert">{error}</p></section>}
-    {me && !me.is_staff && <section className="acct-body">
+    {me && me.role !== 'administrator' && <section className="acct-body">
       <p className="acct-note" role="alert">Only an administrator can manage coach logins. Ask an administrator if you need a password reset.</p>
       <div><button type="button" className="acct-solid" onClick={back}>Back to the workspace</button></div>
     </section>}
-    {me?.is_staff && <Coaches accessToken={token} me={me} onLogout={signOut} onChangePassword={() => navigate(PASSWORD_PATH)} />}
+    {me?.role === 'administrator' && <Coaches accessToken={token} me={me} onLogout={signOut} onChangePassword={() => navigate(PASSWORD_PATH)} />}
     <StateNavbar current={null} onSelect={(key) => navigate(pathForCoachState(key))} daySet />
   </main>
 }

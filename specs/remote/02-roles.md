@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: In progress — Phases 0, 1 and 2 done
+- Status: Done 2026-10-07, on `feature-roles` — not yet merged into `SprintBranch`
 - Form item: Definition of Done #3
 - Depends on: [01 Secure coach accounts](01-coach-accounts.md)
 - Next: [05 Hosted mode](05-hosted-mode.md), then 03 and 04
@@ -210,20 +210,33 @@ own tests. The last-administrator rule now counts coach logins only.
 
 **Done when:**
 
-- [ ] *(Frontend test)* An athlete sign-in on `/coach` renders the notice and makes no
+- [x] *(Frontend test)* An athlete sign-in on `/coach` renders the notice and makes no
       coach API requests.
-- [ ] *(Browser)* A coach and an administrator see exactly what they saw before.
-- [ ] The frontend suite passes and the production build succeeds.
+- [x] *(Browser)* A coach and an administrator see exactly what they saw before.
+- [x] The frontend suite passes and the production build succeeds.
+
+**Result, 2026-10-07.** Frontend 281 → 288; Django still 536; production build succeeds.
+
+- The role is stored beside the token at sign-in, so the workspace knows it is an
+  athlete before it asks the server anything. With an athlete signed in the only
+  requests are sign-in and "who am I".
+- The notice is one page, `NotACoach.jsx`, used by the workspace, the account pages and
+  Room Layout. The sensor-setup sign-in on a rack tablet refuses an athlete outright.
+- *(Browser, on a throwaway copy)* An athlete sees the notice; a login attached to
+  nothing sees the server's sentence; a coach sees the workspace and Room Layout and no
+  Coaches entry; an administrator sees Coaches, which lists the two coaches and neither
+  of the other logins.
+- Docs updated: `docs/journal/apis.md`, `docs/remote/access.md`, `docs/reference/spec.md`.
 
 ---
 
 ## Acceptance criteria
 
-- [ ] An athlete login is refused by every coach-only and administrator-only endpoint.
-- [ ] A login attached to nothing is refused everywhere, including at sign-in.
-- [ ] Archiving an athlete ends their access immediately and keeps their history.
-- [ ] No coach or administrator loses anything they could do before.
-- [ ] Nothing behaves differently between a gym box and a hosted installation.
+- [x] An athlete login is refused by every coach-only and administrator-only endpoint.
+- [x] A login attached to nothing is refused everywhere, including at sign-in.
+- [x] Archiving an athlete ends their access immediately and keeps their history.
+- [x] No coach or administrator loses anything they could do before.
+- [x] Nothing behaves differently between a gym box and a hosted installation.
 
 ## Risks
 

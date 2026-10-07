@@ -4,6 +4,7 @@
  */
 
 const TOKEN_KEY = 'coach_access_token'
+const ROLE_KEY = 'coach_signed_in_role'
 
 function responseError(data, status) {
   if (typeof data === 'string') return `HTTP ${status}`
@@ -21,10 +22,26 @@ export function getCoachToken() {
 
 export function setCoachToken(token) {
   if (token) localStorage.setItem(TOKEN_KEY, token)
-  else localStorage.removeItem(TOKEN_KEY)
+  else {
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(ROLE_KEY)
+  }
 }
 
-export async function coachLogin(username, password, { persist = true } = {}) {
+/** The role the server reported at sign-in: 'administrator', 'coach' or 'athlete'.
+ *  Kept beside the token so a screen knows who it is talking to before it asks the
+ *  server anything. It only decides what to SHOW; the server decides what is allowed.
+ *  A login stored before roles existed has none, and those were all coaches. */
+export function getSignedInRole() {
+  return localStorage.getItem(ROLE_KEY)
+}
+
+export function setSignedInRole(role) {
+  if (role) localStorage.setItem(ROLE_KEY, role)
+  else localStorage.removeItem(ROLE_KEY)
+}
+
+export async function coachLogin(username, password, { persist = true, coachOnly = false } = {}) {
   const res = await fetch('/api/auth/login/', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -34,12 +51,20 @@ export async function coachLogin(username, password, { persist = true } = {}) {
   // standing at a tablet nothing. Say what to do instead.
   if (res.status === 429) throw new Error('Too many login attempts. Wait a minute, then try again.')
   const data = await res.json().catch(() => ({}))
+  // The password was right, but the login is attached to neither a coach nor an
+  // athlete. Calling that a wrong password would send someone off to reset a
+  // password that works; pass on the server's own sentence.
+  if (res.status === 401 && data.code === 'no_role' && typeof data.detail === 'string') throw new Error(data.detail)
   if (res.status === 401) throw new Error('The username or password was not accepted.')
   if (!res.ok || !data.access) {
     const detail = data.detail || data.error || `HTTP ${res.status}`
     throw new Error(typeof detail === 'string' ? detail : 'login failed')
   }
-  if (persist) setCoachToken(data.access)
+  if (coachOnly && data.role === 'athlete') throw new Error('Only a coach can do this. Ask your coach to sign in here.')
+  if (persist) {
+    setCoachToken(data.access)
+    setSignedInRole(data.role)
+  }
   return data.access
 }
 

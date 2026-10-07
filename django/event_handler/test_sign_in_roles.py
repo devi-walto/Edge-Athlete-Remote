@@ -78,6 +78,8 @@ class ALoginAttachedToNothingTests(SignInBase):
         self.assertEqual(res.status_code, 401)
         self.assertNotIn('access', res.data)
         self.assertIn('not set up as a coach or an athlete', str(res.data['detail']))
+        # the screen tells this apart from a wrong password by this code
+        self.assertEqual(res.data['code'], 'no_role')
 
     def test_the_staff_flag_alone_does_not_get_in(self):
         self.make('staff_only', is_staff=True)

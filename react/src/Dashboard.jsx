@@ -32,9 +32,10 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import "./App.css";
 import { navigate } from "./router.js";
-import { coachFetch, fetchCurrentCoach, getCoachToken, setCoachToken } from "./coach/api.js";
+import { coachFetch, fetchCurrentCoach, getCoachToken, getSignedInRole, setCoachToken, setSignedInRole } from "./coach/api.js";
 import AccountMenu from "./coach/AccountMenu.jsx";
 import ChangePassword from "./coach/ChangePassword.jsx";
+import NotACoach from "./coach/NotACoach.jsx";
 import SignIn from "./coach/SignIn.jsx";
 import useLiveRoomState from "./useLiveRoomState.js";
 import { compareReps, groupHistorySets, summariseTrainingDays } from "./historyView.js";
@@ -956,7 +957,11 @@ export default function Dashboard({ mode = "wall", coachState = "planning" }) {
   // Who is signed in: their username, whether they are an administrator, and whether
   // they are still on a temporary password. Asked once per login.
   const [me, setMe] = useState(null);
-  const monitor = useLiveRoomState({ mode, accessToken, onAuthRequired: () => forget() });
+  // An athlete's login is a real login, but not for this workspace. Known before
+  // anything is asked of the server (the role is stored at sign-in), so the room
+  // feed below is never started for them.
+  const athleteHere = mode === "coach" && Boolean(accessToken) && (me?.role || getSignedInRole()) === "athlete";
+  const monitor = useLiveRoomState({ mode, accessToken: athleteHere ? null : accessToken, onAuthRequired: () => forget() });
 
   // One place to drop the login, so the stored copy can never outlive the
   // in-memory one — a stale token left in storage is a coach still signed in on
@@ -971,7 +976,7 @@ export default function Dashboard({ mode = "wall", coachState = "planning" }) {
     if (mode !== "coach" || !accessToken) return undefined;
     let cancelled = false;
     fetchCurrentCoach(accessToken)
-      .then((reply) => { if (!cancelled) setMe(reply); })
+      .then((reply) => { if (!cancelled) { setSignedInRole(reply.role); setMe(reply); } })
       // 401: the stored login is no longer good. Anything else (the network
       // dropping mid-session) must NOT sign a coach out; the menu just shows
       // no name until the next successful answer.
@@ -982,6 +987,7 @@ export default function Dashboard({ mode = "wall", coachState = "planning" }) {
   if (mode === "coach" && !accessToken) {
     return <SignIn onSignedIn={setAccessToken} />;
   }
+  if (athleteHere) return <NotACoach onSignOut={forget} />;
   // A temporary password opens this form and nothing else. The server enforces the
   // same thing on every coach route, so this is the polite version of a locked door.
   if (mode === "coach" && me?.must_change_password) {

@@ -19,7 +19,7 @@ Full detail in {doc}`../reference/database`; the reasoning in {doc}`database`.
 ## The permission rule
 
 **Anything a rack tablet must do is open. Anything that changes the plan or the room
-needs a coach login.** 21 routes open, 32 need a login, and 9 more need an administrator's login (counted October 6, 2026; the eight sign-in and coach-login routes below are counted separately).
+needs a coach login.** 21 routes open and 41 need a coach's login (counted October 7, 2026; the eight sign-in and coach-login routes below are counted separately). Until October 7, nine of those 41, the Room Layout routes, needed an administrator. They now take any coach, because a coach has to be able to help set a room up; the administrator flag guards managing coach logins and nothing else.
 
 **What forced it.** A rack tablet is a kiosk. It boots unattended into full-screen
 mode, nobody signs in to it, and there is no keyboard in front of a squat rack. But it
@@ -37,18 +37,65 @@ password matters more than it looks, and why the wall display shows no names
 the first decision to revisit — and the hosted service is that network: see
 {doc}`../remote/access`.
 
-## "Coach" means "logged in", and nothing more
+## A login's role comes from what it is attached to
 
-The check is one line: is this request authenticated? (Since October 2026 it also
-refuses a login that is still on a temporary password; see the next section.)
+Until October 2026 this section was titled *"Coach" means "logged in", and nothing
+more*. The check was one line: is this request authenticated? That was a recorded,
+accepted trade for a gym with two staff logins.
 
-**What we rejected.** A role system — coach, assistant, athlete, admin. There is
-exactly one kind of privileged user in a weight room running this, and a role system
-that is never exercised is a system that is wrong the first time someone needs it.
+**What forced the change.** Athletes get logins on the hosted service
+({doc}`../remote/access`). Under the old check, an athlete's login could edit the
+roster, end a session and delete a plan. The check had to be right before the first
+athlete login could exist.
 
-**What it cost.** Any authenticated account has full coach powers. Fine for one gym
-with two staff logins; not fine the moment athletes get accounts — which the hosted
-service needs ({doc}`../remote/access`).
+**What we chose.** Nothing stores a role. One function, `role_of` in
+`django/event_handler/roles.py`, works it out from what the login is attached to:
+
+| Role | How the server knows |
+|---|---|
+| Administrator | active, has a coach profile, and Django's staff flag is on |
+| Coach | active and has a coach profile |
+| Athlete | active and attached to an athlete record (`Athlete.user`) |
+| None | anything else: **refused everywhere, including at sign-in** |
+
+Every permission class asks that one function. `IsCoach` kept its name on purpose: 43
+routes already used it, and its meaning became the one the name always claimed. Sign-in
+and "who am I" report the role, so a screen knows who it is talking to before it asks
+for anything.
+
+- **Refused by default.** A login attached to nothing, or to both a coach profile and
+  an athlete record, gets nothing. That is the safe answer to a half-made account, and
+  to any new kind of login nobody has planned for yet.
+- **Archiving an athlete switches their login off**, and bringing them back switches it
+  on. The rule lives on the athlete record's own save step, not in the archive route, so
+  no route can archive an athlete and forget the login. It acts only when
+  archived-or-not actually changes.
+- **Renewing a sign-in asks the same question.** The stock renewal route only checked
+  that the renewal token was genuine, and so kept issuing tokens to a switched-off login
+  for up to a week. Each was refused when used; the renewal now refuses too.
+
+**What we rejected, and why.**
+
+- *Django's built-in groups as role labels.* A label and the athlete link could
+  disagree, and then one of them is lying.
+- *A `role` column on the user table.* It means swapping the user model in a project
+  that already has data.
+- *Head-coach and assistant powers.* The label on a training group stays a display
+  label and is never checked. One coach role; the administrator flag adds exactly one
+  thing.
+
+**What it cost.**
+
+- A coach who also lifts cannot use one login for both. They get a separate athlete
+  record, like any other athlete.
+- 37 older tests created a bare login and called it a coach. Each now gives its user a
+  coach profile. No check was loosened to make an old test pass.
+- Coach routes are found by a test that reads the URL configuration, so a route added
+  later is covered without anyone remembering. The price is that the test sends
+  stand-in requests to every coach route, and a view that fails on a stand-in address
+  has to be told apart from a view that refused the caller.
+- There is still no way to bring an archived athlete back from a screen. The server
+  rule exists; the button comes with the archived-athletes work in Analytics.
 
 ## Signing in, and coach logins
 

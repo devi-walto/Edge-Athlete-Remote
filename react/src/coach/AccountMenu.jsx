@@ -40,9 +40,9 @@ export default function AccountMenu({ me, onLogout }) {
     {open && <div className="acct-menu-panel" role="menu">
       <div className="acct-menu-who">
         <span className="acct-label">Signed in as</span>
-        <span><b>{me?.username || '…'}</b>{me?.is_staff && <em className="acct-badge" style={{ fontStyle: 'normal' }}>Administrator</em>}</span>
+        <span><b>{me?.username || '…'}</b>{me?.role === 'administrator' && <em className="acct-badge" style={{ fontStyle: 'normal' }}>Administrator</em>}</span>
       </div>
-      {me?.is_staff && <button type="button" role="menuitem" onClick={() => go(COACHES_PATH)}>Coaches<small>administrators only</small></button>}
+      {me?.role === 'administrator' && <button type="button" role="menuitem" onClick={() => go(COACHES_PATH)}>Coaches<small>administrators only</small></button>}
       <button type="button" role="menuitem" onClick={() => go(PASSWORD_PATH)}>Change password</button>
       <button type="button" role="menuitem" onClick={() => { setOpen(false); onLogout() }}>Log out</button>
     </div>}

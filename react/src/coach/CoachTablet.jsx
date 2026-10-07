@@ -12,11 +12,13 @@ import { navigate } from '../router.js'
 import {
   coachFetch,
   getCoachToken,
+  getSignedInRole,
   setCoachToken,
   shortId,
 } from './api.js'
 import { getRackState } from '../api/client.js'
 import './CoachTablet.css'
+import NotACoach from './NotACoach.jsx'
 import SignIn from './SignIn.jsx'
 
 /** Demo room size — slots are UI numbers, not a DB model. */
@@ -845,6 +847,8 @@ export default function CoachTablet() {
 
         {!token ? (
           <SignIn embedded onSignedIn={setToken} />
+        ) : getSignedInRole() === 'athlete' ? (
+          <NotACoach onSignOut={logout} />
         ) : (
           <>
             <DefaultsBanner token={token} onChangePassword={() => setShowWifi(true)} />

@@ -102,6 +102,14 @@ the wall in the gym. The fence that matters is **between programs**, and that on
 structural ({doc}`databases`). The coach's hide setting applies online exactly as on
 the wall, so the two can never disagree.
 
+**How the server tells them apart (built October 2026).** Nothing stores a role. A
+login attached to a coach profile is a coach; with the staff flag on, an administrator.
+A login attached to an athlete record is an athlete. A login attached to neither, or
+to both, is refused everywhere, including at sign-in. An athlete's login is refused by
+every coach route, and the coach workspace shows them a short notice instead of
+loading. Archiving an athlete switches their login off at once and keeps their history.
+The reasoning is in {doc}`../journal/apis`.
+
 ### 6. Setting up the coaches
 
 The coach side is not new design. It is work Braydon did on the team repository,
