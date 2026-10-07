@@ -18,6 +18,24 @@ to edit the roster, end sessions and delete plans. **This spec has to be finishe
 before the first athlete login can exist.** Spec 03 creates those logins; it must not
 start until this one is merged.
 
+### Open decision — who may use Room Layout?
+
+Found in spec 01's Phase 3 rehearsal (2026-10-06). Eight routes need the administrator
+flag today: assigning a tablet to a rack, removing a rack, releasing all racks, linking
+or replacing a rack's sensor, and the sensor scan and verify routes. That predates coach
+accounts. It went unnoticed because every login was the staff demo login.
+
+The agreed rule is that the administrator flag controls **only** managing coach
+logins, and every coach can do everything in the workspace. As built, a coach who is
+not an administrator cannot set the room up or swap a dead sensor during a session.
+
+- **Option A (matches the agreed rule):** these eight routes take any coach. The
+  administrator flag guards only `/api/coaches/…`.
+- **Option B:** keep them for administrators, and change the rule to say so.
+
+This spec builds whichever is chosen; until then the table below keeps today's
+behaviour.
+
 ## User story
 
 As a coach, I want athlete logins to be able to do only athlete things, so that giving

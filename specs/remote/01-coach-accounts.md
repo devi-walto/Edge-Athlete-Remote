@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-05
-- Status: **Phases 0, 1 and 2 done 2026-10-06 on branch `feature-coach_accounts`. Phase 2: every check passed; the archived-athlete history item moved to spec 09 by Devin's decision. Waiting on Devin's go for Phase 3**
+- Status: **Phases 0, 1 and 2 done 2026-10-06 on branch `feature-coach_accounts`. Phases 0–3 done; the archived-athlete history item moved to spec 09 by Devin's decision. Phase 3 found one thing for Devin to decide (who may use Room Layout). Waiting on Devin's review before Phase 4**
 - Mockup: `F_SignIn`, `F_FirstRun`, `F_Coaches`, `F_AccountMenu` on the canvas's **Final designs** page ("The same in both: accounts and access"), also in [`specs/ui/mockups/coach-ui-final.html`](../ui/mockups/coach-ui-final.html). Look: [spec 06](../ui/06-design-rules.md) rule 9
 - Index and shared decisions: [specs/README.md](../README.md)
 - Form item: Definition of Done #2 ("Coach accounts are secured")
@@ -410,21 +410,78 @@ that picker.
 
 **A. Fresh installation** — empty database, `DEBUG` off:
 
-- [ ] The site asks for a setup code. The code comes only from `manage.py setup_code`.
-- [ ] Claiming creates the first administrator; the setup screen never appears again.
-- [ ] `coach` / `coachpass` does not work, and the demo command refuses to create it.
+- [x] The site asks for a setup code. The code comes only from `manage.py setup_code`.
+- [x] Claiming creates the first administrator; the setup screen never appears again.
+- [x] `coach` / `coachpass` does not work, and the demo command refuses to create it.
 
 **B. Upgraded gym box** — a copy of a database that already has coach logins:
 
-- [ ] After migrating, every existing coach can still sign in and use everything.
-- [ ] Nobody is an administrator yet, and **Coaches** is not shown to anyone.
-- [ ] `manage.py make_admin <username>` on the machine makes one of them an
+- [x] After migrating, every existing coach can still sign in and use everything.
+- [x] Nobody is an administrator yet, and **Coaches** is not shown to anyone.
+- [x] `manage.py make_admin <username>` on the machine makes one of them an
       administrator; after they sign in again, **Coaches** appears.
 
 **C. The gym still runs:**
 
-- [ ] A rack screen with no login can register, check an athlete in, and save a set.
-- [ ] The wall display still shows the room.
+- [x] A rack screen with no login can register, check an athlete in, and save a set.
+- [x] The wall display still shows the room.
+
+### Phase 3 result — 2026-10-06
+
+Rehearsed on a second copy of the app (port 8090), started **with the image's own start
+command and `DEBUG=False`**, which is how a real box starts. Driven through a browser.
+
+**A. Fresh installation** (empty database):
+
+- It started cleanly: migrations `0023`–`0025` applied, no demo login was created, and
+  the database held zero logins.
+- `ensure_demo_coach` refused: "Refusing to create the demo login (coach / coachpass)
+  while DEBUG is off." `coach` / `coachpass` got `401`.
+- Trying to claim with no code issued was refused.
+- `/`, `/coach/planning`, `/rack/1`, `/dashboard` and the Coaches address all showed
+  first-run setup. `setup_code` on the machine printed a code; a wrong code was
+  refused with a sentence; the right one created the administrator (with a coach
+  profile) and opened the workspace.
+- Afterwards the site opened normally, the setup route said no setup was needed, the
+  stored code was gone, and running `setup_code` again answered "This installation is
+  already set up."
+
+**B. Upgraded gym box** (a copy of the running database, taken back to "no
+administrator" by clearing the staff flag on both logins, still at migration `0022`):
+
+- Starting the new version migrated it. Both logins kept working with their old
+  passwords, each got one coach profile, nobody was forced to change a password, and
+  the 4 athletes, 34 sessions and 52 sets were untouched. The site did not ask for a
+  setup code.
+- The existing coach opened all three states and all nine tabs with no failed request.
+  Their account menu had no **Coaches**, and the Coaches address said "Only an
+  administrator can manage coach logins."
+- `make_admin coach` on the machine promoted them. **Coaches** appeared after a plain
+  reload; signing out was not needed, so the command's message now says "the next time
+  they open or reload the coach workspace".
+
+**C. The gym still runs:**
+
+- A new tablet registered with no login. A rack screen with no login showed the
+  check-in list, an athlete tapped in, a set ran with the simulated sensor (5 reps),
+  and the set saved with its 5 reps.
+- The wall display showed the room with no login.
+
+**Found: Room Layout is administrator-only, which the decisions table says it should
+not be.** Assigning a tablet to a rack, removing or releasing racks, and linking or
+replacing a sensor need the administrator flag (`IsActiveStaff`, eight routes). That
+rule is older than this spec and nobody noticed, because until now every login was the
+demo login, which is staff. From this spec on there are coaches who are not
+administrators, and they cannot do Room Layout or replace a dead sensor mid-session.
+The decisions table above says the flag controls **only** managing coach logins.
+Nothing here was changed. **Devin to decide, and spec 02 is where it gets built:**
+open Room Layout to every coach (what the decision says), or keep it for
+administrators and amend the decision.
+
+**A limit of how this was tested:** in this headless browser a real mouse press does
+not register on any page, so buttons were pressed through the page itself. The account
+menu's open, close-on-Escape and close-on-outside-press were confirmed that way. A
+person clicking through once is still worth doing before the merge.
 
 **Stop. Devin reviews before Phase 4.**
 

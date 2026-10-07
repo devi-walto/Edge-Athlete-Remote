@@ -48,5 +48,5 @@ class Command(BaseCommand):
         # An administrator is a coach too: the Coaches screen lists coach profiles.
         CoachProfile.objects.get_or_create(user=user)
         self.stdout.write(self.style.SUCCESS(
-            f"'{username}' is now an administrator. They will see Coaches in the "
-            "account menu the next time they sign in."))
+            f"'{username}' is now an administrator. Coaches appears in their account "
+            "menu the next time they open or reload the coach workspace."))
