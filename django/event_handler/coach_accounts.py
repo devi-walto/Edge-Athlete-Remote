@@ -45,7 +45,8 @@ def _would_remove_last_admin(user, *, is_active=None, is_staff=None):
     next_staff = user.is_staff if is_staff is None else is_staff
     if next_active and next_staff:
         return False
-    others = get_user_model().objects.filter(is_active=True, is_staff=True).exclude(pk=user.pk)
+    # An administrator is a coach login with the staff flag; the flag alone is not one.
+    others = coach_logins().filter(is_active=True, is_staff=True).exclude(pk=user.pk)
     return not others.exists()
 
 

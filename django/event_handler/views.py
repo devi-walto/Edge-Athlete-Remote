@@ -40,6 +40,7 @@ from django.db import IntegrityError, models, transaction
 from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework.decorators import api_view, parser_classes, permission_classes
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -53,7 +54,8 @@ from .models import (Node, RackScreen, Athlete, TrainingSession, Set, Rep, Athle
 
 # Coaches are Django users; there is no separate coach table. See docs/reference/spec.md.
 User = get_user_model()
-from .permissions import IsActiveStaff, IsCoach, refuse_while_password_change_due
+from .permissions import COACH_ROLES, IsCoach, refuse_while_password_change_due
+from .roles import role_of
 from .serializers import (SetSerializer, SetCompleteSerializer, RackScreenSerializer,
                           AthleteSerializer, TrainingSessionSerializer,
                           NodeSerializer, ExerciseSerializer, TrainingGroupSerializer,
@@ -270,6 +272,10 @@ def _require_coach(request):
     """
     if not (request.user and request.user.is_authenticated):
         return False
+    # Signed in, but not as a coach (an athlete, or a login attached to nothing):
+    # that is "you may not", not "you are not signed in".
+    if role_of(request.user) not in COACH_ROLES:
+        raise PermissionDenied('Only a coach can do this.')
     refuse_while_password_change_due(request.user)
     return True
 
@@ -353,7 +359,7 @@ def racks_unassigned(request):
 
 
 @api_view(["PATCH"])
-@permission_classes([IsActiveStaff])
+@permission_classes([IsCoach])
 def rack_assign(request, device_id):
     """Coach-only: give a waiting tablet its rack number, or release it.
 
@@ -400,7 +406,7 @@ def rack_assign(request, device_id):
 
 
 @api_view(["DELETE"])
-@permission_classes([IsActiveStaff])
+@permission_classes([IsCoach])
 def rack_remove(request, rack_number):
     """Coach-only: FORCE-CLEAR a rack so a fresh screen can take it over.
 
@@ -437,7 +443,7 @@ def rack_remove(request, rack_number):
 
 
 @api_view(["POST"])
-@permission_classes([IsActiveStaff])
+@permission_classes([IsCoach])
 def racks_release_all(request):
     """Coach-only: force-clear EVERY rack in one go — the end-of-session reset.
 
@@ -582,7 +588,7 @@ def _force_clear_rack(rack_number, *, emit_event=True):
 
 
 @api_view(["PUT"])
-@permission_classes([IsActiveStaff])
+@permission_classes([IsCoach])
 def rack_node_assignment(request):
     """Select this physical rack's registered node. Body: {device_id, node_id}.
 
@@ -618,7 +624,7 @@ def rack_node_assignment(request):
 
 
 @api_view(["DELETE"])
-@permission_classes([IsActiveStaff])
+@permission_classes([IsCoach])
 @transaction.atomic
 def rack_node_unlink(request, rack_number):
     """Coach-only: take whatever sensor is on this rack OFF it.
@@ -743,7 +749,7 @@ def _nonempty_bounded_string(value, maximum=255):
 
 
 @api_view(["POST"])
-@permission_classes([IsActiveStaff])
+@permission_classes([IsCoach])
 def ble_scans(request):
     if request.data not in ({}, None):
         return Response({
@@ -771,7 +777,7 @@ def ble_scans(request):
 
 
 @api_view(["POST"])
-@permission_classes([IsActiveStaff])
+@permission_classes([IsCoach])
 def ble_verifications(request):
     if set(request.data) != {"device_handle"} or not _nonempty_bounded_string(
         request.data.get("device_handle"),
@@ -800,7 +806,7 @@ def ble_verifications(request):
 
 
 @api_view(["PUT"])
-@permission_classes([IsActiveStaff])
+@permission_classes([IsCoach])
 def rack_ble_selection(request, rack_number):
     if set(request.data) != {"device_id", "verification_token"} or not all((
         _nonempty_bounded_string(request.data.get("device_id")),
@@ -1526,7 +1532,7 @@ def nodes_list(request):
 
 
 @api_view(["PUT"])
-@permission_classes([IsActiveStaff])
+@permission_classes([IsCoach])
 def node_acquisition_kind(request, node_id):
     """Provision the transport trusted to supply one registered node's health."""
     if set(request.data) != {"acquisition_kind"}:
@@ -2649,8 +2655,8 @@ def training_group_coaches_view(request, group_id):
       DELETE -> remove someone: { "coach": 4 }
 
     ⚠️ Being on this list is a STATEMENT, not a permission. Nothing here is
-    consulted when deciding whether a write is allowed — `IsCoach` still means
-    "is authenticated". That is the canon's filter-not-fence decision, and it is
+    consulted when deciding whether a write is allowed — `IsCoach` lets any coach
+    through, listed or not. That is the canon's filter-not-fence decision, and it is
     deliberate: recording who runs what is useful on its own, and enforcement can
     be added later on top of this without undoing any of it.
     """

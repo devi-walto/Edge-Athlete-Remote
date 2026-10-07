@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: In progress — Phase 0 done
+- Status: In progress — Phases 0 and 1 done
 - Form item: Definition of Done #3
 - Depends on: [01 Secure coach accounts](01-coach-accounts.md)
 - Next: [05 Hosted mode](05-hosted-mode.md), then 03 and 04
@@ -38,12 +38,16 @@ Build it in this spec, with the role checks:
 
 **Done when** (add to the phase that changes the permission classes):
 
-- [ ] A coach who is not an administrator can assign a tablet to a rack, link a
+- [x] A coach who is not an administrator can assign a tablet to a rack, link a
       sensor, replace a sensor, and release a rack.
-- [ ] No login, and an athlete login, are refused on all eight.
-- [ ] A coach who is not an administrator still gets `403` from every `/api/coaches/…` route.
-- [ ] `IsActiveStaff` appears nowhere in the code.
+- [x] No login, and an athlete login, are refused on all eight.
+- [x] A coach who is not an administrator still gets `403` from every `/api/coaches/…` route.
+- [x] `IsActiveStaff` appears nowhere in the code.
 - [ ] *(Browser)* A regular coach completes Room Layout for one rack from start to finish.
+
+**Result, 2026-10-07.** Built in Phase 1. Nine routes moved, not eight: linking a sensor and
+unlinking one are two routes. The browser check is still open: finishing Room Layout
+needs a sensor in range, so it is for Devin to do once on the gym box.
 
 ## User story
 
@@ -131,7 +135,7 @@ Rewrite `permissions.py` on top of `role_of`:
 | Class | Lets through |
 |---|---|
 | `IsCoach` | administrator, coach |
-| `IsInstallationAdmin` (and `IsActiveStaff`, kept as an alias) | administrator |
+| `IsInstallationAdmin` | administrator |
 | `IsAthlete` | athlete |
 | `IsCoachOrAthlete` | any of the three |
 
@@ -140,15 +144,24 @@ becomes the one the name always claimed.
 
 **Done when:**
 
-- [ ] **One test walks every route that uses `IsCoach`** — discovered from the URL
+- [x] **One test walks every route that uses `IsCoach`** — discovered from the URL
       configuration, not typed out — and asserts, for each allowed method: a coach is
       not refused for permission; an athlete gets `403`; a login with no role gets
       `403`; no login gets `401`. A new coach route added later is covered without
       anyone remembering to add a test.
-- [ ] The same walk for the administrator-only routes: a coach gets `403`.
-- [ ] Every existing test that signs in as a plain user still passes — which means the
+- [x] The same walk for the administrator-only routes: a coach gets `403`.
+- [x] Every existing test that signs in as a plain user still passes — which means the
       test fixtures give that user a coach profile. Fix the fixtures, not the checks.
-- [ ] The full Django suite passes.
+- [x] The full Django suite passes.
+
+**Result, 2026-10-07.** Suite 502 → 520. The walk reads 73 routes out of the URL
+configuration: 43 coach routes (65 route-and-method pairs) and 3 administrator routes.
+It also fails if any route is guarded by "signed in" alone, apart from "who am I" and
+changing your own password. `IsActiveStaff` is deleted, not kept as an alias (the Room
+Layout decision above). 37 older test users were given a coach profile; no check was
+loosened. Two open-to-read routes check for a coach inside the view (`athletes`,
+`room-state?details=true`); they now answer `403` to a signed-in non-coach and have their
+own tests. The last-administrator rule now counts coach logins only.
 
 **Stop. Devin reviews.**
 

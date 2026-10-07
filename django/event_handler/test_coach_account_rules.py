@@ -152,6 +152,9 @@ class LastAdministratorTests(APITestCase):
         self.assertTrue(_would_remove_last_admin(self.admin, is_staff=False))
         self.assertTrue(_would_remove_last_admin(self.admin, is_active=False))
         second = User.objects.create_user('second', password=PASSWORD, is_staff=True)
+        # The staff flag alone is not an administrator; it has to be a coach login.
+        self.assertTrue(_would_remove_last_admin(self.admin, is_staff=False))
+        CoachProfile.objects.create(user=second)
         self.assertFalse(_would_remove_last_admin(self.admin, is_staff=False))
         # A deactivated administrator does not count as one that remains.
         second.is_active = False

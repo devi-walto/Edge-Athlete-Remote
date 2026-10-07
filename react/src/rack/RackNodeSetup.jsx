@@ -294,7 +294,7 @@ export default function RackNodeSetup({ rackNumber, onReady, onObserve }) {
           </div>
           <h2 style={{ margin: '10px 0 8px' }}>Authorize sensor setup</h2>
           <p style={{ color: T.muted, margin: '0 0 22px' }}>
-            An active staff coach must authenticate before scanning nearby BLE sensors.
+            A coach must sign in before scanning for nearby sensors.
           </p>
           <div style={{ display: 'grid', gap: 12 }}>
             <input aria-label="Coach username" autoComplete="username" placeholder="Coach username"

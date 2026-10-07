@@ -241,6 +241,7 @@ class DemoCoachGuardTests(APITestCase):
 class RosterManagementTests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='coach', password='Unique-coach-2026!safe')
+        CoachProfile.objects.create(user=self.user)
         self.client.force_authenticate(self.user)
 
     def test_create_edit_archive_preserves_history_and_releases_tag(self):

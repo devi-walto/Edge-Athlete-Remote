@@ -1,13 +1,18 @@
 """
-permissions.py — the "bouncer" for coach-only actions.
+permissions.py — the "bouncer" for actions that are not open to everyone.
 
 Some actions (creating athletes, assigning racks, ending sessions) should only
-work for a logged-in coach. This file is that check: is the person making the
-request a logged-in coach? Yes -> let them through. No -> block it. Endpoints
-that are open to any screen simply don't use this bouncer.
+work for a coach. This file is that check. It does not decide who a login is;
+roles.py does that, from what the login is attached to. Each class here just
+says which roles it lets through. Endpoints that are open to any screen simply
+don't use this bouncer.
 """
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import BasePermission
+
+from .roles import ADMINISTRATOR, ATHLETE, COACH, role_of
+
+COACH_ROLES = (ADMINISTRATOR, COACH)
 
 
 def password_change_due(user) -> bool:
@@ -37,44 +42,54 @@ def refuse_while_password_change_due(user):
         })
 
 
+def _role(request):
+    return role_of(getattr(request, 'user', None))
+
+
 class IsCoach(BasePermission):
-    """Allow the request only if it carries a valid coach login (a JWT token,
-    which the login endpoint hands out) that is past its temporary password."""
+    """Let through a coach or an administrator who is past their temporary password.
+
+    "Coach" used to mean "signed in", because coaches were the only people who
+    could sign in. Now it means what the name says: the login is attached to a
+    coach profile. An athlete's login, or one attached to nothing, is refused.
+    """
 
     def has_permission(self, request, view):
-        if not (request.user and request.user.is_authenticated):
-            return False
-        refuse_while_password_change_due(request.user)
-        return True
-
-
-class IsActiveStaff(BasePermission):
-    """Require the active staff account used for security-sensitive setup."""
-
-    def has_permission(self, request, view):
-        if not (request.user
-                and request.user.is_authenticated
-                and request.user.is_active
-                and request.user.is_staff):
+        if _role(request) not in COACH_ROLES:
             return False
         refuse_while_password_change_due(request.user)
         return True
 
 
 class IsInstallationAdmin(BasePermission):
-    """An administrator: an active staff account that may manage coach logins.
+    """Let through an administrator only.
 
-    Staff status is the sole difference between an administrator and an ordinary
-    coach, so this is the check that keeps account creation, password resets, and
-    deactivation out of a regular coach's hands. ("Administrator" is this flag.
-    "Head coach" is only a label on a training group and is never checked.)
+    The administrator flag is the sole difference between an administrator and
+    an ordinary coach, and it guards exactly one thing: managing coach logins.
+    ("Head coach" is only a label on a training group and is never checked.)
     """
 
     def has_permission(self, request, view):
-        if not (request.user
-                and request.user.is_authenticated
-                and request.user.is_active
-                and request.user.is_staff):
+        if _role(request) != ADMINISTRATOR:
             return False
         refuse_while_password_change_due(request.user)
+        return True
+
+
+class IsAthlete(BasePermission):
+    """Let through an athlete's own login only."""
+
+    def has_permission(self, request, view):
+        return _role(request) == ATHLETE
+
+
+class IsCoachOrAthlete(BasePermission):
+    """Let through anyone with a role; refuse a login attached to nothing."""
+
+    def has_permission(self, request, view):
+        role = _role(request)
+        if role is None:
+            return False
+        if role in COACH_ROLES:
+            refuse_while_password_change_due(request.user)
         return True

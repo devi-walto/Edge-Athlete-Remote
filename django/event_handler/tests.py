@@ -37,6 +37,19 @@ from .management.commands.simulate_node import (MODE_ALWAYS, MODE_CHECKIN, MODE_
 from .realtime.mqtt_ingester.parser import parse_pulse_payload
 from .realtime.event_processor.process_pulse import process_pulse_event
 from .serializers import AthleteSerializer
+from .models import CoachProfile
+
+
+def make_coach(**fields):
+    """A signed-in coach for a test: a login WITH a coach profile.
+
+    A bare login is no longer a coach (see roles.py). It is attached to nothing,
+    so every coach route refuses it. Tests that want a coach use this; tests that
+    want to prove a non-coach is refused create a bare login on purpose.
+    """
+    user = User.objects.create_user(**fields)
+    CoachProfile.objects.create(user=user)
+    return user
 
 
 def controller_token():
@@ -76,7 +89,7 @@ def give_plan(athlete, session, exercise, weight_lbs, sets=5, reps=3,
     competing plans.
     """
     coach = User.objects.filter(username="plan-helper-coach").first() \
-        or User.objects.create_user(username="plan-helper-coach", password="pw")
+        or make_coach(username="plan-helper-coach", password="pw")
 
     group = athlete.training_groups.first()
     if group is None:
@@ -1067,7 +1080,7 @@ class RackScreenReleaseTests(APITestCase):
     """
 
     def setUp(self):
-        self.staff = User.objects.create_user(
+        self.staff = make_coach(
             username="release-coach", password="pw", is_staff=True, is_active=True,
         )
         self.client.force_authenticate(self.staff)
@@ -1136,7 +1149,7 @@ class RackRemoveTests(APITestCase):
     """
 
     def setUp(self):
-        self.staff = User.objects.create_user(
+        self.staff = make_coach(
             username="remove-coach", password="pw", is_staff=True, is_active=True,
         )
         self.client.force_authenticate(self.staff)
@@ -1186,8 +1199,8 @@ class RackRemoveTests(APITestCase):
         self.node.refresh_from_db()
         self.assertEqual(self.node.rack_number, 1, "the sensor stays on the rack for a new screen")
 
-    def test_requires_staff(self):
-        ordinary = User.objects.create_user(username="athlete", password="pw")
+    def test_refuses_a_login_that_is_not_a_coach(self):
+        ordinary = User.objects.create_user(username="not-a-coach", password="pw")
         self.client.force_authenticate(ordinary)
         res = self.client.delete("/api/racks/1/")
         self.assertEqual(res.status_code, 403)
@@ -1457,7 +1470,7 @@ class PerLaptopNodeFlowTests(APITestCase):
     fast path so nobody re-welds it to wt901_ble and breaks the laptop build."""
 
     def setUp(self):
-        self.staff = User.objects.create_user(
+        self.staff = make_coach(
             username="rack-coach", password="pw", is_staff=True, is_active=True,
         )
         self.session = TrainingSession.objects.create(label="Live", started_at=timezone.now())
@@ -1516,7 +1529,7 @@ class RackReleaseAllTests(APITestCase):
     """
 
     def setUp(self):
-        self.staff = User.objects.create_user(
+        self.staff = make_coach(
             username="sweep-coach", password="pw", is_staff=True, is_active=True,
         )
         self.client.force_authenticate(self.staff)
@@ -1586,7 +1599,7 @@ class RackClearBluetoothGuardTests(APITestCase):
     """
 
     def setUp(self):
-        self.staff = User.objects.create_user(
+        self.staff = make_coach(
             username="ble-guard-coach", password="pw", is_staff=True, is_active=True,
         )
         self.client.force_authenticate(self.staff)
@@ -1645,7 +1658,7 @@ class RackNodeUnlinkTests(APITestCase):
     """
 
     def setUp(self):
-        self.staff = User.objects.create_user(
+        self.staff = make_coach(
             username="unlink-coach", password="pw", is_staff=True, is_active=True,
         )
         self.client.force_authenticate(self.staff)
@@ -1714,7 +1727,7 @@ class RackNodeUnlinkTests(APITestCase):
 
 class RackNodeAssignmentTests(APITestCase):
     def setUp(self):
-        self.staff = User.objects.create_user(
+        self.staff = make_coach(
             username="rack-coach", password="pw", is_staff=True, is_active=True,
         )
         self.screen = RackScreen.objects.create(device_id="rack-screen-a", rack_number=1)
@@ -1781,8 +1794,8 @@ class RackNodeAssignmentTests(APITestCase):
         self.node.refresh_from_db()
         self.assertIsNone(self.node.rack_number)
 
-    def test_assignment_requires_active_staff(self):
-        ordinary_user = User.objects.create_user(username="athlete", password="pw")
+    def test_assignment_refuses_a_login_that_is_not_a_coach(self):
+        ordinary_user = User.objects.create_user(username="not-a-coach", password="pw")
         self.client.force_authenticate(ordinary_user)
         self.assertEqual(self._assign().status_code, 403)
 
@@ -1794,7 +1807,7 @@ class RackNodeAssignmentTests(APITestCase):
         self.node.refresh_from_db()
         self.assertIsNone(self.node.rack_number)
 
-    def test_screen_assignment_requires_active_staff(self):
+    def test_screen_assignment_refuses_a_login_that_is_not_a_coach(self):
         ordinary_user = User.objects.create_user(username="screen-user", password="pw")
         self.client.force_authenticate(ordinary_user)
 
@@ -2020,7 +2033,7 @@ class RackNodeAssignmentTests(APITestCase):
 
 class BLEAgentFacadeTests(APITestCase):
     def setUp(self):
-        self.staff = User.objects.create_user(
+        self.staff = make_coach(
             username="ble-coach", password="pw", is_staff=True, is_active=True,
         )
         self.screen = RackScreen.objects.create(device_id="rack-screen-1", rack_number=1)
@@ -2044,7 +2057,7 @@ class BLEAgentFacadeTests(APITestCase):
         }, format="json")
 
     @patch("event_handler.views.ble_agent.scan")
-    def test_scan_requires_staff_and_exact_empty_body(self, scan):
+    def test_scan_requires_a_coach_and_exact_empty_body(self, scan):
         scan.return_value = {"devices": []}
         self.assertEqual(self.client.post("/api/ble/scans/", {}, format="json").status_code, 401)
         self.client.force_authenticate(User.objects.create_user(username="ordinary", password="pw"))
@@ -2718,7 +2731,7 @@ class AthleteNotesTests(APITestCase):
     """
 
     def setUp(self):
-        self.coach = User.objects.create_user(username="notescoach", password="pw")
+        self.coach = make_coach(username="notescoach", password="pw")
         self.client.force_authenticate(user=self.coach)
         self.athlete = Athlete.objects.create(name="Jordan Lee")
 
@@ -2907,7 +2920,7 @@ class RoomStateEndpointTests(APITestCase):
 
     def test_details_adds_ids_and_roster_for_a_coach(self):
         session, athlete, _ = self._room()
-        coach = User.objects.create_user(username="coach", password="pw")
+        coach = make_coach(username="coach", password="pw")
         self.client.force_authenticate(user=coach)
 
         res = self.client.get("/api/room-state/?details=true")
@@ -2934,7 +2947,7 @@ class SessionCompletionTests(APITestCase):
     """
 
     def setUp(self):
-        self.coach = User.objects.create_user(username="coach", password="pw")
+        self.coach = make_coach(username="coach", password="pw")
         self.client.force_authenticate(user=self.coach)
         self.session = TrainingSession.objects.create(label="Thursday", started_at=timezone.now())
         self.athlete = Athlete.objects.create(name="Jordan Lee")
@@ -3024,7 +3037,7 @@ class ReportsEndpointTests(APITestCase):
     """GET /api/reports/ — one family, athlete view is a filter (canon R6)."""
 
     def setUp(self):
-        self.coach = User.objects.create_user(username="coach", password="pw")
+        self.coach = make_coach(username="coach", password="pw")
         self.client.force_authenticate(user=self.coach)
         self.session = TrainingSession.objects.create(label="Thursday", started_at=timezone.now())
         self.athlete = Athlete.objects.create(name="Jordan Lee")
@@ -3090,7 +3103,7 @@ class ReferenceMaxWriteTests(APITestCase):
     """POST /api/reference-maxes/ — the prescription lever."""
 
     def setUp(self):
-        self.coach = User.objects.create_user(username="coach", password="pw")
+        self.coach = make_coach(username="coach", password="pw")
         self.client.force_authenticate(user=self.coach)
         self.squat = Exercise.objects.get_or_create(name="Back Squat")[0]
         self.a1 = Athlete.objects.create(name="A One")
@@ -3133,7 +3146,7 @@ class PlanResolutionTests(APITestCase):
     """
 
     def setUp(self):
-        self.coach = User.objects.create_user(username="coach", password="pw")
+        self.coach = make_coach(username="coach", password="pw")
         self.session = TrainingSession.objects.create(label="Thursday", started_at=timezone.now())
         self.athlete = Athlete.objects.create(name="Jordan Lee")
         self.session.athletes.add(self.athlete)
@@ -3311,7 +3324,7 @@ class CoachWeightAdjustmentTests(APITestCase):
         real gap: it was missing from SetSerializer.fields, so DRF silently
         dropped it and no client could make an adjustment at all. The whole D15
         exclusion list was unreachable from outside Python."""
-        coach = User.objects.create_user(username="d15coach", password="pw")
+        coach = make_coach(username="d15coach", password="pw")
         self.client.force_authenticate(user=coach)
         res = self.client.post("/api/sets/", {
             "session": self.session.id, "athlete": self.athlete.id,
@@ -3341,7 +3354,7 @@ class PlanningEndpointTests(APITestCase):
     """
 
     def setUp(self):
-        self.coach = User.objects.create_user(username="coach", password="pw")
+        self.coach = make_coach(username="coach", password="pw")
         self.client.force_authenticate(user=self.coach)
         self.squat = Exercise.objects.get_or_create(name="Back Squat")[0]
         self.bench = Exercise.objects.get_or_create(name="Bench Press")[0]
@@ -3486,7 +3499,7 @@ class TemplateEditingTests(APITestCase):
     """
 
     def setUp(self):
-        self.coach = User.objects.create_user(username="coach", password="pw")
+        self.coach = make_coach(username="coach", password="pw")
         self.client.force_authenticate(user=self.coach)
         self.squat = Exercise.objects.get_or_create(name="Back Squat")[0]
         self.bench = Exercise.objects.get_or_create(name="Bench Press")[0]
@@ -3666,8 +3679,8 @@ class BlockCatalogLensTests(APITestCase):
     """
 
     def setUp(self):
-        self.sarah = User.objects.create_user(username="sarah", password="pw")
-        self.mike = User.objects.create_user(username="mike", password="pw")
+        self.sarah = make_coach(username="sarah", password="pw")
+        self.mike = make_coach(username="mike", password="pw")
         self.client.force_authenticate(user=self.sarah)
         self.hers = TrainingBlock.objects.create(name="Alpha Fall", coach=self.sarah)
         self.his = TrainingBlock.objects.create(name="Beta Winter", coach=self.mike)
@@ -3732,7 +3745,7 @@ class BlockCategoryTests(APITestCase):
     """
 
     def setUp(self):
-        self.coach = User.objects.create_user(username="coach", password="pw")
+        self.coach = make_coach(username="coach", password="pw")
         self.client.force_authenticate(user=self.coach)
         self.offseason = BlockCategory.objects.create(name="Off-season")
         self.football = BlockCategory.objects.create(name="Football")
@@ -3832,7 +3845,7 @@ class BlockCategoryTests(APITestCase):
         self.assertEqual(res.status_code, 400)
 
     def test_category_and_coach_filters_combine(self):
-        other = User.objects.create_user(username="other", password="pw")
+        other = make_coach(username="other", password="pw")
         theirs = TrainingBlock.objects.create(name="Epsilon", coach=other)
         theirs.categories.set([self.football])
 
@@ -3849,9 +3862,9 @@ class TrainingGroupStaffTests(APITestCase):
     """
 
     def setUp(self):
-        self.sarah = User.objects.create_user(username="sarah", password="pw")
-        self.mike = User.objects.create_user(username="mike", password="pw")
-        self.dana = User.objects.create_user(username="dana", password="pw")
+        self.sarah = make_coach(username="sarah", password="pw")
+        self.mike = make_coach(username="mike", password="pw")
+        self.dana = make_coach(username="dana", password="pw")
         self.client.force_authenticate(user=self.sarah)
         self.group = TrainingGroup.objects.create(name="Varsity")
         TrainingGroupCoach.objects.create(
@@ -4113,7 +4126,7 @@ class OneOpenSessionTests(APITestCase):
     """
 
     def setUp(self):
-        self.coach = User.objects.create_user(username="coach", password="pw")
+        self.coach = make_coach(username="coach", password="pw")
         self.client.force_authenticate(user=self.coach)
         # A session needs a non-empty roster — the API rejects a day with nobody
         # in it, which is correct and worth knowing when reading these payloads.
@@ -4299,7 +4312,7 @@ class ProgramPromotionTests(APITestCase):
     """
 
     def setUp(self):
-        self.coach = User.objects.create_user(username="coach", password="pw")
+        self.coach = make_coach(username="coach", password="pw")
         self.client.force_authenticate(user=self.coach)
         self.group = TrainingGroup.objects.create(name="Varsity")
         self.squat = Exercise.objects.get_or_create(name="Back Squat")[0]
@@ -4440,7 +4453,7 @@ class ProgramPromotionTests(APITestCase):
         self.assertEqual(self._promote(program, name="   ").data["name"], "One-off")
 
     def test_the_promoting_coach_owns_the_new_block(self):
-        other = User.objects.create_user(username="other", password="pw")
+        other = make_coach(username="other", password="pw")
         self.client.force_authenticate(user=other)
         program = self._program()
         self.assertEqual(self._promote(program).data["coach"], other.id)
@@ -4488,7 +4501,7 @@ class ScheduleGenerationTests(APITestCase):
     """
 
     def setUp(self):
-        self.coach = User.objects.create_user(username="coach", password="pw")
+        self.coach = make_coach(username="coach", password="pw")
         self.client.force_authenticate(user=self.coach)
         self.group = TrainingGroup.objects.create(name="Varsity")
         self.squat = Exercise.objects.get_or_create(name="Back Squat")[0]
@@ -4677,7 +4690,7 @@ class ScheduleRouteTests(APITestCase):
     """
 
     def setUp(self):
-        self.coach = User.objects.create_user(username="coach", password="pw")
+        self.coach = make_coach(username="coach", password="pw")
         self.client.force_authenticate(user=self.coach)
         self.group = TrainingGroup.objects.create(name="Varsity")
         self.jordan = Athlete.objects.create(name="Jordan Lee")
@@ -4933,7 +4946,7 @@ class CadenceValidationTests(APITestCase):
     """
 
     def setUp(self):
-        self.coach = User.objects.create_user(username="coach", password="pw")
+        self.coach = make_coach(username="coach", password="pw")
         self.client.force_authenticate(user=self.coach)
 
     def _post(self, **fields):
@@ -4976,7 +4989,7 @@ class UnstartedSessionTests(APITestCase):
     """
 
     def setUp(self):
-        self.coach = User.objects.create_user(username="coach", password="pw")
+        self.coach = make_coach(username="coach", password="pw")
         self.client.force_authenticate(user=self.coach)
         self.athlete = Athlete.objects.create(name="Jordan Lee")
 
@@ -5063,7 +5076,7 @@ class AthleteAnalyticsTests(APITestCase):
     """
 
     def setUp(self):
-        self.coach = User.objects.create_user(username="coach", password="pw")
+        self.coach = make_coach(username="coach", password="pw")
         self.client.force_authenticate(user=self.coach)
         self.athlete = Athlete.objects.create(name="Jordan Lee")
         self.squat = Exercise.objects.get_or_create(name="Back Squat")[0]
@@ -5286,7 +5299,7 @@ class CsvImportTests(APITestCase):
     """
 
     def setUp(self):
-        self.coach = User.objects.create_user(username="coach", password="pw")
+        self.coach = make_coach(username="coach", password="pw")
         self.client.force_authenticate(user=self.coach)
         self.squat = Exercise.objects.get_or_create(name="Back Squat")[0]
         self.bench = Exercise.objects.get_or_create(name="Bench Press")[0]
@@ -5625,7 +5638,7 @@ class AthleteAssignmentTests(APITestCase):
     """
 
     def setUp(self):
-        self.coach = User.objects.create_user(username="coach", password="pw")
+        self.coach = make_coach(username="coach", password="pw")
         self.client.force_authenticate(user=self.coach)
         self.squat = Exercise.objects.get_or_create(name="Back Squat")[0]
         self.athlete = Athlete.objects.create(name="Jordan Lee")
@@ -5901,7 +5914,7 @@ class SystemStatusTests(APITestCase):
     nothing read."""
 
     def setUp(self):
-        self.coach = User.objects.create_user(username="coach", password="x", is_staff=True)
+        self.coach = make_coach(username="coach", password="x", is_staff=True)
 
     def test_it_requires_a_coach_login(self):
         """It reports the box's security posture, so it must not be readable by
@@ -5981,7 +5994,7 @@ class WifiPasswordChangeTests(APITestCase):
     harness, not here."""
 
     def setUp(self):
-        self.coach = User.objects.create_user(username="coach", password="s3cret-coach-pw", is_staff=True)
+        self.coach = make_coach(username="coach", password="s3cret-coach-pw", is_staff=True)
         # A real, writable spool dir per test, pointed at by the same env var the
         # endpoint reads — so no test ever writes to the real /var/lib path.
         import tempfile, os

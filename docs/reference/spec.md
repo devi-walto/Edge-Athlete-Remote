@@ -949,7 +949,7 @@ POST  /api/auth/login/                 coach login → {access, refresh}  (alrea
 POST  /api/auth/refresh/               → {access}
 
 GET   /api/nodes/                      list nodes                         (open)
-PUT   /api/racks/node-assignment/      select node for this rack screen   (active staff only)
+PUT   /api/racks/node-assignment/      select node for this rack screen   (coach)
       body: { device_id, node_id }
 
 POST  /api/racks/register/             rack screen announces itself       (open)
@@ -988,7 +988,7 @@ GET   /api/analytics/athlete/{id}/     athlete + summary + per-exercise
 
 **Open (no auth):** node/rack/dashboard reads, rack-screen self-registration + assignment polling, and the set-complete write.
 **Coach-only (JWT):** athlete/program writes, session create/end, and analytics.
-**Active-staff-only:** rack-screen assignment and rack-local node selection.
+Rack-screen assignment and rack-local node selection are coach-only too: any coach may set a room up. The administrator flag guards managing coach logins and nothing else.
 
 ### Extended in Phase 5+ endpoints
 
@@ -1526,8 +1526,10 @@ timestamp, velocity_color) and a SetCompleteSerializer with:
   reps = RepInputSerializer(many=True)
 
 ## permissions.py
-IsCoach covers legacy authenticated coach endpoints. IsActiveStaff requires an
-authenticated, active staff user and gates rack screen/sensor assignment.
+Each class names the roles it lets through; `roles.py` decides who a login is, from
+what it is attached to. IsCoach: a coach or an administrator. IsInstallationAdmin: an
+administrator, for managing coach logins only. IsAthlete and IsCoachOrAthlete exist for
+the athlete routes. A login attached to nothing is refused everywhere.
 
 ## views.py + urls.py — endpoints
 Open (AllowAny):
@@ -1546,7 +1548,7 @@ Coach-only (IsCoach):
   GET   /api/analytics/session/{id}/  aggregate: total sets, reps, avg velocity per athlete
   GET   /api/analytics/athlete/{id}/  the coach athlete+history context (widened
                                      in merge P13 from a flat velocity trend)
-Active-staff-only (IsActiveStaff):
+Room setup, any coach (IsCoach):
   PATCH /api/racks/{device_id}/       assign rack_number
   PUT   /api/racks/node-assignment/   select this screen's registered node;
                                       exact body {device_id, node_id}
@@ -2507,7 +2509,7 @@ Athletes/Racks/Analytics tabs" scope, which stays deferred.
 ## Room Layout
 Coach setup assigns waiting screens to rack slots with
 `PATCH /api/racks/{device_id}/`. Sensor selection is intentionally absent here:
-an active staff coach selects the registered sensor beside the physical rack,
+a coach selects the registered sensor beside the physical rack,
 before athlete check-in, through `PUT /api/racks/node-assignment/`.
 
 ## Group/Block/TrainingSession browsing
