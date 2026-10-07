@@ -18,23 +18,32 @@ to edit the roster, end sessions and delete plans. **This spec has to be finishe
 before the first athlete login can exist.** Spec 03 creates those logins; it must not
 start until this one is merged.
 
-### Open decision — who may use Room Layout?
+### Decided 2026-10-06 — every coach may use Room Layout
 
-Found in spec 01's Phase 3 rehearsal (2026-10-06). Eight routes need the administrator
-flag today: assigning a tablet to a rack, removing a rack, releasing all racks, linking
-or replacing a rack's sensor, and the sensor scan and verify routes. That predates coach
-accounts. It went unnoticed because every login was the staff demo login.
+Found in spec 01's Phase 3 rehearsal. Eight routes need the administrator flag today:
+assigning a tablet to a rack, removing a rack, releasing all racks, linking or replacing
+a rack's sensor, changing how a sensor is read, and the sensor scan and verify routes
+(`IsActiveStaff` in `views.py`). That predates coach accounts and went unnoticed because
+every login was the staff demo login.
 
-The agreed rule is that the administrator flag controls **only** managing coach
-logins, and every coach can do everything in the workspace. As built, a coach who is
-not an administrator cannot set the room up or swap a dead sensor during a session.
+**Devin's decision: regular coaches need to be able to help set a room up, so these
+eight routes take any coach.** That keeps the agreed rule true: the administrator flag
+controls only managing coach logins (`/api/coaches/…`), and nothing else.
 
-- **Option A (matches the agreed rule):** these eight routes take any coach. The
-  administrator flag guards only `/api/coaches/…`.
-- **Option B:** keep them for administrators, and change the rule to say so.
+Build it in this spec, with the role checks:
 
-This spec builds whichever is chosen; until then the table below keeps today's
-behaviour.
+- The eight routes move from `IsActiveStaff` to the coach check. `IsActiveStaff` is
+  then unused and is deleted; `IsInstallationAdmin` stays, for coach logins only.
+- The Room Layout page's "Authorize sensor setup" step accepts any coach.
+
+**Done when** (add to the phase that changes the permission classes):
+
+- [ ] A coach who is not an administrator can assign a tablet to a rack, link a
+      sensor, replace a sensor, and release a rack.
+- [ ] No login, and an athlete login, are refused on all eight.
+- [ ] A coach who is not an administrator still gets `403` from every `/api/coaches/…` route.
+- [ ] `IsActiveStaff` appears nowhere in the code.
+- [ ] *(Browser)* A regular coach completes Room Layout for one rack from start to finish.
 
 ## User story
 

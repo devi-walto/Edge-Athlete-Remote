@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-05
-- Status: **Phases 0, 1 and 2 done 2026-10-06 on branch `feature-coach_accounts`. Phases 0–3 done; the archived-athlete history item moved to spec 09 by Devin's decision. Phase 3 found one thing for Devin to decide (who may use Room Layout). Waiting on Devin's review before Phase 4**
+- Status: **Phases 0, 1 and 2 done 2026-10-06 on branch `feature-coach_accounts`. Phases 0–3 done; the archived-athlete history item moved to spec 09 by Devin's decision. Room Layout opens to every coach in spec 02 (decided). Waiting on Devin's go for Phase 4**
 - Mockup: `F_SignIn`, `F_FirstRun`, `F_Coaches`, `F_AccountMenu` on the canvas's **Final designs** page ("The same in both: accounts and access"), also in [`specs/ui/mockups/coach-ui-final.html`](../ui/mockups/coach-ui-final.html). Look: [spec 06](../ui/06-design-rules.md) rule 9
 - Index and shared decisions: [specs/README.md](../README.md)
 - Form item: Definition of Done #2 ("Coach accounts are secured")
@@ -474,9 +474,8 @@ rule is older than this spec and nobody noticed, because until now every login w
 demo login, which is staff. From this spec on there are coaches who are not
 administrators, and they cannot do Room Layout or replace a dead sensor mid-session.
 The decisions table above says the flag controls **only** managing coach logins.
-Nothing here was changed. **Devin to decide, and spec 02 is where it gets built:**
-open Room Layout to every coach (what the decision says), or keep it for
-administrators and amend the decision.
+Nothing here was changed. **Decided 2026-10-06: every coach may use Room Layout.** It
+is built in spec 02, with the role checks.
 
 **A limit of how this was tested:** in this headless browser a real mouse press does
 not register on any page, so buttons were pressed through the page itself. The account
