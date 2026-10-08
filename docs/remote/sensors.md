@@ -122,6 +122,47 @@ these cannot.
 | **Space for a label** | the sensor's setup-network password, and its ID |
 | **Antenna placement and clearance** for 2.4 GHz | the only band the C6 has; a poorly placed antenna is a range problem no firmware fixes |
 
+### The motion sensor: BNO085, replacing the MPU-6050
+
+Decided 2026-10-08. The first remote sensor is built on a **Seeed XIAO ESP32-C6 with a
+BNO085** (the BNO086 is the same family and would also do). Both parts are ordered.
+
+**What forced it.** The first sensor used an MPU-6050, and the firmware read only its
+accelerometer (`esp32/edge_athlete_node/edge_athlete_node.ino`). It measured gravity
+once, while the sensor sat still, and subtracted that fixed amount from one fixed axis
+for the rest of the session. The moment a bar tilts or rolls, gravity leaks into the
+"movement" reading and the bar speed is wrong. The part is also old and noisy, and many
+of the boards sold are clones.
+
+**What we chose.** The BNO085 combines its own accelerometer and gyroscope on the chip
+and reports:
+
+- **linear acceleration**, with gravity already removed, and
+- **its orientation**, so "up" can be worked out however the sensor is mounted.
+
+It is used in the mode that **ignores the compass** (the "game rotation vector"): a
+steel bar and a steel rack make a compass useless. It reports at 100 times a second or
+faster, which matches the firmware's loop, and runs on 3.3 V over I2C like the part it
+replaces.
+
+**What we rejected.** An **ICM-42688-P** or **LSM6DSV16X**: newer, quieter and far
+cheaper as bare chips, and the better choice for a printed board later. They hand over
+raw readings (the LSM6DSV16X can combine them itself), so they cost firmware work the
+first sensor does not need to spend. Keeping the **MPU-6050** and adding the gyroscope
+in firmware: the same work, on the noisiest part of the three.
+
+**What it cost.**
+
+- Several times the price of an MPU-6050 board.
+- The BNO08x family has a reputation for I2C trouble on some ESP32 boards, and it is
+  **not yet tested on the C6**. The breakout also speaks SPI and UART if it misbehaves.
+- **A better sensor fixes tilt, not drift.** Speed still comes from adding acceleration
+  up over time, so it must be reset to zero whenever the bar is still. The firmware
+  already detects stillness between reps; that part carries over.
+- The firmware's sensor code is rewritten for the new part. The messages it sends
+  (`pulse`, `motion` and `rep` under `edgeathlete/node/{node_id}/`) do not change, so
+  nothing on the server does.
+
 ## What we rejected, and why
 
 **Setting up Wi-Fi over Bluetooth from a web page.** Web Bluetooth does not work on
