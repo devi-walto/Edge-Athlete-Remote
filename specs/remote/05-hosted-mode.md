@@ -34,6 +34,12 @@ to require a login, without changing how a rack tablet works in a gym.
 - **The default is the gym box.** A missing or misspelled value must not open a hosted
   installation by accident — so an unknown value **refuses to start**, and the hosted
   manifests set it explicitly.
+- **One codebase, always** (Devin, 2026-10-14). Every difference between a gym box and a
+  hosted installation (HTTP or HTTPS, `ws` or `wss`, which routes are open, which browser
+  workarounds apply) is chosen at run time from this setting or from how the page was
+  served. Never a second build, a fork of a file, or a hosted-only copy of a screen. The
+  specs that add a hosted behaviour (12 for HTTPS and `wss`, 03 and 04 for athletes) key
+  it off this switch.
 - **The frontend is told, it does not guess.** One small endpoint reports the mode, and
   remote-only controls key off it.
 
@@ -174,6 +180,10 @@ version tags are the other half of CI/CD and live in [spec 12](12-hosting.md).
 - `ALLOWED_HOSTS`, CORS origins and CSRF trusted origins come from the environment when
   hosted, and startup fails if they are empty.
 - `DEBUG` on with `remote` refuses to start.
+- Behind the cluster's HTTPS front door, Django learns the request was secure from the
+  proxy's header (`SECURE_PROXY_SSL_HEADER`), and its session and CSRF cookies are
+  marked secure, **when hosted only**. A gym box stays on plain HTTP with nothing
+  changed.
 - Sign-in is rate-limited when hosted (DRF throttling; a small number per minute per address).
 - The frontend's connection-test page (`/connection-test`) renders a "not available"
   notice when the mode is hosted. It is the one screen that publishes to the broker.
@@ -181,6 +191,8 @@ version tags are the other half of CI/CD and live in [spec 12](12-hosting.md).
 **Done when:**
 
 - [ ] `remote` with `DEBUG=True`, or with empty hosts, fails to start.
+- [ ] Hosted: a request marked secure by the proxy is treated as HTTPS, and cookies carry
+      the secure flag. Gym box: no change (the existing suite proves it).
 - [ ] Repeated wrong sign-ins get `429` when hosted, and are unlimited on a gym box.
 - [ ] *(Frontend test)* The connection-test page shows the notice in hosted mode.
 
