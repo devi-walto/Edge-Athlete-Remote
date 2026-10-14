@@ -37,9 +37,11 @@ to require a login, without changing how a rack tablet works in a gym.
 - **One codebase, always** (Devin, 2026-10-14). Every difference between a gym box and a
   hosted installation (HTTP or HTTPS, `ws` or `wss`, which routes are open, which browser
   workarounds apply) is chosen at run time from this setting or from how the page was
-  served. Never a second build, a fork of a file, or a hosted-only copy of a screen. The
-  specs that add a hosted behaviour (12 for HTTPS and `wss`, 03 and 04 for athletes) key
-  it off this switch.
+  served. Never a second build or a fork of a file. **Hosted-only screens are allowed
+  where the Final designs page draws them** (a login link, the athlete's pages); they may
+  look slightly different, but they use the same components and call the same code and
+  logic underneath (spec 06 rule 8). The specs that add a hosted behaviour (12 for HTTPS
+  and `wss`, 03 and 04 for athletes) key it off this switch.
 - **The frontend is told, it does not guess.** One small endpoint reports the mode, and
   remote-only controls key off it.
 
