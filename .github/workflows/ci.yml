@@ -1,0 +1,105 @@
+# ci.yml — run the checks on every pull request, before anything is merged.
+#
+# Why this file exists: the gym box and the hosted version are one codebase, so a
+# change that works in one can quietly break the other. Every pull request into
+# SprintBranch or main runs the whole backend suite twice (as a gym box, then as a
+# hosted installation), the frontend suite and build, and the docs build. A red
+# check means the pull request cannot be merged.
+#
+# It runs on GitHub's own machines, not the Dell: the repo is public, and a
+# stranger's pull request must never run code on a machine in the house.
+# It does NOT run on every push to every branch, only on pull requests (and by hand).
+# Deploying is a separate workflow, started by a version tag (spec 12).
+
+name: CI
+
+on:
+  pull_request:
+    branches: [SprintBranch, main]
+  workflow_dispatch:
+
+# A newer push to the same pull request cancels the run it replaces.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    # Shows up as two checks: "backend (local)" and "backend (remote)".
+    name: backend (${{ matrix.mode }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [local, remote]
+    steps:
+      - uses: actions/checkout@v4
+
+      # The same image a gym box runs. Building it is itself a check.
+      - name: Build the django image
+        run: docker build -t ea-django:ci ./django
+
+      # A throwaway database and broker beside it, under the names the app expects.
+      - name: Start a database and a broker
+        run: |
+          docker network create ci
+          docker run -d --name postgres --network ci --network-alias postgres \
+            --env-file ci/${{ matrix.mode }}.env postgres:15
+          docker run -d --name mosquitto --network ci --network-alias mosquitto \
+            -v "$PWD/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro" \
+            eclipse-mosquitto
+          for i in $(seq 1 30); do
+            docker exec postgres pg_isready -U ci -d ci >/dev/null 2>&1 && break
+            sleep 2
+          done
+          docker exec postgres pg_isready -U ci -d ci
+
+      - name: No model change is missing its migration
+        run: >
+          docker run --rm --network ci --env-file ci/${{ matrix.mode }}.env ea-django:ci
+          python manage.py makemigrations --check --dry-run
+
+      - name: Run the backend tests as ${{ matrix.mode }}
+        run: >
+          docker run --rm --network ci --env-file ci/${{ matrix.mode }}.env ea-django:ci
+          python manage.py test event_handler --noinput
+
+  frontend:
+    name: frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: react
+    steps:
+      - uses: actions/checkout@v4
+      # The same Node major version the react Dockerfile builds with.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: react/package-lock.json
+      - run: npm ci
+      - name: Run the frontend tests
+        run: npx vitest run
+      - name: Production build
+        run: npm run build
+      - name: Build the react image
+        working-directory: .
+        run: docker build -t ea-react:ci ./react
+
+  docs:
+    name: docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build the docs (warnings are errors)
+        run: ./docs/build.sh
