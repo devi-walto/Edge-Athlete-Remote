@@ -107,12 +107,17 @@ tab goes. If a second is ever added, the row comes back by itself.
 
 ### 8. Local and hosted are one interface: features change, form does not
 
-**The rule.** Hosted mode may **add or hide elements on a screen**. It never gets its
-own version of a screen, its own layout, its own components or its own tokens. Every
-difference hangs off one switch, `useDeployment()` (spec 05).
+**The rule.** Hosted mode may **add or hide elements on a screen**. A screen both
+versions have is one screen: it never gets a hosted copy, its own layout, its own
+components or its own tokens. Every difference hangs off one switch, `useDeployment()`
+(spec 05).
 
-The one exception is **Send a login link**, which exists only when hosted. It is built
-from the same focus card and rows as every other dialog.
+**Hosted-only screens exist where the Final designs page draws them** (loosened by Devin,
+2026-10-14): **Send a login link**, the athlete's sign-in and home pages, and the
+session-ended page. They may look slightly different and have their own nuances, but
+they are built from the same components and tokens and **call the same code and logic**
+as the rest of the app: the same routes, the same rules on the server, the same shared
+functions. A hosted-only screen is never a second copy of behaviour that already exists.
 
 Compared screen by screen on 2026-10-06 (the mockup's Remote page is drawn by starting
 from the local screens; a dashed **REMOTE** tag marks each addition and is an
@@ -142,9 +147,10 @@ annotation, not part of the interface):
 - A hosted column must not push a local action off the row. The Roster keeps
   **Change groups**, **Open in Analytics** and **Archive** in both; login and sensor
   are two-line cells so the row still fits at 1180 px.
-- The athlete's own screens are a separate job and are **not covered by this rule**:
-  a remote athlete's device is their rack, and the rack screen was laid out for a
-  tablet on a rack, not a phone. That needs its own mockup before spec 04's front end.
+- The athlete's own screens are drawn on Final designs (the REMOTE flow, `F_Ath_*`).
+  Lifting uses the **same `RackScreen.jsx`** as the gym, with what a remote athlete does
+  not need stripped away (spec 04 Phase 3); it keeps the rack screen's own look. Home and
+  the sign-in pages use the solid look (spec 10).
 
 ### 9. Solid surfaces, clear edges
 
