@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: In progress — Phase 0 done (branch `feature-deployment_switch`). Phase 1 (CI) added 2026-10-14; the old Phases 1–3 are now 2–4
+- Status: In progress — Phases 0 and 1 done (branch `feature-deployment_switch`, open pull request into `SprintBranch`)
 - Form item: Definition of Done #3
 - Depends on: [02 Roles](02-roles.md)
 - **Build this before 03 and 04**, which both need its switch
@@ -148,15 +148,25 @@ version tags are the other half of CI/CD and live in [spec 12](12-hosting.md).
 
 **Done when:**
 
-- [ ] Opening this spec's pull request runs all four checks, and each passes.
-- [ ] A throwaway pull request with a deliberately failing test shows red and **cannot
+- [x] Opening this spec's pull request runs all four checks, and each passes.
+- [x] A throwaway pull request with a deliberately failing test shows red and **cannot
       be merged**. Closed afterwards, never merged.
-- [ ] The two backend legs show up as separate checks, named for their mode.
-- [ ] A push to a branch with no pull request starts nothing.
-- [ ] *(By hand)* The rules are on: a direct push to `SprintBranch` is refused; `main`
+- [x] The two backend legs show up as separate checks, named for their mode.
+- [x] A push to a branch with no pull request starts nothing.
+- [x] *(By hand)* The rules are on: a direct push to `SprintBranch` is refused; `main`
       refuses a force push and a delete.
-- [ ] The time one full run takes is written down (it matters once the repo is private
+- [x] The time one full run takes is written down (it matters once the repo is private
       and minutes are counted).
+
+**Result, 2026-10-14.** The first run on the spec 05 pull request passed all four checks.
+One full run takes about **2½ minutes** (jobs run side by side: backend local 2m23s,
+backend remote 1m44s, frontend 27s, docs 24s), about 6 minutes of runner time in all.
+Rulesets read back from GitHub: `SprintBranch` requires a pull request (0 approvals) and
+the four checks, and refuses force pushes and deletion; `main` refuses force pushes and
+deletion only. A throwaway pull request with a failing test showed red, and merging was
+blocked while the checks were pending and after they failed; it was closed unmerged and
+its branch deleted. Changed during the phase: `main` takes no pull request (Devin), and
+the push-without-PR check was confirmed by the workflow having no push trigger.
 
 **Stop. Devin reviews.**
 
