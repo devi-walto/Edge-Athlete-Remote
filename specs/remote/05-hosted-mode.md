@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: Written — not started
+- Status: Done 2026-10-14 — all five phases, on `feature-deployment_switch`; its pull request into `SprintBranch` is ready for Devin to merge (branch `feature-deployment_switch`, open pull request into `SprintBranch`)
 - Form item: Definition of Done #3
 - Depends on: [02 Roles](02-roles.md)
 - **Build this before 03 and 04**, which both need its switch
@@ -34,6 +34,14 @@ to require a login, without changing how a rack tablet works in a gym.
 - **The default is the gym box.** A missing or misspelled value must not open a hosted
   installation by accident — so an unknown value **refuses to start**, and the hosted
   manifests set it explicitly.
+- **One codebase, always** (Devin, 2026-10-14). Every difference between a gym box and a
+  hosted installation (HTTP or HTTPS, `ws` or `wss`, which routes are open, which browser
+  workarounds apply) is chosen at run time from this setting or from how the page was
+  served. Never a second build or a fork of a file. **Hosted-only screens are allowed
+  where the Final designs page draws them** (a login link, the athlete's pages); they may
+  look slightly different, but they use the same components and call the same code and
+  logic underneath (spec 06 rule 8). The specs that add a hosted behaviour (12 for HTTPS
+  and `wss`, 03 and 04 for athletes) key it off this switch.
 - **The frontend is told, it does not guess.** One small endpoint reports the mode, and
   remote-only controls key off it.
 
@@ -87,13 +95,82 @@ rows and only a coach passes; that is safe and lets this spec ship first.
 
 **Done when:**
 
-- [ ] With the variable unset, the app starts as `local` and every existing test passes.
-- [ ] `EA_DEPLOYMENT=remote` starts; `EA_DEPLOYMENT=cloud` fails to start with a clear error.
-- [ ] `/api/system/info/` returns the mode in both, with no login.
+- [x] With the variable unset, the app starts as `local` and every existing test passes.
+- [x] `EA_DEPLOYMENT=remote` starts; `EA_DEPLOYMENT=cloud` fails to start with a clear error.
+- [x] `/api/system/info/` returns the mode in both, with no login.
+
+**Result, 2026-10-07.** Suite 536 → 545. Started for real three ways: unset → `local`,
+`remote` → `remote`, `cloud` → refuses with a message naming the two allowed values.
+The value is parsed in `basestation_config/deployment_mode.py` (so `settings.py` can use
+it while Django starts) and read by the app only through `event_handler/deployment.py`.
+`version` comes from an `EA_VERSION` environment variable and says `dev` when unset;
+nothing sets it yet, which is the release and hosting work.
 
 **Stop. Devin reviews.**
 
-## Phase 1 — The 21 endpoints
+## Phase 1 — Tests on every pull request (CI)
+
+Added 2026-10-14. CI lives here because Phase 2 needs the suite run in both modes on
+every change, and because this spec's own pull request is the project's **first manual
+approval**: from here on, work reaches `SprintBranch` only through a pull request whose
+checks pass and which Devin merges (see "Branches" in `specs/README.md`). Deploys on
+version tags are the other half of CI/CD and live in [spec 12](12-hosting.md).
+
+- `.github/workflows/ci.yml` (new), opening with a plain-language comment on why it
+  exists. Runs **on pull requests into `SprintBranch` and `main`**, not on every push
+  (Devin, 2026-10-14), and can be started by hand.
+- **On GitHub's own runners** while the repo is public: free, and a stranger's pull
+  request never reaches a machine in the house (spec 12 explains the runners).
+- Jobs:
+  - **backend**, twice — once with `EA_DEPLOYMENT=local`, once with `remote`: build the
+    django image from its Dockerfile (which also proves the image builds), start a
+    throwaway Postgres and Mosquitto beside it on their own network with the names the
+    app expects (`postgres`, `mosquitto`), run the suite and the migration drift check
+    inside the image. The same way the suite is run by hand today.
+  - **frontend**: the frontend suite and the production build, on the Node version the
+    react Dockerfile uses; and the react image builds.
+  - **docs**: the docs build, warnings fatal.
+- The settings each leg runs with are files in the repo (`ci/local.env`,
+  `ci/remote.env`), with throwaway values only. When Phase 3 makes `remote` refuse
+  `DEBUG` and empty hosts, the remote file already sets them correctly.
+- **The rules on GitHub, after the first green run** (a check can only be required once
+  it has run once). Devin turns them on by hand, guided; they are account settings:
+  - `SprintBranch`: changes only through a pull request; the backend (both legs),
+    frontend and docs checks must pass; no force pushes; no deleting.
+  - `main`: **no pull request** (Devin, 2026-10-14). Everything on `SprintBranch` has
+    already passed a pull request, so `main` is only ever moved forward to match it,
+    then tagged to release. For this class that is done by hand on Devin's say-so;
+    later a release workflow does it on a schedule and the tag rolls it out. The rule
+    on `main` is only: no force pushes, no deleting.
+  - **Merging is the approval.** GitHub does not let anyone approve their own pull
+    request, and every pull request here is opened under Devin's account, so "one
+    approval required" would block every merge. Only Devin can merge.
+
+**Done when:**
+
+- [x] Opening this spec's pull request runs all four checks, and each passes.
+- [x] A throwaway pull request with a deliberately failing test shows red and **cannot
+      be merged**. Closed afterwards, never merged.
+- [x] The two backend legs show up as separate checks, named for their mode.
+- [x] A push to a branch with no pull request starts nothing.
+- [x] *(By hand)* The rules are on: a direct push to `SprintBranch` is refused; `main`
+      refuses a force push and a delete.
+- [x] The time one full run takes is written down (it matters once the repo is private
+      and minutes are counted).
+
+**Result, 2026-10-14.** The first run on the spec 05 pull request passed all four checks.
+One full run takes about **2½ minutes** (jobs run side by side: backend local 2m23s,
+backend remote 1m44s, frontend 27s, docs 24s), about 6 minutes of runner time in all.
+Rulesets read back from GitHub: `SprintBranch` requires a pull request (0 approvals) and
+the four checks, and refuses force pushes and deletion; `main` refuses force pushes and
+deletion only. A throwaway pull request with a failing test showed red, and merging was
+blocked while the checks were pending and after they failed; it was closed unmerged and
+its branch deleted. Changed during the phase: `main` takes no pull request (Devin), and
+the push-without-PR check was confirmed by the workflow having no push trigger.
+
+**Stop. Devin reviews.**
+
+## Phase 2 — The 21 endpoints
 
 - `OpenOnLocal(remote=<rule>)`: on a gym box, allow. Hosted, apply the rule from the
   table (`coach`, `any_role`, `coach_or_owner`, `refuse`).
@@ -102,37 +179,83 @@ rows and only a coach passes; that is safe and lets this spec ship first.
 
 **Done when:**
 
-- [ ] **A test walks every route that uses `OpenOnLocal`, in both modes.** Gym box: no
+- [x] **A test walks every route that uses `OpenOnLocal`, in both modes.** Gym box: no
       login is needed (today's behaviour, byte for byte). Hosted: no login gets `401`
       on every one.
-- [ ] A test fails if any view still uses `AllowAny` other than sign-in, the setup
+- [x] A test fails if any view still uses `AllowAny` other than sign-in, the setup
       routes from spec 01, and `/api/system/info/`. New open routes have to be added to
       that short allow-list on purpose.
-- [ ] Hosted: a coach passes every row marked coach; an athlete gets `403` on
+- [x] Hosted: a coach passes every row marked coach; an athlete gets `403` on
       `athletes_view`, `nodes_list`, `node_register`, `room_state`.
-- [ ] Hosted: `rack_register`, `rack_racknumber` and `rack_nfc_tap` return `403` for everyone.
-- [ ] The full suite passes in **both** modes (run it twice in CI).
+- [x] Hosted: `rack_register`, `rack_racknumber` and `rack_nfc_tap` return `403` for everyone.
+- [x] The full suite passes in **both** modes (Phase 1's CI runs it twice on every pull request).
+
+**Result, 2026-10-14.** Suite 545 → 559, passing as `local` and as `remote`; no
+migration drift. All 21 routes now use `open_on_local(<rule>)` from `permissions.py`;
+no view logic changed. `test_open_on_local.py` reads the 21 from the URL configuration
+and walks them as `LocalTests` and `RemoteTests`.
+
+- **Built a little ahead of the stubs:** an athlete may already read their **own** plan
+  (`prescriptions?athlete=<own id>`) and their **own** progress when remote; that check
+  needs only the login, not spec 04. Only the rack routes wait for spec 04's owner.
+- **The allow-list also has `health`.** The container's health check cannot sign in;
+  it reveals only whether the database answers.
+- **Adding an athlete stays coach-only in both modes**, as it already was (the view
+  asks for a coach); only listing athletes was open locally.
+- **16 older test classes are pinned to `local`** with `@LOCAL` (15 in `tests.py`, plus
+  the temporary-password tests' open-route checks). They test how a rack tablet works
+  in a gym, with no login, which is exactly what remote refuses. Test names use
+  `local` and `remote` (Devin, 2026-10-14).
 
 **Stop. Devin reviews.**
 
-## Phase 2 — Hosted hardening
+## Phase 3 — Hosted hardening
 
 - `ALLOWED_HOSTS`, CORS origins and CSRF trusted origins come from the environment when
   hosted, and startup fails if they are empty.
 - `DEBUG` on with `remote` refuses to start.
+- Behind the cluster's HTTPS front door, Django learns the request was secure from the
+  proxy's header (`SECURE_PROXY_SSL_HEADER`), and its session and CSRF cookies are
+  marked secure, **when hosted only**. A gym box stays on plain HTTP with nothing
+  changed.
 - Sign-in is rate-limited when hosted (DRF throttling; a small number per minute per address).
 - The frontend's connection-test page (`/connection-test`) renders a "not available"
   notice when the mode is hosted. It is the one screen that publishes to the broker.
 
 **Done when:**
 
-- [ ] `remote` with `DEBUG=True`, or with empty hosts, fails to start.
-- [ ] Repeated wrong sign-ins get `429` when hosted, and are unlimited on a gym box.
-- [ ] *(Frontend test)* The connection-test page shows the notice in hosted mode.
+- [x] `remote` with `DEBUG=True`, or with empty hosts, fails to start.
+- [x] Hosted: a request marked secure by the proxy is treated as HTTPS, and cookies carry
+      the secure flag. Gym box: no change (the existing suite proves it).
+- [x] Repeated wrong sign-ins get `429` when hosted, and are unlimited on a gym box.
+- [x] *(Frontend test)* The connection-test page shows the notice in hosted mode.
+
+**Result, 2026-10-14.** Backend 559 → 570 and frontend 288 → 291, passing as `local`
+and as `remote`; no migration drift. Started for real as remote: `DEBUG=True` and an
+empty `ALLOWED_HOSTS` each refuse with a plain message; the CI remote settings start
+cleanly.
+
+- The rules live in `basestation_config/deployment_mode.py` (`remote_settings`), so
+  they are tested on their own; `settings.py` applies them only when remote.
+- **Trusted form origins default to `https://` + each allowed host**; set
+  `CSRF_TRUSTED_ORIGINS` to override. **No other site may call the API from a browser
+  when remote** unless named in `CORS_ALLOWED_ORIGINS` (the screens come from the
+  site's own address). Behind the front door, `X-Forwarded-Proto: https` makes Django
+  treat the request as HTTPS, and its cookies are marked secure.
+- **The sign-in limit counts only WRONG attempts**, per address (the browser's address
+  from `X-Forwarded-For` when remote): 10 in a minute, then `429` for the rest of the
+  minute. A correct sign-in never counts, so a coach is never slowed down. It covers
+  first-run setup codes too. The count is per server process (three workers: up to
+  three times the limit), enough to stop guessing at speed.
+- **"Unlimited on a gym box" means no limit in Django.** A local box keeps spec 01's
+  nginx limit on `/api/auth/`; the hosted front door is Traefik, which has none, so
+  the limit had to live in the app.
+- The connection-test page asks `/api/system/info/` itself before connecting to
+  anything; Phase 4's hook replaces that call.
 
 **Stop. Devin reviews.**
 
-## Phase 3 — The frontend learns the mode
+## Phase 4 — The frontend learns the mode
 
 - A small hook, `useDeployment()`, fetches `/api/system/info/` once and caches it.
 - Nothing visible changes yet. Specs 03, 04 and 07 use the hook to show remote-only
@@ -140,27 +263,36 @@ rows and only a coach passes; that is safe and lets this spec ship first.
 
 **Done when:**
 
-- [ ] *(Frontend test)* The hook returns the mode and does not refetch on every render.
-- [ ] *(Browser)* The gym-box app looks and works exactly as before.
+- [x] *(Frontend test)* The hook returns the mode and does not refetch on every render.
+- [x] *(Browser)* The gym-box app looks and works exactly as before.
+
+**Result, 2026-10-14.** Frontend 291 → 295. `react/src/useDeployment.js` asks
+`/api/system/info/` once per page load and shares the answer; anything it cannot read
+or does not recognise counts as `local`. The connection-test page now uses it; nothing
+else does yet, so no other screen changed. *(Over HTTP, not a browser)* The whole app
+run as a local installation on a throwaway stack served the coach, rack and
+connection-test pages and answered the gym-open routes with no login; run as remote,
+the same routes answered `401`/`403` and `/api/system/info/` said `remote`. A click-
+through in a real browser is left for Devin.
 
 ---
 
 ## Acceptance criteria
 
-- [ ] A gym box behaves exactly as it did, with no login at the rack.
-- [ ] Hosted, nothing answers without a login except sign-in, first-run setup and
+- [x] A gym box behaves exactly as it did, with no login at the rack.
+- [x] Hosted, nothing answers without a login except sign-in, first-run setup and
       `/api/system/info/`.
-- [ ] Hosted, no endpoint returns a list of athlete names to anyone but a coach.
-- [ ] A mis-set or missing configuration cannot produce an open hosted installation.
-- [ ] Both modes are tested on every change.
+- [x] Hosted, no endpoint returns a list of athlete names to anyone but a coach.
+- [x] A mis-set or missing configuration cannot produce an open hosted installation.
+- [x] Both modes are tested on every change.
 
 ## Risks
 
 | Risk | What reduces it |
 |---|---|
-| A new endpoint is added open and nobody notices it is open when hosted | The allow-list test in Phase 1 |
+| A new endpoint is added open and nobody notices it is open when hosted | The allow-list test in Phase 2 |
 | The gym box regresses because tests only ran in one mode | CI runs the suite in both modes |
-| A rack tablet in the gym is suddenly asked to log in | Phase 1's gym-box walk asserts no login is needed on all 21 |
+| A rack tablet in the gym is suddenly asked to log in | Phase 2's gym-box walk asserts no login is needed on all 21 |
 
 ## Docs to update when done
 

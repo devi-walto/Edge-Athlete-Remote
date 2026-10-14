@@ -11,10 +11,12 @@ from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.password_validation import validate_password
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework import serializers
+from rest_framework.exceptions import APIException
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -25,6 +27,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .models import CoachProfile, InstallationSetup
+from .deployment import is_hosted
 from .roles import ATHLETE, role_of
 
 # How long a locally-issued setup code stays valid. Long enough to walk a
@@ -80,6 +83,70 @@ def setup_is_required() -> bool:
         pk=1, completed_at__isnull=False).exists()
 
 
+
+# ── Too many wrong attempts (remote only) ─────────────────────────────────────
+# On the internet anyone can try passwords, or first-run setup codes, as fast as
+# they like. A remote installation turns an address away for a minute after
+# FAILED_ATTEMPT_LIMIT wrong attempts. Only WRONG attempts count, so a coach who
+# signs in correctly is never slowed down. A local installation (a gym box) does not
+# do this: its nginx front door already limits sign-in, and only the gym's Wi-Fi can
+# reach it. The count lives in each server process's memory, so with three workers
+# the true limit is up to three times this; good enough to stop guessing at speed.
+FAILED_ATTEMPT_LIMIT = 10
+FAILED_ATTEMPT_WINDOW_SECONDS = 60
+TOO_MANY_ATTEMPTS = 'Too many wrong attempts. Wait a minute, then try again.'
+
+
+def _client_address(request):
+    """Where the request really came from. Behind the cluster's front door every
+    request arrives from the front door itself; it adds the browser's address as
+    the last entry of X-Forwarded-For."""
+    forwarded = request.META.get('HTTP_X_FORWARDED_FOR', '')
+    if forwarded and is_hosted():
+        return forwarded.split(',')[-1].strip()
+    return request.META.get('REMOTE_ADDR', '')
+
+
+def _attempts_key(request, scope):
+    return f'failed-attempts:{scope}:{_client_address(request)}'
+
+
+class LimitWrongAttempts:
+    """Mixed into a view whose POST can fail because of a wrong secret.
+
+    The view puts its POST logic in `attempt()` (or inherits a `post` from its parent
+    class); this class's `post` wraps it with the count.
+    """
+    attempt_scope = None
+
+    def attempt(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        if not is_hosted():
+            return self.attempt(request, *args, **kwargs)
+        key = _attempts_key(request, self.attempt_scope)
+        if cache.get(key, 0) >= FAILED_ATTEMPT_LIMIT:
+            return Response({'detail': TOO_MANY_ATTEMPTS, 'code': 'too_many_attempts'}, status=429)
+        try:
+            response = self.attempt(request, *args, **kwargs)
+        except APIException as refused:
+            if refused.status_code in (400, 401):  # a wrong password, code or username
+                self._count(key)
+            raise
+        if response.status_code in (400, 401):
+            self._count(key)
+        return response
+
+    @staticmethod
+    def _count(key):
+        if cache.add(key, 1, FAILED_ATTEMPT_WINDOW_SECONDS):
+            return
+        try:
+            cache.incr(key)
+        except ValueError:  # expired between add and incr
+            cache.add(key, 1, FAILED_ATTEMPT_WINDOW_SECONDS)
+
 class SetupSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150)
     password = serializers.CharField(trim_whitespace=False, write_only=True, max_length=1024)
@@ -99,8 +166,10 @@ class SetupSerializer(serializers.Serializer):
         return attrs
 
 
-class SetupView(APIView):
+class SetupView(LimitWrongAttempts, APIView):
     """First-run enrollment. Open only while the installation is unclaimed."""
+
+    attempt_scope = 'setup'
 
     authentication_classes = []
     permission_classes = [AllowAny]
@@ -121,7 +190,7 @@ class SetupView(APIView):
         response['Cache-Control'] = 'no-store'
         return response
 
-    def post(self, request):
+    def attempt(self, request):
         try:
             with transaction.atomic():
                 # The migration creates the singleton before requests arrive; the
@@ -188,8 +257,9 @@ class CoachTokenObtainPairSerializer(TokenObtainPairSerializer):
         return data
 
 
-class CoachTokenObtainPairView(TokenObtainPairView):
+class CoachTokenObtainPairView(LimitWrongAttempts, TokenObtainPairView):
     serializer_class = CoachTokenObtainPairSerializer
+    attempt_scope = 'sign_in'
 
 
 class CheckedTokenRefreshSerializer(TokenRefreshSerializer):

@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: Done 2026-10-07, on `feature-roles` — not yet merged into `SprintBranch`
+- Status: Done 2026-10-07, merged into `SprintBranch`
 - Form item: Definition of Done #3
 - Depends on: [01 Secure coach accounts](01-coach-accounts.md)
 - Next: [05 Hosted mode](05-hosted-mode.md), then 03 and 04

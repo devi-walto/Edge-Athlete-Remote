@@ -37,7 +37,7 @@ Devin's convention, set 2026-10-06:
 |---|---|
 | `SprintBranch` | **The working trunk for this project.** Every feature branch starts from it and merges back into it. It must always pass the tests. |
 | `feature-xyz` | One branch per spec, named `feature-` plus a short name, with underscores between words: `feature-coach_accounts`. Reviewed phase by phase, merged into `SprintBranch` after its last phase. |
-| `main` | **What is deployed.** Nobody commits or merges to it by hand. It moves only by a release pull request from `SprintBranch`, followed by a version tag that deploys it (spec 12). Until that exists, `main` is moved forward from `SprintBranch` only when Devin says so. |
+| `main` | **What is deployed.** Nobody commits to it. It is only moved forward to match `SprintBranch` (by hand on Devin's say-so for this class, by a scheduled release workflow later), then tagged; the tag deploys it (spec 12). Until that exists, `main` is moved forward from `SprintBranch` only when Devin says so. |
 
 Feature branch for each spec: `feature-coach_accounts` (01), `feature-roles` (02),
 `feature-deployment_switch` (05), `feature-login_links` (03), `feature-session_link`
@@ -51,9 +51,11 @@ Spec and mockup edits that are not part of a feature are committed straight to
 work reaches `SprintBranch` only through a pull request: one per spec, with each phase
 added to it. Its checks must pass, and Devin merges it. Merging is the approval, because
 GitHub does not let anyone approve a pull request opened under their own account. Tests
-run on pull requests, not on every push. Releases: a pull request from `SprintBranch`
-into `main`, then a version tag (`vX.Y.Z`, patches included), cut by hand when Devin
-chooses; every two weeks is the long-term habit. Until spec 05 Phase 1 is built, commits
+run on pull requests, not on every push. **`main` takes no pull request**: everything on
+`SprintBranch` has already been through one, so a release just moves `main` forward to
+match `SprintBranch` and tags it (`vX.Y.Z`, patches included), and the tag rolls it out.
+For this class Devin releases by hand when he chooses; later a release workflow does it
+on a schedule (every two weeks is the long-term habit). Until spec 05 Phase 1 is built, commits
 go straight to `SprintBranch` as before.
 
 ### Running the tests
@@ -82,8 +84,8 @@ The Django suite had 447 tests on 2026-10-06 and **491 after spec 01** (2026-10-
 | # | Spec | Form item | Depends on | Status |
 |---|---|---|---|---|
 | 01 | [Secure coach accounts](remote/01-coach-accounts.md) | 2 | — | **Done 2026-10-07**, merged into `SprintBranch` |
-| 02 | [Roles: administrator, coach, athlete](remote/02-roles.md) | 3 | 01 | **Done 2026-10-07** (on `feature-roles`) |
-| 05 | [Hosted mode](remote/05-hosted-mode.md) | 3 | 02 | Phase 0 done (on `feature-deployment_switch`). **Phase 1 is CI**: tests on every pull request, in both modes; the first pull request and the first manual approval |
+| 02 | [Roles: administrator, coach, athlete](remote/02-roles.md) | 3 | 01 | **Done 2026-10-07**, merged into `SprintBranch` |
+| 05 | [Hosted mode](remote/05-hosted-mode.md) | 3 | 02 | **Done 2026-10-14**, pull request into `SprintBranch` waiting for Devin's merge. Includes CI (Phase 1) |
 | 12 | [Hosting on k3s, with CD](remote/12-hosting.md) | 1, 5 | 05 | Written 2026-10-14. The app drops onto the plumbing already on the Dell; deploys on version tags; demo installation; rebuild from a blank machine. Runs alongside 03 and 04; going public waits for all of 05 |
 | 03 | [Athlete login links, and coach login codes](remote/03-athlete-login-links.md) | 4, 2 | 02, 05 | Written. Phase 5 replaces temporary coach passwords with one-time login codes |
 | 04 | [Session link and virtual racks](remote/04-session-link-and-virtual-racks.md) | 3, 4 | 02, 03, 05 | Written |

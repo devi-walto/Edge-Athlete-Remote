@@ -69,8 +69,8 @@ on my memory.
 - **Tests run on pull requests; deploys run on version tags.** A tag like `v0.4.0` (patch
   tags too) builds the images, labels them with that version, and rolls that version out.
   Devin cuts releases by hand when he chooses; every two weeks is the long-term habit.
-  Rolling back means deploying the previous tag. `main` moves only by the release pull
-  request.
+  Rolling back means deploying the previous tag. A release moves `main` forward to match
+  `SprintBranch` (no pull request: that work was already reviewed) and tags it.
 - **Runners:** while the repo is public, tests and builds run on GitHub's own machines
   (free, and a stranger's pull request cannot reach the house). A runner on the Dell
   does **deploys only**, fired only by version tags. **After the repo goes private, CI
@@ -239,8 +239,9 @@ it runs.
   - GitHub's **"require approval for all outside contributors"** setting is on, so no
     workflow from a stranger's fork runs until Devin approves it;
   - the runner deletes its working files after each job.
-- **The release pull request:** `SprintBranch` into `main`, then the tag. This is the
-  only way `main` moves.
+- **The release:** `main` moved forward to match `SprintBranch`, then the tag. By hand
+  for this class; a `release.yml` "release now" button (and later a schedule) does both
+  steps. This is the only way `main` moves.
 
 **Done when:**
 
