@@ -135,8 +135,13 @@ version tags are the other half of CI/CD and live in [spec 12](12-hosting.md).
   `DEBUG` and empty hosts, the remote file already sets them correctly.
 - **The rules on GitHub, after the first green run** (a check can only be required once
   it has run once). Devin turns them on by hand, guided; they are account settings:
-  - `SprintBranch` and `main`: changes only through a pull request; the backend (both
-    legs), frontend and docs checks must pass; no force pushes; no deleting.
+  - `SprintBranch`: changes only through a pull request; the backend (both legs),
+    frontend and docs checks must pass; no force pushes; no deleting.
+  - `main`: **no pull request** (Devin, 2026-10-14). Everything on `SprintBranch` has
+    already passed a pull request, so `main` is only ever moved forward to match it,
+    then tagged to release. For this class that is done by hand on Devin's say-so;
+    later a release workflow does it on a schedule and the tag rolls it out. The rule
+    on `main` is only: no force pushes, no deleting.
   - **Merging is the approval.** GitHub does not let anyone approve their own pull
     request, and every pull request here is opened under Devin's account, so "one
     approval required" would block every merge. Only Devin can merge.
@@ -148,8 +153,8 @@ version tags are the other half of CI/CD and live in [spec 12](12-hosting.md).
       be merged**. Closed afterwards, never merged.
 - [ ] The two backend legs show up as separate checks, named for their mode.
 - [ ] A push to a branch with no pull request starts nothing.
-- [ ] *(By hand)* The branch rules are on for `SprintBranch` and `main`, and a direct
-      push to either is refused.
+- [ ] *(By hand)* The rules are on: a direct push to `SprintBranch` is refused; `main`
+      refuses a force push and a delete.
 - [ ] The time one full run takes is written down (it matters once the repo is private
       and minutes are counted).
 
