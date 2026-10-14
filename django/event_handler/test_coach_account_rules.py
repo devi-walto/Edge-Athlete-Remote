@@ -170,6 +170,8 @@ class LastAdministratorTests(APITestCase):
             f'/api/coaches/{self.admin.pk}/', {'is_staff': False}, format='json').status_code, 400)
 
 
+# Its open-route checks describe a LOCAL installation, where those routes need no login.
+@override_settings(EA_DEPLOYMENT='local')
 class TemporaryPasswordTests(APITestCase):
     """A temporary password opens the change-password form and nothing else."""
 

@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: In progress — Phases 0 and 1 done (branch `feature-deployment_switch`, open pull request into `SprintBranch`)
+- Status: In progress — Phases 0, 1 and 2 done (branch `feature-deployment_switch`, open pull request into `SprintBranch`)
 - Form item: Definition of Done #3
 - Depends on: [02 Roles](02-roles.md)
 - **Build this before 03 and 04**, which both need its switch
@@ -179,16 +179,33 @@ the push-without-PR check was confirmed by the workflow having no push trigger.
 
 **Done when:**
 
-- [ ] **A test walks every route that uses `OpenOnLocal`, in both modes.** Gym box: no
+- [x] **A test walks every route that uses `OpenOnLocal`, in both modes.** Gym box: no
       login is needed (today's behaviour, byte for byte). Hosted: no login gets `401`
       on every one.
-- [ ] A test fails if any view still uses `AllowAny` other than sign-in, the setup
+- [x] A test fails if any view still uses `AllowAny` other than sign-in, the setup
       routes from spec 01, and `/api/system/info/`. New open routes have to be added to
       that short allow-list on purpose.
-- [ ] Hosted: a coach passes every row marked coach; an athlete gets `403` on
+- [x] Hosted: a coach passes every row marked coach; an athlete gets `403` on
       `athletes_view`, `nodes_list`, `node_register`, `room_state`.
-- [ ] Hosted: `rack_register`, `rack_racknumber` and `rack_nfc_tap` return `403` for everyone.
-- [ ] The full suite passes in **both** modes (Phase 1's CI runs it twice on every pull request).
+- [x] Hosted: `rack_register`, `rack_racknumber` and `rack_nfc_tap` return `403` for everyone.
+- [x] The full suite passes in **both** modes (Phase 1's CI runs it twice on every pull request).
+
+**Result, 2026-10-14.** Suite 545 → 559, passing as `local` and as `remote`; no
+migration drift. All 21 routes now use `open_on_local(<rule>)` from `permissions.py`;
+no view logic changed. `test_open_on_local.py` reads the 21 from the URL configuration
+and walks them as `LocalTests` and `RemoteTests`.
+
+- **Built a little ahead of the stubs:** an athlete may already read their **own** plan
+  (`prescriptions?athlete=<own id>`) and their **own** progress when remote; that check
+  needs only the login, not spec 04. Only the rack routes wait for spec 04's owner.
+- **The allow-list also has `health`.** The container's health check cannot sign in;
+  it reveals only whether the database answers.
+- **Adding an athlete stays coach-only in both modes**, as it already was (the view
+  asks for a coach); only listing athletes was open locally.
+- **16 older test classes are pinned to `local`** with `@LOCAL` (15 in `tests.py`, plus
+  the temporary-password tests' open-route checks). They test how a rack tablet works
+  in a gym, with no login, which is exactly what remote refuses. Test names use
+  `local` and `remote` (Devin, 2026-10-14).
 
 **Stop. Devin reviews.**
 

@@ -20,7 +20,7 @@ from django.db.models import ProtectedError
 from django.utils import timezone
 from django.contrib.auth.models import User
 from django.db.migrations.executor import MigrationExecutor
-from django.test import TransactionTestCase
+from django.test import TransactionTestCase, override_settings
 from rest_framework.test import APIClient, APITestCase
 
 from .models import (Athlete, TrainingSession, Set, Rep, AthleteReferenceMax, Exercise,
@@ -38,6 +38,13 @@ from .realtime.mqtt_ingester.parser import parse_pulse_payload
 from .realtime.event_processor.process_pulse import process_pulse_event
 from .serializers import AthleteSerializer
 from .models import CoachProfile
+
+
+# LOCAL-only behaviour: these tests call the routes a rack tablet uses with no login,
+# which is exactly how a local installation (a gym box) works and exactly what a
+# remote one refuses. Pinned to local so the remote CI run tests remote behaviour
+# where it applies (test_open_on_local.py walks those same routes as remote).
+LOCAL = override_settings(EA_DEPLOYMENT='local')
 
 
 def make_coach(**fields):
@@ -191,6 +198,7 @@ class PulsePayloadTests(APITestCase):
         self.assertEqual(node.acquisition_kind, Node.ACQUISITION_WT901_BLE)
 
 
+@LOCAL
 class ActiveSessionEndpointTests(APITestCase):
     URL = "/api/sessions/active/"
 
@@ -291,6 +299,7 @@ class ActiveSessionEndpointTests(APITestCase):
         self.assertEqual(ex["velocity_zone_max"], 0.8)
 
 
+@LOCAL
 class AthleteProgressEndpointTests(APITestCase):
     """GET /api/sessions/active/athlete/{id}/progress/ — the rack day-view. Pins:
     which sets count as completed, that false sets don't advance the number, the
@@ -401,6 +410,7 @@ class AthleteProgressEndpointTests(APITestCase):
         self.assertIsNone(moves[bench.id]["last_weight_lbs"])          # not yet lifted → null
 
 
+@LOCAL
 class RackCheckInEndpointTests(APITestCase):
     """POST /api/racks/{n}/checkin/ + GET /api/racks/{n}/checkins/ — the hot list.
     Pins: a check-in appears on that rack's list, ownership transfers to the newest
@@ -604,6 +614,7 @@ class RackCheckInEndpointTests(APITestCase):
         self.assertEqual(MonitoringEvent.objects.count(), 0)
 
 
+@LOCAL
 class RackControllerEndpointTests(APITestCase):
     def setUp(self):
         self.screen = RackScreen.objects.create(device_id="screen-1", rack_number=1)
@@ -1037,6 +1048,7 @@ class RackControllerEndpointTests(APITestCase):
         self.assertEqual(MonitoringEvent.objects.count(), 0)
 
 
+@LOCAL
 class RackControllerConcurrencyTests(TransactionTestCase):
     reset_sequences = True
 
@@ -1215,6 +1227,7 @@ class RackRemoveTests(APITestCase):
         self.assertIsNone(self.screen.rack_number)
 
 
+@LOCAL
 class NodeRegistrationTests(APITestCase):
     """A sensor announcing itself — the MQTT counterpart of racks/register/.
 
@@ -1355,6 +1368,7 @@ class RecoverRacksTests(APITestCase):
         self.assertEqual(runtime.command_receipts.count(), 0)
 
 
+@LOCAL
 class RackSelfRecoveryTests(APITestCase):
     """A rebooted rack screen recovering its OWN stranded set.
 
@@ -1462,6 +1476,7 @@ class RackSelfRecoveryTests(APITestCase):
         self.assertEqual(granted.data["snapshot"]["phase"], "idle")
 
 
+@LOCAL
 class PerLaptopNodeFlowTests(APITestCase):
     """The per-rack-laptop topology: the rack screen runs the WT901 agent, which
     registers itself as an ordinary MQTT node. That is the whole shortcut — an
@@ -1725,6 +1740,7 @@ class RackNodeUnlinkTests(APITestCase):
         self.assertIn(res.status_code, (401, 403))
 
 
+@LOCAL
 class RackNodeAssignmentTests(APITestCase):
     def setUp(self):
         self.staff = make_coach(
@@ -2031,6 +2047,7 @@ class RackNodeAssignmentTests(APITestCase):
         self.assertIsNone(self.node.rack_number)
 
 
+@LOCAL
 class BLEAgentFacadeTests(APITestCase):
     def setUp(self):
         self.staff = make_coach(
@@ -2353,6 +2370,7 @@ class BLEAgentFacadeTests(APITestCase):
         self.assertEqual(response.data["code"], "wt901_verification_required")
 
 
+@LOCAL
 class LiveRoomInvalidationTests(APITestCase):
     def setUp(self):
         self.session = TrainingSession.objects.create(label="Live", started_at=timezone.now())
@@ -2660,6 +2678,7 @@ class LiveRoomInvalidationTests(APITestCase):
         self.assertEqual(MonitoringEvent.objects.count(), 0)
 
 
+@LOCAL
 class SessionStatusEndpointTests(APITestCase):
     """GET /api/sessions/active/status/ — room state. Pins the status each athlete
     reads as (lifting / resting / ready / not_started) and that a `since` timestamp
@@ -2703,6 +2722,7 @@ class SessionStatusEndpointTests(APITestCase):
         self.assertEqual(res.data["athletes"], [])
 
 
+@LOCAL
 class ExerciseCatalogEndpointTests(APITestCase):
     def test_lists_catalog_by_name(self):
         # Migration 0009_seed_exercise_catalog already seeds the canonical movements,
@@ -2765,6 +2785,7 @@ class AthleteNotesTests(APITestCase):
         self.assertEqual(self.client.get("/api/athletes/999999/").status_code, 404)
 
 
+@LOCAL
 class RoomStateEndpointTests(APITestCase):
     """GET /api/room-state/ — the derived live room picture (merge canon D8).
 
@@ -3267,6 +3288,7 @@ class PlanResolutionTests(APITestCase):
         self.assertEqual(len(movements_for_athlete(self.athlete, self.session)), 2)
 
 
+@LOCAL
 class CoachWeightAdjustmentTests(APITestCase):
     """A coach changing the weight an athlete is working with (canon D15).
 
