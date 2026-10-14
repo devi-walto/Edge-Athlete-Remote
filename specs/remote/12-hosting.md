@@ -212,6 +212,7 @@ it runs.
 |---|---|
 | `status`, `logs <service>`, `shell` | see what is running, read logs, open a shell in django |
 | `setup-code` | print the first-administrator code (spec 01) |
+| `new <name>` | (optional) make a new installation's overlay from the template; Phase 6 decides if it is worth it |
 | `make-admin <username>` | the recovery command from spec 01 |
 | `secrets` | create or update the installation's Secret from a local file that is never committed |
 | `deploy <version>`, `rollback` | the manual version of Phase 3, for when CI is down |
@@ -306,15 +307,34 @@ it runs.
 
 **Stop. Devin reviews.**
 
-## Phase 6 — The demo installation (Definition of Done #5)
+## Phase 6 — The demo installation: a dry run of onboarding a new school (Definition of Done #5)
 
-- `k8s/app/overlays/demo/`: its own namespace, subdomain, Secret and database, from the
-  same base.
-- Seeded with invented data (the seed command), **never** a copy of the real database.
+Decided 2026-10-14. The demo is **set up the way a new school's installation would be,
+from start to finish, by hand**, so it doubles as the rehearsal of onboarding a real
+customer. Devin then hands Dr. Prather invented login details as if he were that
+school's administrator, and demos the whole app from there.
+
+- **A new installation is a new overlay** made from the same base: its own namespace,
+  subdomain (with its two lines, in `coredns-custom` and the DDNS job), Secret and
+  database. Making one is a written step in the hosting guide (and `eactl new <name>`
+  if it earns its place), not a hand-edited copy of the real installation's files.
+- **It starts empty, like a real new school.** First-run setup with a setup code from
+  `eactl setup-code`, exactly as spec 01 built it. Devin claims it, creates **an
+  administrator login for Dr. Prather** with an invented username and a real (not
+  well-known) password, and hands those over. No `coach` / `coachpass`; spec 01's rule
+  against well-known logins holds here too.
+- Any data in it is **invented**: entered through the app during the walkthrough, or
+  loaded with the seed command. **Never** a copy of the real database.
 - The same version tag deploys both installations.
+- **Every step the walkthrough needed that the guide did not have is added to the
+  guide.** That makes the next school's onboarding a matter of following it.
 
 **Done when:**
 
+- [ ] *(By hand)* The demo was set up from nothing by following the hosting guide, and
+      the guide now has every step that was needed.
+- [ ] *(Browser)* Signed in with the login details handed to Dr. Prather, the demo shows
+      the administrator's view: Coaches page, adding a coach, the whole workspace.
 - [ ] The demo runs at its own address with its own database; nothing in it can read the
       real installation (separate namespaces, separate Secrets, separate databases).
 - [ ] Deleting the demo namespace leaves the real installation untouched.
