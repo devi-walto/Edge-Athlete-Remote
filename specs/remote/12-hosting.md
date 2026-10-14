@@ -372,6 +372,17 @@ the Dell.
   copies the cluster credentials to the operator's user. Safe to run twice. Opens with a
   plain-language comment on why it exists. Written from what was done by hand on the
   Dell, not invented.
+- **Secrets encrypted on disk from the start** (decided 2026-10-14). Before installing
+  k3s, the bootstrap writes `secrets-encryption: true` into `/etc/rancher/k3s/config.yaml`,
+  so the new cluster encrypts every Secret it ever stores. By default a Secret is only
+  base64-encoded, and anyone with a copy of the cluster's database file could read it.
+  This is what managed clouds (AKS, EKS, GKE) do by default. It protects copies of that
+  file (a stolen disk, a leaked backup), not someone holding cluster credentials. The
+  key lives in `/var/lib/rancher/k3s/server/cred/`: a backup of the cluster's own
+  database is useless without it.
+- **The Dell gets the same setting by hand**, walked through step by step with Devin:
+  add the line, restart k3s, re-encrypt the Secrets already stored
+  (`k3s secrets-encrypt reencrypt`), and check one is unreadable in the database file.
 - `docs/guides/hosting.md` (new): bootstrap, `kubectl apply -k k8s/cluster`, the written
   secret steps, deploy the current tag, restore last night's backup.
 
@@ -381,6 +392,9 @@ the Dell.
       the real installation back with all its data. The time taken is written in the
       guide.
 - [ ] Running `bootstrap.sh` a second time changes nothing and reports so.
+- [ ] On the throwaway machine and on the Dell, `k3s secrets-encrypt status` reports
+      encryption enabled, and a known Secret's value does not appear in plain text in the
+      cluster's database file.
 - [ ] Nothing in that run needed a step that is not in the guide.
 
 ---
