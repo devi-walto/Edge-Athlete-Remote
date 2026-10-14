@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: In progress — Phase 0 done (branch `feature-deployment_switch`)
+- Status: In progress — Phase 0 done (branch `feature-deployment_switch`). Phase 1 (CI) added 2026-10-14; the old Phases 1–3 are now 2–4
 - Form item: Definition of Done #3
 - Depends on: [02 Roles](02-roles.md)
 - **Build this before 03 and 04**, which both need its switch
@@ -100,7 +100,54 @@ nothing sets it yet, which is the release and hosting work.
 
 **Stop. Devin reviews.**
 
-## Phase 1 — The 21 endpoints
+## Phase 1 — Tests on every pull request (CI)
+
+Added 2026-10-14. CI lives here because Phase 2 needs the suite run in both modes on
+every change, and because this spec's own pull request is the project's **first manual
+approval**: from here on, work reaches `SprintBranch` only through a pull request whose
+checks pass and which Devin merges (see "Branches" in `specs/README.md`). Deploys on
+version tags are the other half of CI/CD and live in [spec 12](12-hosting.md).
+
+- `.github/workflows/ci.yml` (new), opening with a plain-language comment on why it
+  exists. Runs **on pull requests into `SprintBranch` and `main`**, not on every push
+  (Devin, 2026-10-14), and can be started by hand.
+- **On GitHub's own runners** while the repo is public: free, and a stranger's pull
+  request never reaches a machine in the house (spec 12 explains the runners).
+- Jobs:
+  - **backend**, twice — once with `EA_DEPLOYMENT=local`, once with `remote`: build the
+    django image from its Dockerfile (which also proves the image builds), start a
+    throwaway Postgres and Mosquitto beside it on their own network with the names the
+    app expects (`postgres`, `mosquitto`), run the suite and the migration drift check
+    inside the image. The same way the suite is run by hand today.
+  - **frontend**: the frontend suite and the production build, on the Node version the
+    react Dockerfile uses; and the react image builds.
+  - **docs**: the docs build, warnings fatal.
+- The settings each leg runs with are files in the repo (`ci/local.env`,
+  `ci/remote.env`), with throwaway values only. When Phase 3 makes `remote` refuse
+  `DEBUG` and empty hosts, the remote file already sets them correctly.
+- **The rules on GitHub, after the first green run** (a check can only be required once
+  it has run once). Devin turns them on by hand, guided; they are account settings:
+  - `SprintBranch` and `main`: changes only through a pull request; the backend (both
+    legs), frontend and docs checks must pass; no force pushes; no deleting.
+  - **Merging is the approval.** GitHub does not let anyone approve their own pull
+    request, and every pull request here is opened under Devin's account, so "one
+    approval required" would block every merge. Only Devin can merge.
+
+**Done when:**
+
+- [ ] Opening this spec's pull request runs all four checks, and each passes.
+- [ ] A throwaway pull request with a deliberately failing test shows red and **cannot
+      be merged**. Closed afterwards, never merged.
+- [ ] The two backend legs show up as separate checks, named for their mode.
+- [ ] A push to a branch with no pull request starts nothing.
+- [ ] *(By hand)* The branch rules are on for `SprintBranch` and `main`, and a direct
+      push to either is refused.
+- [ ] The time one full run takes is written down (it matters once the repo is private
+      and minutes are counted).
+
+**Stop. Devin reviews.**
+
+## Phase 2 — The 21 endpoints
 
 - `OpenOnLocal(remote=<rule>)`: on a gym box, allow. Hosted, apply the rule from the
   table (`coach`, `any_role`, `coach_or_owner`, `refuse`).
@@ -118,11 +165,11 @@ nothing sets it yet, which is the release and hosting work.
 - [ ] Hosted: a coach passes every row marked coach; an athlete gets `403` on
       `athletes_view`, `nodes_list`, `node_register`, `room_state`.
 - [ ] Hosted: `rack_register`, `rack_racknumber` and `rack_nfc_tap` return `403` for everyone.
-- [ ] The full suite passes in **both** modes (run it twice in CI).
+- [ ] The full suite passes in **both** modes (Phase 1's CI runs it twice on every pull request).
 
 **Stop. Devin reviews.**
 
-## Phase 2 — Hosted hardening
+## Phase 3 — Hosted hardening
 
 - `ALLOWED_HOSTS`, CORS origins and CSRF trusted origins come from the environment when
   hosted, and startup fails if they are empty.
@@ -139,7 +186,7 @@ nothing sets it yet, which is the release and hosting work.
 
 **Stop. Devin reviews.**
 
-## Phase 3 — The frontend learns the mode
+## Phase 4 — The frontend learns the mode
 
 - A small hook, `useDeployment()`, fetches `/api/system/info/` once and caches it.
 - Nothing visible changes yet. Specs 03, 04 and 07 use the hook to show remote-only
@@ -165,9 +212,9 @@ nothing sets it yet, which is the release and hosting work.
 
 | Risk | What reduces it |
 |---|---|
-| A new endpoint is added open and nobody notices it is open when hosted | The allow-list test in Phase 1 |
+| A new endpoint is added open and nobody notices it is open when hosted | The allow-list test in Phase 2 |
 | The gym box regresses because tests only ran in one mode | CI runs the suite in both modes |
-| A rack tablet in the gym is suddenly asked to log in | Phase 1's gym-box walk asserts no login is needed on all 21 |
+| A rack tablet in the gym is suddenly asked to log in | Phase 2's gym-box walk asserts no login is needed on all 21 |
 
 ## Docs to update when done
 
