@@ -131,8 +131,9 @@ on my memory.
 - More than one node. Autoscaling.
 - Sensors over the internet and MQTT over TLS on 8883 (the sensors work; this spec only
   leaves room for the port).
-- **Browser logins to the broker** (see Phase 4: the broker is not made public until
-  they exist).
+- **Browser logins to the broker.** Accepted 2026-10-14: online, the broker's WebSockets
+  door is open to read, the same as on a gym box, because the data is test data with
+  invented names. Revisit before a real program's athletes use the hosted installation.
 - Continuous sync between a gym box and hosted (out of scope on the form).
 - A managed cloud. The design keeps the door open; it does not walk through it.
 
@@ -261,14 +262,18 @@ it runs.
   job, its line in `coredns-custom`, its certificate.
 - The real overlay sets `EA_DEPLOYMENT=remote` and its allowed hosts and trusted origins.
 - The Tailscale-only middleware comes off the site.
-- **The broker stays private.** Today it lets anyone connect, and some of what it sends
-  carries athlete names (the leaderboard push). Until **browser logins to the broker**
-  exist (not specced: see open decisions), the broker's WebSockets door is reachable over
-  Tailscale only. Screens on the public site then work without live updates and refresh
-  on their own; screens over Tailscale keep them.
-- The screens find the broker through the site's own address when served over HTTPS
-  (`wss://<site>/<path>`), instead of `ws://<host>:9001`. A small frontend change, keyed
-  off spec 05's `useDeployment()`.
+- **The broker goes online through the site's own address.** Traefik routes a path on
+  the HTTPS site to the broker's WebSockets listener, so live updates travel as `wss`
+  on 443 like everything else. No new port.
+- **The screens connect to it the right way for where they run.** A gym box keeps
+  `ws://<host>:9001`; a hosted page uses `wss://<site>/<path>`. Chosen by spec 05's
+  `useDeployment()`, so it is one codebase, not two builds.
+- **The plain-HTTP workarounds stay for the gym and go unused online.** A gym box serves
+  plain HTTP, so the app carries two patches: `polyfills.js` fills in browser features
+  that plain HTTP switches off, and the rack screen's kiosk script launches Chromium
+  with the gym's address marked as secure. Online, HTTPS makes the browser trust the
+  site by itself: the polyfill only fills a gap that is no longer there, and no kiosk
+  flag is involved. Neither is removed, because the gym box still needs both.
 
 **Done when:**
 
@@ -277,7 +282,10 @@ it runs.
 - [ ] From the internet, every route except sign-in, first-run setup and
       `/api/system/info/` answers `401` without a login (spec 05's walk, against the
       live address).
-- [ ] From the internet, the broker's WebSockets door does not answer.
+- [ ] *(Browser, from a phone on mobile data)* Live updates arrive over `wss`: starting
+      a set on one phone shows on another without a refresh.
+- [ ] *(Browser)* On the public site the offline shell (the service worker) registers,
+      with no kiosk flag; on a gym box nothing has changed.
 - [ ] Certificates renew: cert-manager reports the renewal time, and a forced renewal on
       staging succeeds.
 
@@ -363,7 +371,6 @@ athlete login. Would become `eactl copy-db`.
 | Where Phase 7's throwaway machine runs | A free-tier cloud VM (amd64, like the Dell, and the closest thing to the AWS/Azure goal). A local VM on an Apple-chip Mac would be ARM and need ARM images |
 | Where backups are copied to | Off the house entirely (a cloud storage bucket) is the professional answer; the laptop over Tailscale is the cheap one |
 | `eactl` as a Makefile or a `justfile` | `justfile`: reads like a list of commands, takes arguments cleanly |
-| Who builds browser logins to the broker, and when | Not specced. Definition of Done #4 asks for "encrypted live updates"; encryption arrives in Phase 4, logins do not. Recommend a short spec of its own before spec 04 ships to the public |
 | Secrets beyond a local file | A local, never-committed file per installation applied by `eactl secrets` now; Sealed Secrets or SOPS (encrypted secrets in the repo) as a later step |
 
 ## Acceptance criteria
@@ -382,7 +389,6 @@ athlete login. Would become `eactl copy-db`.
 | Risk | What reduces it |
 |---|---|
 | The real app goes public before its open routes are closed | Phase 4 is gated on spec 05; Phase 1 keeps the site Tailscale-only |
-| Live updates leak athlete names through an open broker | The broker stays Tailscale-only until browser logins exist |
 | A fork's pull request runs code on the Dell | Tests and builds run on GitHub's machines; the Dell runner deploys only, on tags only Devin can create; fork approval required |
 | The home connection or the Dell goes down before a live demo | Backups off the Dell; the rebuild rehearsal is timed; record the end-to-end demo on video early (Definition of Done #7 allows video) |
 | A new subdomain silently fails its certificate | The two-line rule (coredns-custom + DDNS) is in the hosting guide and in Phase 4's and 6's checklists |
