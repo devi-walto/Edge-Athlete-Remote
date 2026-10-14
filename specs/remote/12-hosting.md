@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-14
-- Status: Written — not started
+- Status: In progress — Phase 0 done (branch `feature-hosting`)
 - Form items: Definition of Done #1 (k3s, public HTTPS, automatic certificates, CI/CD) and
   #5 (a separate demo installation from the same template). Feeds #7 (end to end) and #8
   (docs on deploying to k3s)
@@ -152,10 +152,28 @@ on my memory.
 
 **Done when:**
 
-- [ ] Pushing a test tag produces both images in the registry with that tag, and they
+- [x] Pushing a test tag produces both images in the registry with that tag, and they
       are not visible to a logged-out visitor.
-- [ ] The Dell can pull them with the stored token; a pod without the token cannot.
-- [ ] A container from the image reports the tag at `/api/system/info/`.
+- [x] The Dell can pull them with the stored token; a pod without the token cannot.
+- [x] A container from the image reports the tag at `/api/system/info/`.
+
+**Result, 2026-10-14.** A test tag (`v0.3.1-test.1`, deleted afterwards) ran
+`release.yml` green: both images built, the django image reported its own version, both
+stored in `ghcr.io/devi-walto/`. On the Dell, a pod using the pull secret downloaded the
+image and printed `v0.3.1-test.1`; a pod without it got `ImagePullBackOff`.
+
+- **The images came out public**: GitHub gives a new package its repository's
+  visibility, and the repo is public. Devin set both to private by hand; a logged-out
+  pull is now refused (403).
+- **Two lines were added to `django/Dockerfile`** (`ARG EA_VERSION=dev`, `ENV
+  EA_VERSION=$EA_VERSION`), against "the Dockerfiles do not change". Baking the version
+  in at build time cannot drift from the image's tag, which setting it in a manifest
+  could. A gym box's own build passes nothing and reports `dev`, as before.
+- **The pull key** is a classic token with only `read:packages`, 90 days, stored by
+  Devin on the Dell as Secret `ghcr-pull` in the new namespace `edge-athlete` (the token
+  never passed through Claude). Renewal is by hand: a new token and the same command
+  with `--dry-run=client -o yaml | kubectl apply -f -`. A GitHub App with an
+  auto-refreshing key is the after-November option.
 
 **Stop. Devin reviews.**
 
