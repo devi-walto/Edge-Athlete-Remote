@@ -75,7 +75,7 @@ function Pill({ children, color }) {
     background: color + '22', color, letterSpacing: '.03em' }}>{children}</span>
 }
 
-function ConnectionTest() {
+function ConnectionTestPage() {
   const [resp, setResp] = useState({})
   const [busy, setBusy] = useState({})
   const [token, setToken] = useState(null)
@@ -299,6 +299,38 @@ function ConnectionTest() {
       </div>
     </div>
   )
+}
+
+// On a remote installation this page is not served: it is the one screen that
+// PUBLISHES to the broker (every other screen only listens), and it lists the API
+// for anyone who finds it. Asked once, before anything connects (spec 05, Phase 3).
+export function RemoteNotice() {
+  return (
+    <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#070b0e', color: '#f5f7f2', padding: 24 }}>
+      <section role="alert" style={{ maxWidth: 420, background: '#10171b', border: '1px solid #263239', borderRadius: 6, padding: 24 }}>
+        <h1 style={{ margin: '0 0 8px', fontSize: 20 }}>Not available here</h1>
+        <p style={{ margin: 0, color: '#89969d', lineHeight: 1.5 }}>
+          The connection test is a tool for a local installation. It is switched off on an online one.
+        </p>
+      </section>
+    </main>
+  )
+}
+
+function ConnectionTest() {
+  const [deployment, setDeployment] = useState(null)
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/system/info/')
+      .then((res) => (res.ok ? res.json() : {}))
+      // If the server cannot say, behave as a local installation: that is the default.
+      .catch(() => ({}))
+      .then((info) => { if (!cancelled) setDeployment(info.deployment || 'local') })
+    return () => { cancelled = true }
+  }, [])
+  if (deployment === null) return null
+  if (deployment === 'remote') return <RemoteNotice />
+  return <ConnectionTestPage />
 }
 
 export default ConnectionTest

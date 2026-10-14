@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: In progress — Phases 0, 1 and 2 done (branch `feature-deployment_switch`, open pull request into `SprintBranch`)
+- Status: In progress — Phases 0 to 3 done (branch `feature-deployment_switch`, open pull request into `SprintBranch`)
 - Form item: Definition of Done #3
 - Depends on: [02 Roles](02-roles.md)
 - **Build this before 03 and 04**, which both need its switch
@@ -224,11 +224,34 @@ and walks them as `LocalTests` and `RemoteTests`.
 
 **Done when:**
 
-- [ ] `remote` with `DEBUG=True`, or with empty hosts, fails to start.
-- [ ] Hosted: a request marked secure by the proxy is treated as HTTPS, and cookies carry
+- [x] `remote` with `DEBUG=True`, or with empty hosts, fails to start.
+- [x] Hosted: a request marked secure by the proxy is treated as HTTPS, and cookies carry
       the secure flag. Gym box: no change (the existing suite proves it).
-- [ ] Repeated wrong sign-ins get `429` when hosted, and are unlimited on a gym box.
-- [ ] *(Frontend test)* The connection-test page shows the notice in hosted mode.
+- [x] Repeated wrong sign-ins get `429` when hosted, and are unlimited on a gym box.
+- [x] *(Frontend test)* The connection-test page shows the notice in hosted mode.
+
+**Result, 2026-10-14.** Backend 559 → 570 and frontend 288 → 291, passing as `local`
+and as `remote`; no migration drift. Started for real as remote: `DEBUG=True` and an
+empty `ALLOWED_HOSTS` each refuse with a plain message; the CI remote settings start
+cleanly.
+
+- The rules live in `basestation_config/deployment_mode.py` (`remote_settings`), so
+  they are tested on their own; `settings.py` applies them only when remote.
+- **Trusted form origins default to `https://` + each allowed host**; set
+  `CSRF_TRUSTED_ORIGINS` to override. **No other site may call the API from a browser
+  when remote** unless named in `CORS_ALLOWED_ORIGINS` (the screens come from the
+  site's own address). Behind the front door, `X-Forwarded-Proto: https` makes Django
+  treat the request as HTTPS, and its cookies are marked secure.
+- **The sign-in limit counts only WRONG attempts**, per address (the browser's address
+  from `X-Forwarded-For` when remote): 10 in a minute, then `429` for the rest of the
+  minute. A correct sign-in never counts, so a coach is never slowed down. It covers
+  first-run setup codes too. The count is per server process (three workers: up to
+  three times the limit), enough to stop guessing at speed.
+- **"Unlimited on a gym box" means no limit in Django.** A local box keeps spec 01's
+  nginx limit on `/api/auth/`; the hosted front door is Traefik, which has none, so
+  the limit had to live in the app.
+- The connection-test page asks `/api/system/info/` itself before connecting to
+  anything; Phase 4's hook replaces that call.
 
 **Stop. Devin reviews.**
 

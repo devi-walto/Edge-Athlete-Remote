@@ -29,7 +29,7 @@ import os
 
 from django.core.exceptions import ImproperlyConfigured
 
-from .deployment_mode import parse_deployment
+from .deployment_mode import REMOTE, parse_deployment, remote_settings
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 # BASE_DIR points to the /django folder — the root of the Django project
@@ -249,3 +249,27 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
 }
+
+
+# ── Remote-only safety (spec 05, Phase 3) ────────────────────────────────────
+# A LOCAL installation (a gym box) is on its own private Wi-Fi, over plain HTTP,
+# and none of this applies to it. A REMOTE installation is on the internet behind
+# the cluster's HTTPS front door, so it must refuse to start without the settings
+# below, and it must know that a request which reached it as plain HTTP from the
+# front door was HTTPS from the browser.
+if EA_DEPLOYMENT == REMOTE:
+    ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS = remote_settings(
+        debug=DEBUG,
+        allowed_hosts_raw=os.environ.get('ALLOWED_HOSTS'),
+        csrf_origins_raw=os.environ.get('CSRF_TRUSTED_ORIGINS'),
+    )
+    # The front door (Traefik) ends HTTPS and passes the request on, saying so in
+    # this header. Without it Django would think every request was plain HTTP.
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    # Cookies (the admin's session and the form token) only travel over HTTPS.
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    # The screens are served from the site's own address, so no other site may
+    # call the API from a browser unless it is named here on purpose.
+    CORS_ALLOWED_ORIGINS = [o.strip() for o in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if o.strip()]
+
