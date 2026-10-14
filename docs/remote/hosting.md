@@ -30,16 +30,14 @@ Learning k3s is itself one of the directed study's outcomes ({doc}`directed-stud
 
 ### Where the cluster runs: at home
 
-The cluster runs on two machines at home: **a Dell OptiPlex and a Mac mini.**
+The cluster runs on one machine at home: **a Dell OptiPlex**, as a single k3s node.
 
-**It starts on the Dell alone.** k3s runs only on Linux. The Dell runs it directly;
-the Mac mini can only join through a Linux virtual machine. So the first goal is
-everything working on one machine. The Mac mini joins later as a second node, which
-is a learning step in its own right and blocks nothing before it.
-
-**If the Mac mini has an Apple chip, the images must be built twice** — once for the
-Dell's Intel-style processor, once for the Mac's ARM one. Another reason the Dell goes
-first.
+**A second machine was planned and then cut (October 14).** A Mac mini was going to
+join later as a second node. It was never part of the Definition of Done, which asks
+for the app on k3s at a public HTTPS link, not for a cluster of a given size. It would
+also have cost real work: k3s runs only on Linux, so the Mac could only join through a
+virtual machine, and an Apple-chip Mac would have meant building every image twice.
+Adding a node later is still possible; nothing here depends on there being one.
 
 **Getting traffic from the internet to the Dell:**
 
@@ -129,8 +127,9 @@ take incoming traffic.
   manifests on the cluster.
 - **The browser's broker login is new work.** Today the broker trusts everyone on the
   box's Wi-Fi; hosted, it has to check a credential the site issued.
-- **If the cluster mixes processor types** — an Apple-chip Mac mini beside the Dell —
-  every image must be built for both. Starting on the Dell alone defers this.
+- **One machine, so no failover.** If the Dell is down, the site is down. The cluster
+  can still restart a crashed container on its own; it cannot move work to a machine
+  that is not there.
 - **The site is only as available as the house.** A power cut, a router reboot or an
   outage at the provider takes it down. Fine for a directed study; worth saying out
   loud before a live demo.
@@ -145,5 +144,4 @@ address itself.
 
 - Does the provider allow incoming traffic on ports 80 and 443? Only testable once the
   Dell is serving something and the router forwards those ports.
-- Does the Mac mini have an Apple chip or an Intel one?
 - Have the domain's old DNS records been cleared out, so only the project's remain?
