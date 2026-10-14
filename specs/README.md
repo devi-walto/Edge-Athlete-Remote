@@ -20,6 +20,12 @@ Written 2026-10-06. Owner: Devin Walton. Project: CSC 4903, due **November 11, 2
 - **A stop after every phase.** Devin reviews before the next phase starts. Do not run
   several phases ahead.
 - **Work on a feature branch, merge into `SprintBranch` at the end.** See "Branches" below.
+- **Screens are built from the Final designs page** (Devin, 2026-10-14). Every screen a
+  spec builds follows its `F_*` board on the canvas's Final designs page: layout, wording,
+  states, and the solid look. A spec names the boards it builds. A screen a feature needs
+  that has no board goes to a proposal page first and is built only after Devin approves
+  it; it then moves to Final designs. This applies to specs written later too, so
+  features are fitted to the agreed design, not the other way round.
 - **Record the baseline first.** Before changing anything, note how many backend and
   frontend tests pass on `SprintBranch`.
 
@@ -217,7 +223,8 @@ a day can still change, but days cannot be added, removed or reordered.
 - **Source and screenshots:** `~/Desktop/Coding Projects/Edge Athlete Remote/mockups/`
   and `.../ui-captures/` (outside the repo).
 
-Specs refer to mockup screens by file name, for example `V3b_DesignStep2`.
+Specs refer to mockup screens by file name, for example `V3b_DesignStep2`. **Where a spec
+names an older `V3*`/`V4*` board, build its `F_*` counterpart on Final designs.**
 
 ---
 
