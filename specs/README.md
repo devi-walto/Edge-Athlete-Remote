@@ -110,15 +110,27 @@ overlaps are called out inside each spec.
 | Sensors over the internet, and MQTT over TLS on 8883 | 6 | Design is in `docs/remote/sensors.md`; hardware chosen (XIAO ESP32-C6 + BNO085); firmware not started |
 
 Moved into [spec 12](remote/12-hosting.md) on 2026-10-14: hosting on k3s, the demo
-installation, and (as "if there is time" and "deferred") moving a database between a gym
-box and hosted, the parent registry, and an installation's name on the sign-in card.
+installation, and (as "if there is time") moving a database between a gym box and hosted.
 
----|---|---|
-| Hosting on k3s, HTTPS, CI/CD | 1 | Devin's hands-on learning; the design is in `docs/remote/hosting.md` |
-| The demo installation | 5 | Part of the hosting template |
-| Sensors over the internet | 6 | Design is in `docs/remote/sensors.md`; firmware not started |
-| An installation's name (shown under "Edge Athlete" on the sign-in card; reads "Coach workspace" until then) | 1 | Nothing stores a name for an installation yet. It comes with the parent registry in the hosting work. Noted 2026-10-06 |
-| Moving an installation between a gym box and hosted (copying the database across, both directions) | 1 | Tabled 2026-10-06: it is an operator job that needs the hosting template, so it is specced with the k3s work. The model is in `docs/remote/databases.md`. **Gap to close in that spec (noted 2026-10-07):** the model says athlete logins are hosted only, but not what happens to them when a hosted database is copied down to a gym box. Starting point: the copy strips them, or the box ignores them, so a gym box never holds a working athlete login |
+### After the class
+
+Decided or designed, and deliberately left until after November 11. Pick from this list
+then. Business plans (pricing, billing) are kept out of this repository.
+
+| Work | Why it waits | Where the design is |
+|---|---|---|
+| **The registry of schools and the operator's console** | Two schools (real and demo) are manageable with `eactl list`; a console is for many | [spec 13](later/13-registry-and-console.md) |
+| An installation's name on the sign-in card (reads "Coach workspace") | Read from the registry | spec 13 |
+| Moving a database between a gym box and hosted, both directions | Not in the Definition of Done; "if there is time" in spec 12 | spec 12, `docs/remote/databases.md` |
+| Browser logins to the broker | Online it is open to read, accepted while the data is test data; needed before a real program's athletes use it | spec 12, Phase 4 and Non-goals |
+| Un-archiving an athlete from a screen | The server rule exists (spec 02); the button belongs with archived athletes in Analytics | spec 09 |
+| Opening a past session (athlete) | Built last in spec 10, only if there is time | spec 10, Phase 4 |
+| The coach interface redesign | Only if there is time before November 11 | specs 06–09, 11 |
+| Moving CI onto the Dell | Only safe once the repo is private | spec 12, Deferred |
+| An image pull key that renews itself (a GitHub App) | The 90-day token is renewed by hand meanwhile | spec 12, Phase 0 result |
+| A real secrets vault (beyond k3s encrypting Secrets on disk) | One server does not need it yet | spec 12, Phase 7 |
+| Ansible in place of `bootstrap.sh` | The script is enough for one machine | spec 12, Deferred |
+| A second node | Cut on 2026-10-14; nothing assumes one node | `docs/remote/hosting.md` |
 
 ---
 

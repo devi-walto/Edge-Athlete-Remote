@@ -62,8 +62,31 @@ on my memory.
   overlay per installation). The real installation and the demo differ only in their
   overlay: namespace, address, settings. Chosen over Helm because it is plain Kubernetes
   files, which fits "apply the repo".
-- **One namespace per installation**, with one ConfigMap and one Secret each, mirroring
-  today's `.env`.
+- **One server, many schools** (Devin, 2026-10-14). A *server* is one machine running
+  the cluster (today, the Dell). Setting one up happens once (`eactl init`). A new
+  school is a new **installation on an existing server**; it never gets a server of its
+  own. This differs from local on purpose: each gym box is a standalone device, so every
+  local install is its own server.
+- **One shared Postgres, one database per school** (option B, Devin, 2026-10-14).
+  Postgres is the database *server* (one running program); a *database* is one separate,
+  named set of tables inside it. The server runs **one** Postgres, in the platform
+  namespace `edge-athlete`; each school gets **its own database** in it, with its own
+  database login that can open only that database. So a school's app still cannot see
+  another school's data, and one Postgres uses far less of the Dell's memory than one per
+  school, with one backup job. The cost: if that Postgres is down, every school is.
+- **Everything else a school runs is its own**, in its own namespace `ea-<school>`:
+  Django, the two workers, the broker, the screens, one ConfigMap and one Secret
+  (mirroring today's `.env`), and a copy of the image pull key.
+- **A directory of schools, from day one.** `eactl new` labels each school's namespace
+  (`ea/installation=<school>`, its address, its version, and `ea/status=active`), and
+  `eactl list` reads those labels; `eactl status <school>` drills into one. The full
+  directory (a registry database and a web console) is after the class:
+  [spec 13](../later/13-registry-and-console.md).
+- **Server settings are asked once and kept out of the repo.** `eactl init` asks for the
+  domain, the email for certificate warnings and similar server-wide answers, and saves
+  them to `eactl.env` on the laptop, which git ignores. The repo's files use
+  placeholders (`${DOMAIN}`, `${ACME_EMAIL}`) that `eactl` fills in when applying. A new
+  school's questions (its name, its subdomain) are asked by `eactl new`.
 - **Images live in GitHub's container registry** (`ghcr.io`), **private**, even while the
   repo is public. The cluster pulls with a read-only token stored as a Secret.
 - **Tests run on pull requests; deploys run on version tags.** A tag like `v0.4.0` (patch
@@ -179,9 +202,11 @@ image and printed `v0.3.1-test.1`; a pod without it got `ImagePullBackOff`.
 
 ## Phase 1 — The app on the cluster, private
 
-- `k8s/app/base/` (new), one subfolder per Compose service:
-  - **postgres**: one copy, its data on a volume, replaced not doubled on update
-    (the practice cluster's `Recreate` strategy).
+- `k8s/platform/postgres/` (new): **the one shared Postgres**, in the platform namespace
+  `edge-athlete`. One copy, its data on a volume, replaced not doubled on update (the
+  practice cluster's `Recreate` strategy). Its administrator password is a Secret made
+  by a written step.
+- `k8s/app/base/` (new), what **each school** runs, one subfolder per Compose service:
   - **mosquitto**: the repo's own `mosquitto.conf` as a ConfigMap; a volume for its data.
   - **django**: the image, **with migrations moved from the start command to an init
     container** (a step Kubernetes runs once before the app starts), so two copies can
@@ -190,28 +215,43 @@ image and printed `v0.3.1-test.1`; a pod without it got `ImagePullBackOff`.
   - **mqtt-listener**, **monitoring-publisher**: the django image with their commands.
   - **react**: the image.
   - An **Ingress** that does what `nginx.conf` does: `/api/`, `/admin/` and the two
-    static paths to django, `/` to react. The sign-in rate limit moves to a Traefik
-    middleware.
+    static paths to django, `/` to react. (The sign-in limit is already in the app when
+    remote: spec 05 Phase 3.)
   - Health checks from today's `/api/health/`.
-- `k8s/app/overlays/real/` (new): the namespace, its ConfigMap (from `.env.example`'s
-  names), and a reference to its Secret.
+- **The first school is made with `eactl new`**, which: creates its namespace with the
+  directory labels; creates its database and database login in the shared Postgres;
+  writes its ConfigMap (from `.env.example`'s names, pointing at its own database);
+  creates its Secret and copies in the pull key; and applies `k8s/app/base` to it.
 - **The app uses the plumbing already on the Dell**: Traefik as the ingress, the
   existing `letsencrypt-staging` / `letsencrypt-prod` issuers through the same
   annotation the practice site uses. Nothing in the cluster's add-ons is reinstalled.
-- `k8s/cluster/` (new): the Dell's working add-on files **copied in as they are** —
-  the two issuers, `coredns-custom`, the DDNS CronJob and its namespace, and cert-manager
-  **pinned to the version already running** (a no-op on the Dell). The DNS provider's
-  keys stay a Secret created by a written step, never a file in the repo.
+- `k8s/cluster/` (new): the Dell's working add-ons, brought into the repo with **only the
+  changes a new machine needs**:
+  - **cert-manager**: the official v1.21.2 file, referenced by its address (pinned to the
+    version already running), not copied in.
+  - **the two certificate issuers**: as they are, with the email as `${ACME_EMAIL}`.
+  - **the hairpin fix** (`coredns-custom`): instead of Traefik's internal address on this
+    Dell (`10.43.x.x`, which a new machine would not have), it uses CoreDNS's `rewrite`
+    to send the site's name to the Traefik service, whatever its address. One line per
+    subdomain, generated from the settings.
+  - **the DNS updater**: its curl image pinned to an exact version instead of `latest`;
+    the domain and subdomains from the settings.
+  - The DNS provider's keys stay a Secret created by a written step, never a file.
+- `eactl` starts here with what Phase 1 needs: `init`, `apply-cluster`, `new`, `list`.
 - **Private until spec 05 is done:** a Traefik middleware lets in only the Tailscale and
   home network ranges. No public DNS record yet.
 
 **Done when:**
 
-- [ ] `kubectl apply -k k8s/app/overlays/real` brings every part up healthy.
+- [ ] `eactl new <school>` brings every part of the school up healthy, and its database
+      login cannot open any other database.
+- [ ] `eactl list` shows the school with its address, version and status.
 - [ ] *(Browser, over Tailscale)* First-run setup works: `setup_code` run inside the pod
       prints a code, and the code claims the first administrator.
 - [ ] *(Browser)* A coach signs in, creates an athlete, and the athlete is still there
-      after the django and postgres pods are deleted.
+      after the school's django pod and the shared postgres pod are deleted.
+- [ ] No domain, email or address of Devin's appears in the repo: `eactl.env` is
+      ignored by git, and the committed files hold only placeholders.
 - [ ] Two django copies started together: migrations run once.
 - [ ] From outside Tailscale and the home network, the address answers nothing.
 - [ ] The rate limit on sign-in still returns `429`.
@@ -230,7 +270,10 @@ it runs.
 |---|---|
 | `status`, `logs <service>`, `shell` | see what is running, read logs, open a shell in django |
 | `setup-code` | print the first-administrator code (spec 01) |
-| `new <name>` | (optional) make a new installation's overlay from the template; Phase 6 decides if it is worth it |
+| `init` | (from Phase 1) once per server: ask the server-wide settings, save `eactl.env` |
+| `apply-cluster` | (from Phase 1) fill in the placeholders and apply `k8s/cluster` |
+| `new <school>` | (from Phase 1) make a school's installation on this server, with its database |
+| `list` | (from Phase 1) the directory: every school, its address, version and status |
 | `make-admin <username>` | the recovery command from spec 01 |
 | `secrets` | create or update the installation's Secret from a local file that is never committed |
 | `deploy <version>`, `rollback` | the manual version of Phase 3, for when CI is down |
@@ -333,10 +376,10 @@ from start to finish, by hand**, so it doubles as the rehearsal of onboarding a 
 customer. Devin then hands Dr. Prather invented login details as if he were that
 school's administrator, and demos the whole app from there.
 
-- **A new installation is a new overlay** made from the same base: its own namespace,
-  subdomain (with its two lines, in `coredns-custom` and the DDNS job), Secret and
-  database. Making one is a written step in the hosting guide (and `eactl new <name>`
-  if it earns its place), not a hand-edited copy of the real installation's files.
+- **A new school is `eactl new demo`**, from the same base as the real one: its own
+  namespace, subdomain (with its two lines, in `coredns-custom` and the DDNS job), Secret,
+  and its own database in the shared Postgres. Never a hand-edited copy of another
+  school's files, and never a new server.
 - **It starts empty, like a real new school.** First-run setup with a setup code from
   `eactl setup-code`, exactly as spec 01 built it. Devin claims it, creates **an
   administrator login for Dr. Prather** with an invented username and a real (not
@@ -410,9 +453,9 @@ athlete login. Would become `eactl copy-db`.
 
 ## Deferred, with a home
 
-- **An installation's name** on the sign-in card (reads "Coach workspace"): needs the
-  parent registry, which needs more than one real installation. After November 11.
-- **The parent registry** (the operator's list of installations): same.
+- **The registry database and the operator's web console**, an installation's name on
+  the sign-in card, and account standing: [spec 13](../later/13-registry-and-console.md),
+  after the class. Phase 1's namespace labels are its starting point.
 - **Moving CI onto the Dell** once the repo is private; ephemeral runners with Actions
   Runner Controller as a stretch.
 - **Ansible** in place of `bootstrap.sh`, for machine configuration.
