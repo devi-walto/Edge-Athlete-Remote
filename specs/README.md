@@ -85,7 +85,7 @@ The Django suite had 447 tests on 2026-10-06 and **491 after spec 01** (2026-10-
 |---|---|---|---|---|
 | 01 | [Secure coach accounts](remote/01-coach-accounts.md) | 2 | — | **Done 2026-10-07**, merged into `SprintBranch` |
 | 02 | [Roles: administrator, coach, athlete](remote/02-roles.md) | 3 | 01 | **Done 2026-10-07**, merged into `SprintBranch` |
-| 05 | [Hosted mode](remote/05-hosted-mode.md) | 3 | 02 | Phase 0 done (on `feature-deployment_switch`). **Phase 1 is CI**: tests on every pull request, in both modes; the first pull request and the first manual approval |
+| 05 | [Hosted mode](remote/05-hosted-mode.md) | 3 | 02 | **Done 2026-10-14**, pull request into `SprintBranch` waiting for Devin's merge. Includes CI (Phase 1) |
 | 12 | [Hosting on k3s, with CD](remote/12-hosting.md) | 1, 5 | 05 | Written 2026-10-14. The app drops onto the plumbing already on the Dell; deploys on version tags; demo installation; rebuild from a blank machine. Runs alongside 03 and 04; going public waits for all of 05 |
 | 03 | [Athlete login links, and coach login codes](remote/03-athlete-login-links.md) | 4, 2 | 02, 05 | Written. Phase 5 replaces temporary coach passwords with one-time login codes |
 | 04 | [Session link and virtual racks](remote/04-session-link-and-virtual-racks.md) | 3, 4 | 02, 03, 05 | Written |

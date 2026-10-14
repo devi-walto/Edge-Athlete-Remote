@@ -11,6 +11,7 @@
  */
 import { useState, useRef, useEffect } from 'react'
 import mqtt from 'mqtt'
+import useDeployment from './useDeployment.js'
 
 // ── endpoints you can run live (open — no login needed) ──
 const OPEN_GETS = [
@@ -303,7 +304,7 @@ function ConnectionTestPage() {
 
 // On a remote installation this page is not served: it is the one screen that
 // PUBLISHES to the broker (every other screen only listens), and it lists the API
-// for anyone who finds it. Asked once, before anything connects (spec 05, Phase 3).
+// for anyone who finds it. Asked once, before anything connects (spec 05, Phases 3–4).
 export function RemoteNotice() {
   return (
     <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#070b0e', color: '#f5f7f2', padding: 24 }}>
@@ -318,16 +319,7 @@ export function RemoteNotice() {
 }
 
 function ConnectionTest() {
-  const [deployment, setDeployment] = useState(null)
-  useEffect(() => {
-    let cancelled = false
-    fetch('/api/system/info/')
-      .then((res) => (res.ok ? res.json() : {}))
-      // If the server cannot say, behave as a local installation: that is the default.
-      .catch(() => ({}))
-      .then((info) => { if (!cancelled) setDeployment(info.deployment || 'local') })
-    return () => { cancelled = true }
-  }, [])
+  const deployment = useDeployment()
   if (deployment === null) return null
   if (deployment === 'remote') return <RemoteNotice />
   return <ConnectionTestPage />

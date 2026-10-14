@@ -11,11 +11,13 @@ const connect = vi.fn(() => ({ on: vi.fn(), subscribe: vi.fn(), end: vi.fn(), pu
 vi.mock('mqtt', () => ({ default: { connect }, connect }))
 
 const { default: ConnectionTest } = await import('./ConnectionTest.jsx')
+const { forgetDeploymentForTests } = await import('./useDeployment.js')
 
 let container, root
 beforeEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true
   connect.mockClear()
+  forgetDeploymentForTests()
   container = document.createElement('div')
   document.body.append(container)
   root = createRoot(container)

@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: In progress — Phases 0 to 3 done (branch `feature-deployment_switch`, open pull request into `SprintBranch`)
+- Status: Done 2026-10-14 — all five phases, on `feature-deployment_switch`; its pull request into `SprintBranch` is ready for Devin to merge (branch `feature-deployment_switch`, open pull request into `SprintBranch`)
 - Form item: Definition of Done #3
 - Depends on: [02 Roles](02-roles.md)
 - **Build this before 03 and 04**, which both need its switch
@@ -263,19 +263,28 @@ cleanly.
 
 **Done when:**
 
-- [ ] *(Frontend test)* The hook returns the mode and does not refetch on every render.
-- [ ] *(Browser)* The gym-box app looks and works exactly as before.
+- [x] *(Frontend test)* The hook returns the mode and does not refetch on every render.
+- [x] *(Browser)* The gym-box app looks and works exactly as before.
+
+**Result, 2026-10-14.** Frontend 291 → 295. `react/src/useDeployment.js` asks
+`/api/system/info/` once per page load and shares the answer; anything it cannot read
+or does not recognise counts as `local`. The connection-test page now uses it; nothing
+else does yet, so no other screen changed. *(Over HTTP, not a browser)* The whole app
+run as a local installation on a throwaway stack served the coach, rack and
+connection-test pages and answered the gym-open routes with no login; run as remote,
+the same routes answered `401`/`403` and `/api/system/info/` said `remote`. A click-
+through in a real browser is left for Devin.
 
 ---
 
 ## Acceptance criteria
 
-- [ ] A gym box behaves exactly as it did, with no login at the rack.
-- [ ] Hosted, nothing answers without a login except sign-in, first-run setup and
+- [x] A gym box behaves exactly as it did, with no login at the rack.
+- [x] Hosted, nothing answers without a login except sign-in, first-run setup and
       `/api/system/info/`.
-- [ ] Hosted, no endpoint returns a list of athlete names to anyone but a coach.
-- [ ] A mis-set or missing configuration cannot produce an open hosted installation.
-- [ ] Both modes are tested on every change.
+- [x] Hosted, no endpoint returns a list of athlete names to anyone but a coach.
+- [x] A mis-set or missing configuration cannot produce an open hosted installation.
+- [x] Both modes are tested on every change.
 
 ## Risks
 
