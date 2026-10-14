@@ -5885,7 +5885,7 @@ class SimulatorGateTests(APITestCase):
         self.assertTrue(active)
 
     def test_another_athletes_open_set_elsewhere_does_not_wake_this_rack(self):
-        other = Athlete.objects.create(name="Kyle Prather")
+        other = Athlete.objects.create(name="Riley Brooks")
         self.session.athletes.add(other)
         self._check_in(self.athlete, rack_number=1)
         self._check_in(other, rack_number=2)
