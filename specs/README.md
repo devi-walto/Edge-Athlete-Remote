@@ -100,7 +100,6 @@ overlaps are called out inside each spec.
 | Work | Form item | Why not yet |
 |---|---|---|
 | Sensors over the internet, and MQTT over TLS on 8883 | 6 | Design is in `docs/remote/sensors.md`; hardware chosen (XIAO ESP32-C6 + BNO085); firmware not started |
-| Browser logins to the broker (read-only, per installation) | 4 | Found while writing spec 12 (2026-10-14): the broker lets anyone connect and some messages carry athlete names, so its WebSockets door stays Tailscale-only until this exists. Recommended as a short spec before spec 04 goes public |
 
 Moved into [spec 12](remote/12-hosting.md) on 2026-10-14: hosting on k3s, the demo
 installation, and (as "if there is time" and "deferred") moving a database between a gym
