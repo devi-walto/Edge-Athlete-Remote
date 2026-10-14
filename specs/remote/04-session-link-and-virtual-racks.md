@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: Written — not started. **One decision open** (who may join; see below)
+- Status: Written — not started. No decisions open (who may join: decided 2026-10-14)
 - Form items: Definition of Done #3 and #4
 - Depends on: [02 Roles](02-roles.md), [05 Hosted mode](05-hosted-mode.md), [03 Login links](03-athlete-login-links.md)
 - Mockup: coach side `F_Remote_Session` on the canvas's Final designs page. Athlete side:
@@ -52,7 +52,7 @@ already connected.
   check in would trip it, it depends on a timer, and it would still let a remote
   athlete reach a list of names.
 
-### Open decision — who may join?
+### Decided 2026-10-14 — who may join
 
 The agreed rule is **"the athlete must be in a training group assigned to the
 session."** In the data, that is: one of the athlete's `training_groups` is the group
@@ -62,10 +62,10 @@ Spec 08 adds the **Quick Training Session**, where a coach picks athletes one by
 and may pick no workout at all. Such a session has a roster (`TrainingSession.athletes`)
 but can have no program, and so no group.
 
-**Recommendation: an athlete may join if they are on the session's roster, or in a
+**Decided by Devin: an athlete may join if they are on the session's roster, or in a
 group taking part in it.** The roster is filled when a planned day is set up and when a
 quick session is created, so this is the same rule for planned days and it does not
-lock everyone out of a quick one. **Confirm before Phase 1.**
+lock everyone out of a quick one.
 
 ## What exists today
 
@@ -130,7 +130,7 @@ constant, `VIRTUAL_RACK_BASE`.
 
 1. The session must be **started and not ended**. A session that is only set up
    returns `409 not_started` ("Your coach hasn't started this session yet").
-2. The membership rule (the open decision above). Failing it returns
+2. The membership rule (decided above). Failing it returns
    `403 not_in_session`.
 3. Find this athlete's virtual rack for this session; if there is none, take the next
    free number from `VIRTUAL_RACK_BASE` and create the `RackRuntime` with
