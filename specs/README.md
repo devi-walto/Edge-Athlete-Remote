@@ -31,7 +31,7 @@ Devin's convention, set 2026-10-06:
 |---|---|
 | `SprintBranch` | **The working trunk for this project.** Every feature branch starts from it and merges back into it. It must always pass the tests. |
 | `feature-xyz` | One branch per spec, named `feature-` plus a short name, with underscores between words: `feature-coach_accounts`. Reviewed phase by phase, merged into `SprintBranch` after its last phase. |
-| `main` | **What is deployed.** Nobody commits or merges to it by hand. CI/CD will update it from `SprintBranch` and deploy it (set up with the hosting work). Until that exists, `main` is moved forward from `SprintBranch` only when Devin says so. |
+| `main` | **What is deployed.** Nobody commits or merges to it by hand. It moves only by a release pull request from `SprintBranch`, followed by a version tag that deploys it (spec 12). Until that exists, `main` is moved forward from `SprintBranch` only when Devin says so. |
 
 Feature branch for each spec: `feature-coach_accounts` (01), `feature-roles` (02),
 `feature-deployment_switch` (05), `feature-login_links` (03), `feature-session_link`
@@ -40,6 +40,15 @@ Feature branch for each spec: `feature-coach_accounts` (01), `feature-roles` (02
 
 Spec and mockup edits that are not part of a feature are committed straight to
 `SprintBranch`. Release tags and the public docs are cut from `main`.
+
+**Pull requests (decided 2026-10-14, starting with spec 05 Phase 1).** Once CI exists,
+work reaches `SprintBranch` only through a pull request: one per spec, with each phase
+added to it. Its checks must pass, and Devin merges it. Merging is the approval, because
+GitHub does not let anyone approve a pull request opened under their own account. Tests
+run on pull requests, not on every push. Releases: a pull request from `SprintBranch`
+into `main`, then a version tag (`vX.Y.Z`, patches included), cut by hand when Devin
+chooses; every two weeks is the long-term habit. Until spec 05 Phase 1 is built, commits
+go straight to `SprintBranch` as before.
 
 ### Running the tests
 
@@ -68,7 +77,8 @@ The Django suite had 447 tests on 2026-10-06 and **491 after spec 01** (2026-10-
 |---|---|---|---|---|
 | 01 | [Secure coach accounts](remote/01-coach-accounts.md) | 2 | — | **Done 2026-10-07**, merged into `SprintBranch` |
 | 02 | [Roles: administrator, coach, athlete](remote/02-roles.md) | 3 | 01 | **Done 2026-10-07** (on `feature-roles`) |
-| 05 | [Hosted mode](remote/05-hosted-mode.md) | 3 | 02 | Written |
+| 05 | [Hosted mode](remote/05-hosted-mode.md) | 3 | 02 | Phase 0 done (on `feature-deployment_switch`). **Phase 1 is CI**: tests on every pull request, in both modes; the first pull request and the first manual approval |
+| 12 | [Hosting on k3s, with CD](remote/12-hosting.md) | 1, 5 | 05 | Written 2026-10-14. The app drops onto the plumbing already on the Dell; deploys on version tags; demo installation; rebuild from a blank machine. Runs alongside 03 and 04; going public waits for all of 05 |
 | 03 | [Athlete login links, and coach login codes](remote/03-athlete-login-links.md) | 4, 2 | 02, 05 | Written. Phase 5 replaces temporary coach passwords with one-time login codes |
 | 04 | [Session link and virtual racks](remote/04-session-link-and-virtual-racks.md) | 3, 4 | 02, 03, 05 | Written |
 | 10 | [The athlete's home page](remote/10-athlete-pages.md) | 4 | 03, 04, 05 | Written. Phase 4 (opening a past session) is built last, if time |
@@ -78,7 +88,7 @@ The Django suite had 447 tests on 2026-10-06 and **491 after spec 01** (2026-10-
 | 09 | [Analytics](ui/09-analytics.md) | 11 | 06 | Written |
 | 11 | [Mine first](ui/11-mine-first.md) | 11 | 02, 06 | Written. A coach's own groups, programs, sessions and athletes come first; coaches on a group can be edited; coaches shown by name |
 
-**Build 05 before 03 and 04, and 10 after 04.** It is numbered 05 because it was listed fifth, but 03
+**Build 05 before 03 and 04, and 10 after 04. Spec 12 (hosting) starts after 05 and runs alongside 03 and 04.** It is numbered 05 because it was listed fifth, but 03
 and 04 both need its "is this installation hosted?" switch.
 
 **The two tracks can interleave.** Specs 01–05 are the remote access work. Specs 06–09
@@ -89,6 +99,14 @@ overlaps are called out inside each spec.
 
 | Work | Form item | Why not yet |
 |---|---|---|
+| Sensors over the internet, and MQTT over TLS on 8883 | 6 | Design is in `docs/remote/sensors.md`; hardware chosen (XIAO ESP32-C6 + BNO085); firmware not started |
+| Browser logins to the broker (read-only, per installation) | 4 | Found while writing spec 12 (2026-10-14): the broker lets anyone connect and some messages carry athlete names, so its WebSockets door stays Tailscale-only until this exists. Recommended as a short spec before spec 04 goes public |
+
+Moved into [spec 12](remote/12-hosting.md) on 2026-10-14: hosting on k3s, the demo
+installation, and (as "if there is time" and "deferred") moving a database between a gym
+box and hosted, the parent registry, and an installation's name on the sign-in card.
+
+---|---|---|
 | Hosting on k3s, HTTPS, CI/CD | 1 | Devin's hands-on learning; the design is in `docs/remote/hosting.md` |
 | The demo installation | 5 | Part of the hosting template |
 | Sensors over the internet | 6 | Design is in `docs/remote/sensors.md`; firmware not started |

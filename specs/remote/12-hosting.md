@@ -1,0 +1,398 @@
+# Feature Spec 12: Hosting on k3s, with CD
+
+- Owner: Devin Walton
+- Date: 2026-10-14
+- Status: Written — not started
+- Form items: Definition of Done #1 (k3s, public HTTPS, automatic certificates, CI/CD) and
+  #5 (a separate demo installation from the same template). Feeds #7 (end to end) and #8
+  (docs on deploying to k3s)
+- Depends on: [05 Hosted mode](05-hosted-mode.md). Phases 0–3 need only spec 05's CI phase;
+  **Phase 4 (going public) needs all of spec 05.** Runs alongside specs 03 and 04
+- Branch: `feature-hosting`
+- Design it builds: `docs/remote/hosting.md`, `docs/remote/databases.md`,
+  `docs/remote/deployments.md`
+
+## Why
+
+The app runs today as one Docker Compose stack on a box in a gym. The remote version
+runs the **same images** on a k3s cluster at home, at a public HTTPS address. A practice
+cluster already exists on the Dell (October 8–14): k3s, Traefik, cert-manager with
+Let's Encrypt, a DNS updater, a Postgres whose data survives its pod, and Tailscale for
+management. What does not exist yet is the real app on it, and a way to rebuild all of
+it without the person who built it.
+
+### The rule this spec is judged by
+
+**A fresh Linux machine, one bootstrap command, the repo, and a backup are enough to
+bring the whole service back** — the way you would stand it up on a new AWS or Azure
+machine when this grows (Devin, 2026-10-14: "this has driven most of my decisions").
+
+So:
+
+- **Only the very first step is a script.** Installing k3s and Tailscale on a bare
+  machine is a script you run once. Everything after it is files in the repo that
+  describe the end state, applied by a tool. Nothing is done to the Dell by hand that
+  is not also in the repo.
+- **Secrets are the one thing not in the repo** (it is public). Restoring them is a
+  written, rehearsed step of the bootstrap, not something to remember.
+- **The proof is a rehearsal on a blank machine**, not a claim (Phase 7).
+
+## User story
+
+As the person running Edge Athlete, I want to tag a version and have it running at a
+public HTTPS address a few minutes later, and I want to be able to rebuild the whole
+service on a new machine from the repo, so that hosting does not depend on one box or
+on my memory.
+
+## Decisions this spec locks in
+
+- **Build on what is already running** (Devin, 2026-10-14). The Dell's plumbing works:
+  Traefik, cert-manager, the two certificate issuers, the DNS updater, the hairpin fix,
+  Tailscale. It stays as it is. The work is the app's manifests and the image registry,
+  and then the app drops in on top. The plumbing is **copied into the repo unchanged**
+  so the repo matches the Dell; it is only changed where something is missing (pinning
+  cert-manager to the version already running, one line per new subdomain).
+- **One node: the Dell**, Ubuntu Server LTS. A Mac mini was planned as a second node and
+  cut on 2026-10-14; it was never in the Definition of Done. Nothing assumes one node,
+  so adding one later stays possible.
+- **The Dockerfiles do not change.** A `k8s/` folder in the repo replaces
+  `docker-compose.yml` for the cluster: one subfolder per service. **Kubernetes never
+  builds images**; it runs images that already exist in a registry.
+- **One template, one variation per installation** (Kustomize: a shared base, one
+  overlay per installation). The real installation and the demo differ only in their
+  overlay: namespace, address, settings. Chosen over Helm because it is plain Kubernetes
+  files, which fits "apply the repo".
+- **One namespace per installation**, with one ConfigMap and one Secret each, mirroring
+  today's `.env`.
+- **Images live in GitHub's container registry** (`ghcr.io`), **private**, even while the
+  repo is public. The cluster pulls with a read-only token stored as a Secret.
+- **Tests run on pull requests; deploys run on version tags.** A tag like `v0.4.0` (patch
+  tags too) builds the images, labels them with that version, and rolls that version out.
+  Devin cuts releases by hand when he chooses; every two weeks is the long-term habit.
+  Rolling back means deploying the previous tag. `main` moves only by the release pull
+  request.
+- **Runners:** while the repo is public, tests and builds run on GitHub's own machines
+  (free, and a stranger's pull request cannot reach the house). A runner on the Dell
+  does **deploys only**, fired only by version tags. **After the repo goes private, CI
+  may move onto the Dell** to save build minutes.
+- **Traefik**, bundled with k3s, is the ingress. **cert-manager is pinned to a version**
+  in the repo, not "latest".
+- **Managed from Devin's laptop over Tailscale.** The cluster's control port (6443) and
+  SSH (22) are never forwarded. Only 80, 443 and later 8883 are.
+- **Operator commands are a thin wrapper**, `eactl`, run from the laptop. Named apart
+  from the two existing `ea.sh` files, which already mean different things on different
+  devices. Each command takes an installation name and is a few lines over `kubectl`.
+- **The public docs describe the setup in general terms.** No domain, home address or
+  router details in the repo or on the docs site.
+
+## What exists
+
+- **On the Dell (practice, outside the repo):** k3s v1.36.5; `~/k3s-practice/` (nginx
+  practice site, Postgres with a 300Mi volume, ClusterIssuers for Let's Encrypt staging
+  and production); `~/k3s-addons/` (cert-manager "latest", a `coredns-custom` entry for
+  the NAT hairpin, a DDNS CronJob calling the DNS provider's API). A test subdomain is
+  live over HTTPS with a trusted certificate. Router forwards 80 and 443 to the Dell.
+- **In the repo:** `django/Dockerfile` (start command: `migrate && recover_racks &&
+  gunicorn`), `react/Dockerfile` (static build served by nginx), `docker-compose.yml`
+  (postgres 15, mosquitto, django, mqtt-listener, monitoring-publisher, react, nginx; a
+  `seed` profile), `nginx/nginx.conf` (`/api/auth/` rate-limited, `/api/`, `/admin/`,
+  static admin and DRF files → django; `/` → react), `mosquitto/mosquitto.conf`
+  (anonymous listeners on 1883 and 9001/WebSockets).
+- **After spec 05:** `EA_DEPLOYMENT=local|remote`, `/api/system/info/` (reports the mode
+  and an `EA_VERSION` build label), hosted refusals, and a CI workflow on pull requests.
+
+## Lessons from the practice cluster (do not relearn)
+
+- A typo in an annotation fails silently (`cluster-ssuer`). Check with `kubectl get … -o
+  yaml` and the controller's logs.
+- **Every new public subdomain needs two lines:** one in the `coredns-custom` block (or
+  its certificate sticks at "self check", because requests from inside the cluster to the
+  public address time out), and one in the DDNS job's list.
+- The old storefront's HSTS covers subdomains, so browsers force HTTPS on every
+  subdomain.
+- k3s `local-path` volume sizes are labels, not limits.
+- `kubectl apply -f folder/` applies every YAML file in it; keep anything else out.
+
+## Scope
+
+- Images built on version tags and stored in the registry.
+- The app as manifests, one base and an overlay per installation, dropped onto the
+  plumbing already on the Dell.
+- The Dell's add-ons copied into the repo, and a bootstrap for a bare machine.
+- `eactl`.
+- Deploys on version tags, rollback, and the release pull request into `main`.
+- Going public, once spec 05 is done.
+- Backups, and a rehearsed restore.
+- The demo installation.
+- A full rebuild rehearsal on a blank machine.
+
+## Non-goals
+
+- More than one node. Autoscaling.
+- Sensors over the internet and MQTT over TLS on 8883 (the sensors work; this spec only
+  leaves room for the port).
+- **Browser logins to the broker** (see Phase 4: the broker is not made public until
+  they exist).
+- Continuous sync between a gym box and hosted (out of scope on the form).
+- A managed cloud. The design keeps the door open; it does not walk through it.
+
+---
+
+## Phase 0 — Images in the registry, on a version tag
+
+- `.github/workflows/release.yml` (new), on GitHub's runners: on a tag `v*.*.*`, build
+  the django and react images from the unchanged Dockerfiles, label each with the tag,
+  and push them to `ghcr.io`, private. The build stamps `EA_VERSION` with the tag, so
+  `/api/system/info/` names the running version.
+- A read-only registry token for the cluster, stored as a Secret per installation by a
+  written step (not in the repo).
+- Images are built for the Dell's processor (amd64). A second processor type is only
+  added if the throwaway machine needs it.
+
+**Done when:**
+
+- [ ] Pushing a test tag produces both images in the registry with that tag, and they
+      are not visible to a logged-out visitor.
+- [ ] The Dell can pull them with the stored token; a pod without the token cannot.
+- [ ] A container from the image reports the tag at `/api/system/info/`.
+
+**Stop. Devin reviews.**
+
+## Phase 1 — The app on the cluster, private
+
+- `k8s/app/base/` (new), one subfolder per Compose service:
+  - **postgres**: one copy, its data on a volume, replaced not doubled on update
+    (the practice cluster's `Recreate` strategy).
+  - **mosquitto**: the repo's own `mosquitto.conf` as a ConfigMap; a volume for its data.
+  - **django**: the image, **with migrations moved from the start command to an init
+    container** (a step Kubernetes runs once before the app starts), so two copies can
+    never migrate at once. `recover_racks` moves with it. The Dockerfile's own start
+    command is left as it is, so the gym box is unchanged.
+  - **mqtt-listener**, **monitoring-publisher**: the django image with their commands.
+  - **react**: the image.
+  - An **Ingress** that does what `nginx.conf` does: `/api/`, `/admin/` and the two
+    static paths to django, `/` to react. The sign-in rate limit moves to a Traefik
+    middleware.
+  - Health checks from today's `/api/health/`.
+- `k8s/app/overlays/real/` (new): the namespace, its ConfigMap (from `.env.example`'s
+  names), and a reference to its Secret.
+- **The app uses the plumbing already on the Dell**: Traefik as the ingress, the
+  existing `letsencrypt-staging` / `letsencrypt-prod` issuers through the same
+  annotation the practice site uses. Nothing in the cluster's add-ons is reinstalled.
+- `k8s/cluster/` (new): the Dell's working add-on files **copied in as they are** —
+  the two issuers, `coredns-custom`, the DDNS CronJob and its namespace, and cert-manager
+  **pinned to the version already running** (a no-op on the Dell). The DNS provider's
+  keys stay a Secret created by a written step, never a file in the repo.
+- **Private until spec 05 is done:** a Traefik middleware lets in only the Tailscale and
+  home network ranges. No public DNS record yet.
+
+**Done when:**
+
+- [ ] `kubectl apply -k k8s/app/overlays/real` brings every part up healthy.
+- [ ] *(Browser, over Tailscale)* First-run setup works: `setup_code` run inside the pod
+      prints a code, and the code claims the first administrator.
+- [ ] *(Browser)* A coach signs in, creates an athlete, and the athlete is still there
+      after the django and postgres pods are deleted.
+- [ ] Two django copies started together: migrations run once.
+- [ ] From outside Tailscale and the home network, the address answers nothing.
+- [ ] The rate limit on sign-in still returns `429`.
+- [ ] `kubectl diff -k k8s/cluster` against the Dell shows no difference, and no secret
+      value appears anywhere in the repo or its history.
+
+**Stop. Devin reviews.**
+
+## Phase 2 — `eactl`
+
+A small file in the repo (a Makefile or `justfile`; see open decisions), run from the
+laptop over Tailscale. Every command takes an installation name and prints the `kubectl`
+it runs.
+
+| Command | Does |
+|---|---|
+| `status`, `logs <service>`, `shell` | see what is running, read logs, open a shell in django |
+| `setup-code` | print the first-administrator code (spec 01) |
+| `make-admin <username>` | the recovery command from spec 01 |
+| `secrets` | create or update the installation's Secret from a local file that is never committed |
+| `deploy <version>`, `rollback` | the manual version of Phase 3, for when CI is down |
+| `backup`, `restore <file>` | Phase 5 |
+
+**Done when:**
+
+- [ ] Each command works from the laptop over Tailscale, against the real installation.
+- [ ] Each prints the underlying `kubectl` command before running it.
+- [ ] `restore` and anything else that deletes data asks for the installation name to be
+      typed again.
+
+**Stop. Devin reviews.**
+
+## Phase 3 — Deploy on a version tag (CD)
+
+- A **GitHub runner on the Dell, for deploys only.** It runs one job: after Phase 0's
+  images exist for a tag, set the installation to that tag and wait for it to be healthy.
+- **Its cluster access is limited**: a Kubernetes service account that may update the
+  app's namespaces and nothing else (no cluster-wide rights, no secrets outside them).
+- **Guarded for a public repo:**
+  - only a **tag** starts the deploy job, and only Devin may create `v*` tags (a
+    repository rule);
+  - GitHub's **"require approval for all outside contributors"** setting is on, so no
+    workflow from a stranger's fork runs until Devin approves it;
+  - the runner deletes its working files after each job.
+- **The release pull request:** `SprintBranch` into `main`, then the tag. This is the
+  only way `main` moves.
+
+**Done when:**
+
+- [ ] Tagging a version deploys it; `/api/system/info/` then reports that version.
+- [ ] Deploying the previous tag rolls back, and the data is untouched.
+- [ ] A deploy that fails its health check leaves the previous version serving.
+- [ ] The runner's credentials are refused when used to read another namespace's
+      Secrets or to change the cluster's add-ons.
+- [ ] *(By hand)* The fork-approval setting and the tag rule are on, and recorded in the
+      hosting guide.
+
+**Stop. Devin reviews.**
+
+## Phase 4 — Going public
+
+**Starts only when spec 05 is done** (the open routes require a login when hosted,
+`DEBUG` is refused, hosts are checked).
+
+- A public subdomain for the real installation: its DNS record, its line in the DDNS
+  job, its line in `coredns-custom`, its certificate.
+- The real overlay sets `EA_DEPLOYMENT=remote` and its allowed hosts and trusted origins.
+- The Tailscale-only middleware comes off the site.
+- **The broker stays private.** Today it lets anyone connect, and some of what it sends
+  carries athlete names (the leaderboard push). Until **browser logins to the broker**
+  exist (not specced: see open decisions), the broker's WebSockets door is reachable over
+  Tailscale only. Screens on the public site then work without live updates and refresh
+  on their own; screens over Tailscale keep them.
+- The screens find the broker through the site's own address when served over HTTPS
+  (`wss://<site>/<path>`), instead of `ws://<host>:9001`. A small frontend change, keyed
+  off spec 05's `useDeployment()`.
+
+**Done when:**
+
+- [ ] *(Browser, from a phone on mobile data)* The site loads over HTTPS with a trusted
+      certificate.
+- [ ] From the internet, every route except sign-in, first-run setup and
+      `/api/system/info/` answers `401` without a login (spec 05's walk, against the
+      live address).
+- [ ] From the internet, the broker's WebSockets door does not answer.
+- [ ] Certificates renew: cert-manager reports the renewal time, and a forced renewal on
+      staging succeeds.
+
+**Stop. Devin reviews.**
+
+## Phase 5 — Backups, and a restore that has been done
+
+- A CronJob per installation: a nightly database dump, kept for a set number of days,
+  **copied off the Dell** (see open decisions for where).
+- `eactl backup` and `eactl restore` (Phase 2) use the same format.
+
+**Done when:**
+
+- [ ] A backup appears off the Dell every night.
+- [ ] *(By hand)* A restore into a scratch namespace brings back the same athletes, sets
+      and reports, with original timestamps.
+- [ ] A restore refuses a dump from a different schema version (`docs/remote/databases.md`).
+
+**Stop. Devin reviews.**
+
+## Phase 6 — The demo installation (Definition of Done #5)
+
+- `k8s/app/overlays/demo/`: its own namespace, subdomain, Secret and database, from the
+  same base.
+- Seeded with invented data (the seed command), **never** a copy of the real database.
+- The same version tag deploys both installations.
+
+**Done when:**
+
+- [ ] The demo runs at its own address with its own database; nothing in it can read the
+      real installation (separate namespaces, separate Secrets, separate databases).
+- [ ] Deleting the demo namespace leaves the real installation untouched.
+- [ ] One tag updates both.
+
+**Stop. Devin reviews.**
+
+## Phase 7 — From a blank machine: the bootstrap, and the rebuild rehearsal
+
+The rule this spec is judged by, tested end to end. Last on purpose: the app is on the
+existing cluster by Phase 1, and this phase proves the same result can be had without
+the Dell.
+
+- `infra/bootstrap.sh` (new): run once on a bare Ubuntu Server machine. Installs the
+  **same pinned** k3s version as the Dell and Tailscale, turns off SSH passwords, and
+  copies the cluster credentials to the operator's user. Safe to run twice. Opens with a
+  plain-language comment on why it exists. Written from what was done by hand on the
+  Dell, not invented.
+- `docs/guides/hosting.md` (new): bootstrap, `kubectl apply -k k8s/cluster`, the written
+  secret steps, deploy the current tag, restore last night's backup.
+
+**Done when:**
+
+- [ ] *(By hand)* On a **throwaway machine** (see open decisions), the guide alone brings
+      the real installation back with all its data. The time taken is written in the
+      guide.
+- [ ] Running `bootstrap.sh` a second time changes nothing and reports so.
+- [ ] Nothing in that run needed a step that is not in the guide.
+
+---
+
+## If there is time: moving a database between a gym box and hosted
+
+Tabled into this spec on 2026-10-06; not in the Definition of Done. The model is in
+`docs/remote/databases.md`: the first move is a copy (same schema version, counters
+moved apart), after which merges add rows and never overwrite. **Gap to close when it is
+built:** athlete logins are hosted only, so a copy from hosted down to a gym box must
+strip them (or the box must ignore them), and a gym box must never hold a working
+athlete login. Would become `eactl copy-db`.
+
+## Deferred, with a home
+
+- **An installation's name** on the sign-in card (reads "Coach workspace"): needs the
+  parent registry, which needs more than one real installation. After November 11.
+- **The parent registry** (the operator's list of installations): same.
+- **Moving CI onto the Dell** once the repo is private; ephemeral runners with Actions
+  Runner Controller as a stretch.
+- **Ansible** in place of `bootstrap.sh`, for machine configuration.
+
+## Open decisions
+
+| Decision | Recommendation |
+|---|---|
+| Where Phase 7's throwaway machine runs | A free-tier cloud VM (amd64, like the Dell, and the closest thing to the AWS/Azure goal). A local VM on an Apple-chip Mac would be ARM and need ARM images |
+| Where backups are copied to | Off the house entirely (a cloud storage bucket) is the professional answer; the laptop over Tailscale is the cheap one |
+| `eactl` as a Makefile or a `justfile` | `justfile`: reads like a list of commands, takes arguments cleanly |
+| Who builds browser logins to the broker, and when | Not specced. Definition of Done #4 asks for "encrypted live updates"; encryption arrives in Phase 4, logins do not. Recommend a short spec of its own before spec 04 ships to the public |
+| Secrets beyond a local file | A local, never-committed file per installation applied by `eactl secrets` now; Sealed Secrets or SOPS (encrypted secrets in the repo) as a later step |
+
+## Acceptance criteria
+
+- [ ] The app runs on k3s at a public HTTPS address with a certificate that renews
+      itself (Definition of Done #1).
+- [ ] Tagging a version deploys it; tests gate every merge (CI from spec 05, CD here).
+- [ ] A demo installation runs from the same template, isolated from the real one (#5).
+- [ ] The whole service has been rebuilt on a blank machine from the repo, the guide and
+      a backup.
+- [ ] No secret is in the repo, and no stranger's pull request can run anything on the
+      Dell.
+
+## Risks
+
+| Risk | What reduces it |
+|---|---|
+| The real app goes public before its open routes are closed | Phase 4 is gated on spec 05; Phase 1 keeps the site Tailscale-only |
+| Live updates leak athlete names through an open broker | The broker stays Tailscale-only until browser logins exist |
+| A fork's pull request runs code on the Dell | Tests and builds run on GitHub's machines; the Dell runner deploys only, on tags only Devin can create; fork approval required |
+| The home connection or the Dell goes down before a live demo | Backups off the Dell; the rebuild rehearsal is timed; record the end-to-end demo on video early (Definition of Done #7 allows video) |
+| A new subdomain silently fails its certificate | The two-line rule (coredns-custom + DDNS) is in the hosting guide and in Phase 4's and 6's checklists |
+| Time: this spec is large for four weeks | Phases 0–1 put the app on the cluster quickly by reusing the plumbing; 5 and 7 can shrink to a documented restore if time runs out; the database move is optional |
+
+## Docs to update when done
+
+`docs/remote/hosting.md` becomes a description of what was built: Ubuntu Server, Tailscale
+for management, Traefik and why, cert-manager over HTTP-01, the DDNS job, the NAT hairpin
+and its DNS fix, one namespace per installation, runners, and the rebuild rule.
+`docs/guides/hosting.md` (new) is the operator's guide. `docs/journal/scripts.md` gains why
+`eactl` is separate from `ea.sh`. `docs/remote/deployments.md`: Compose for a gym box,
+manifests for hosted, the same images.
