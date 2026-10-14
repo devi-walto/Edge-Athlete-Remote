@@ -1,0 +1,53 @@
+# release.yml — turn a version tag into the app's images, stored in GitHub's registry.
+#
+# Why this file exists: Kubernetes never builds images; it runs images that already
+# exist in a registry. When Devin tags a release (v0.4.0, v0.4.1, ...), this builds
+# the django and react images from the SAME Dockerfiles a gym box uses, names each
+# one with the tag, and stores them in GitHub's container registry (ghcr.io), where
+# the cluster on the Dell can pull them. Deploying them is a later step (spec 12,
+# Phase 3); this file only builds and stores.
+#
+# This is a GitHub Actions file: GitHub reads it, not Docker or k3s. It runs on
+# GitHub's own machines, not the Dell (the repo is public), and only a tag starts it.
+
+name: Release images
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+  packages: write   # lets this run store images in the registry, and nothing more
+
+jobs:
+  images:
+    name: build and store the images
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      REGISTRY: ghcr.io/devi-walto
+      VERSION: ${{ github.ref_name }}   # the tag that started this run, e.g. v0.4.0
+    steps:
+      - uses: actions/checkout@v4
+
+      # Sign in to the registry as this workflow run. GitHub makes the token for this
+      # run only and it expires when the run ends; nothing is stored in the repo.
+      - name: Sign in to the registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      # --build-arg stamps the version inside the image, so the running app can say
+      # which release it is at /api/system/info/.
+      - name: Build the django image
+        run: docker build --build-arg EA_VERSION="$VERSION" -t "$REGISTRY/edge-athlete-django:$VERSION" ./django
+
+      - name: Build the react image
+        run: docker build -t "$REGISTRY/edge-athlete-react:$VERSION" ./react
+
+      - name: Check the django image reports its own version
+        run: test "$(docker run --rm "$REGISTRY/edge-athlete-django:$VERSION" printenv EA_VERSION)" = "$VERSION"
+
+      - name: Store both images in the registry
+        run: |
+          docker push "$REGISTRY/edge-athlete-django:$VERSION"
+          docker push "$REGISTRY/edge-athlete-react:$VERSION"

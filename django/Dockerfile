@@ -27,6 +27,13 @@ RUN SECRET_KEY=build-time-only-not-used-at-runtime DEBUG=False \
 
 EXPOSE 8000
 
+# Which release this image is. The release workflow builds with
+# --build-arg EA_VERSION=v0.4.0 (the version tag); /api/system/info/ reports it, so
+# a running installation can say which version it is. "dev" is only the default for
+# a build that passes no version (a gym box building from its own clone).
+ARG EA_VERSION=dev
+ENV EA_VERSION=$EA_VERSION
+
 # Migrate, recover racks, then hand off to gunicorn. First-run coach setup is
 # completed in the browser; never install a default password during boot.
 #
