@@ -5,6 +5,7 @@
 #   eactl help             this list
 #   eactl init             once per server: ask its settings, save eactl.env
 #   eactl check            is this server's cluster answering?
+#   eactl apply-cluster    put the server-wide add-ons (k8s/cluster) on the cluster
 #
 # Why it exists: the hosted service is many schools on one server. Every chore
 # (make a school, list them, apply the add-ons) is a few kubectl commands that
@@ -52,6 +53,52 @@ export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/config}"
 kube() {
     echo "+ kubectl $*" >&2
     kubectl "$@"
+}
+
+# render <folder> — stack a k8s folder's files into one (kustomize), then fill
+# in the placeholders from eactl.env.
+#
+# envsubst is given the exact list of names to fill. Without it, it would also
+# blank out every other $WORD it found, such as the DNS updater's own $IP.
+# An empty setting would be filled in as nothing (an issuer with no email), so
+# each one is checked first.
+#
+# HAIRPIN_RULES is made here, not asked: one CoreDNS rewrite line per subdomain,
+# so adding a subdomain in `eactl init` updates the hairpin too. Lines after the
+# first start with four spaces, to sit inside the YAML block they land in.
+PLACEHOLDERS='${DOMAIN} ${ACME_EMAIL} ${SUBDOMAINS} ${HAIRPIN_RULES}'
+render() {
+    local v sub rules=""
+    for v in DOMAIN ACME_EMAIL SUBDOMAINS; do
+        if [ -z "${!v:-}" ]; then
+            echo "[!] $v is not set. Run: eactl init" >&2
+            return 1
+        fi
+    done
+    for sub in $SUBDOMAINS; do
+        [ -n "$rules" ] && rules+=$'\n    '
+        rules+="rewrite name exact $sub.$DOMAIN traefik.kube-system.svc.cluster.local answer auto"
+    done
+    kubectl kustomize "$REPO_DIR/$1" \
+        | DOMAIN="$DOMAIN" ACME_EMAIL="$ACME_EMAIL" SUBDOMAINS="$SUBDOMAINS" \
+          HAIRPIN_RULES="$rules" envsubst "$PLACEHOLDERS"
+}
+
+# preview <label> <yaml> — show what applying <yaml> would change on the
+# cluster, as -/+ lines like git diff. kubectl diff's answer:
+#   0 = nothing would change, 1 = changes (printed above), 2+ = it failed.
+# Sets CHANGES=1 if anything would change.
+preview() {
+    local label="$1" yaml="$2" rc
+    echo
+    echo "==> preview: $label"
+    kube diff -f - <<< "$yaml"
+    rc=$?
+    case "$rc" in
+        0) echo "    (no changes)" ;;
+        1) CHANGES=1 ;;
+        *) echo "[!] could not preview $label (see the error above)"; return 1 ;;
+    esac
 }
 
 # Stop early, with a plain message, if the cluster is not answering.
@@ -151,6 +198,54 @@ init)
     echo
     echo "Commands:"
     usage | sed 's/^/  /'
+    ;;
+
+apply-cluster)
+    # The server-wide add-ons in k8s/cluster. (Pieces still to come: checks,
+    # the preview, and applying.)
+    load_config
+    require_cluster
+
+    # The DNS updater's API keys are made by hand (README checklist), so they
+    # may not exist yet. A warning, not a stop: everything else still works, and
+    # the updater simply waits until they do.
+    if ! kubectl -n ddns get secret porkbun-api >/dev/null 2>&1; then
+        echo "[!] warning: no Secret porkbun-api in namespace ddns yet."
+        echo "    The DNS updater will not run until it exists. Steps:"
+        echo "    scripts/remote/README.md, \"Before you start\", item 5."
+        echo
+    fi
+
+    echo "==> filling in k8s/cluster with this server's settings"
+    cert_manager="$(kubectl kustomize "$REPO_DIR/k8s/cluster/cert-manager")" \
+        || { echo "[!] could not build k8s/cluster/cert-manager"; exit 1; }
+    addons="$(render k8s/cluster)" || exit 1
+
+    # Show every change before making any. On a brand-new server the issuers
+    # cannot be previewed: they are a kind cert-manager defines, and it is not
+    # installed yet. Then they are simply all new.
+    CHANGES=0
+    preview "cert-manager" "$cert_manager" || exit 1
+    if kubectl get crd clusterissuers.cert-manager.io >/dev/null 2>&1; then
+        preview "add-ons (issuers, hairpin, DNS updater)" "$addons" || exit 1
+    else
+        echo
+        echo "==> preview: add-ons. cert-manager is not installed yet, so these are all"
+        echo "    new: 2 certificate issuers, the hairpin rules, the DNS updater."
+        CHANGES=1
+    fi
+
+    echo
+    if [ "$CHANGES" = 0 ]; then
+        echo "✓ the cluster already matches k8s/cluster. Nothing to do."
+        exit 0
+    fi
+    read -r -p "Apply these changes? (y/N) " answer
+    if [ "$answer" != y ]; then
+        echo "nothing applied"
+        exit 0
+    fi
+    echo "(applying comes in piece 4)"
     ;;
 
 check)

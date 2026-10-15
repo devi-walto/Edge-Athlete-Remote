@@ -7,8 +7,10 @@
 # forever. This tells the cluster's DNS (CoreDNS) that our public addresses mean
 # Traefik, by name, so the request never leaves the cluster.
 #
-# One rewrite line per public subdomain (plus one in the DNS updater).
-# ${DOMAIN} is filled in by `eactl apply-cluster` from eactl.env.
+# One rewrite line per public subdomain, written by `eactl apply-cluster` from
+# the SUBDOMAINS in eactl.env (the same list the DNS updater uses), in place of
+# ${HAIRPIN_RULES} below. Each line reads:
+#   rewrite name exact <sub>.<domain> traefik.kube-system.svc.cluster.local answer auto
 
 apiVersion: v1
 # ConfigMap: a game-day info sheet. k3s's CoreDNS reads one with exactly this
@@ -23,4 +25,4 @@ data:
   edge-athlete.override: |
     # answer auto: the reply still names what was asked for, so the asker never
     # notices the swap.
-    rewrite name exact test.${DOMAIN} traefik.kube-system.svc.cluster.local answer auto
+    ${HAIRPIN_RULES}
