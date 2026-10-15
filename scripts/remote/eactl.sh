@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# eactl.sh — run the hosted Edge Athlete server. Runs ON the server: SSH in
+# eactl.sh — run the remote Edge Athlete server. Runs ON the server: SSH in
 # first, then type eactl.
 #
 #   eactl help             this list
 #   eactl init             once per server: ask its settings, save eactl.env
 #   eactl check            is this server's cluster answering?
 #   eactl apply-cluster    put the server-wide add-ons (k8s/cluster) on the cluster
+#   eactl apply-db         put the shared database (k8s/db) on the cluster
 #
-# Why it exists: the hosted service is many schools on one server. Every chore
+# Why it exists: the remote service is many schools on one server. Every chore
 # (make a school, list them, apply the add-ons) is a few kubectl commands that
 # must be typed the same way every time; this types them, and prints each one
 # first so you can see, and learn, exactly what it ran.
@@ -15,9 +16,9 @@
 # Assumes the server already works: Linux, your user, SSH and Tailscale set up.
 # Setting up the machine itself is not eactl's job.
 #
-#  *** Not the same family as scripts/basestation/ea.sh (the gym box's ea-*
-# commands). Both run on the machine they manage, but ea-* manages a gym box
-# with Docker; eactl manages a hosted server with Kubernetes. ***
+#  *** Not the same family as scripts/basestation/ea.sh (the local install's ea-*
+# commands). Both run on the machine they manage, but ea-* manages a local install
+# with Docker; eactl manages a remote server with Kubernetes. ***
 
 set -uo pipefail
 
@@ -187,7 +188,7 @@ init)
     require_cluster
     echo "==> the cluster is answering"
 
-    # Make `eactl` typeable from any folder, the same way the gym box's ea-*
+    # Make `eactl` typeable from any folder, the same way the local install's ea-*
     # commands are: a shortcut in /usr/local/bin pointing at this file.
     LINK=/usr/local/bin/eactl
     if [ "$(readlink "$LINK" 2>/dev/null)" != "$REPO_DIR/scripts/remote/eactl.sh" ]; then
@@ -264,6 +265,47 @@ apply-cluster)
 
     echo
     echo "✓ k8s/cluster is on the cluster."
+    ;;
+
+apply-db)
+    # The shared database every school keeps its own database in. Applied on
+    # its own, with its own preview: if it goes wrong, every school is affected.
+    require_cluster
+
+    # Its password is made by hand (README checklist). Unlike the DNS keys this
+    # is not optional: Postgres cannot start without it.
+    if ! kubectl -n edge-athlete get secret postgres-admin >/dev/null 2>&1; then
+        echo "[!] no Secret postgres-admin in namespace edge-athlete."
+        echo "    Make it first: scripts/remote/README.md, \"Before you start\"."
+        exit 1
+    fi
+
+    db="$(kubectl kustomize "$REPO_DIR/k8s/db/postgres")" \
+        || { echo "[!] could not build k8s/db/postgres"; exit 1; }
+
+    CHANGES=0
+    preview "the shared database (Postgres)" "$db" || exit 1
+    echo
+    if [ "$CHANGES" = 0 ]; then
+        echo "✓ the cluster already matches k8s/db. Nothing to do."
+        exit 0
+    fi
+    read -r -p "Apply these changes? (y/N) " answer
+    if [ "$answer" != y ]; then
+        echo "nothing applied"
+        exit 0
+    fi
+
+    echo
+    echo "==> applying the shared database"
+    kube apply -f - <<< "$db" || { echo "[!] the database did not apply"; exit 1; }
+    # Ready means its readiness check (pg_isready) passes: Postgres answers.
+    echo "==> waiting for Postgres to answer (up to 3 minutes)"
+    kube -n edge-athlete rollout status deployment/postgres --timeout=180s \
+        || { echo "[!] Postgres is not ready. Look: kubectl -n edge-athlete get pods"; exit 1; }
+
+    echo
+    echo "✓ the shared database is running: postgres.edge-athlete, port 5432."
     ;;
 
 check)

@@ -1,0 +1,12 @@
+# namespace.yaml — edge-athlete, where the things every school shares live: the
+# shared Postgres, its password, and the key for pulling the app's images.
+#
+# Its Secrets are made by hand before `eactl apply-db`, so the README checklist
+# creates the namespace first. It is listed here too so these files describe
+# everything the database needs; applying it again is harmless.
+
+apiVersion: v1
+# Namespace: a squad of its own, apart from every school's.
+kind: Namespace
+metadata:
+  name: edge-athlete

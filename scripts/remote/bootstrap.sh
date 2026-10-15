@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bootstrap.sh — get Edge Athlete's hosted-server tools onto a new server.
+# bootstrap.sh — get Edge Athlete's remote-server tools onto a new server.
 #
 # Run once on a server that already works (Linux, your user, Tailscale, SSH key,
 # k3s; see README.md). It sets up the server's read-only access to the repo, puts
@@ -15,7 +15,7 @@
 # (repo → Settings → Deploy keys, write access OFF). `-t` gives it a terminal to
 # wait on.
 #
-# Modelled on ../basestation/bootstrap.sh, the gym box's; its comments explain the
+# Modelled on ../basestation/bootstrap.sh, the local install's; its comments explain the
 # deploy key and the update steps at length. The code goes in /srv, not a home
 # folder, for the reason given there: it belongs to the machine, not to whoever
 # is logged in.
@@ -141,7 +141,7 @@ mkdir -p "$EDGE_HOME"
 
 if [ -d "$PROJECT_DIR/.git" ]; then
     # Already there: update in place, discarding any local edits (this is an
-    # install, not a place to edit code). See the gym box's bootstrap for why the
+    # install, not a place to edit code). See the local bootstrap for why the
     # fetch spells out where the branch goes.
     echo "    already installed, updating..."
     git -C "$PROJECT_DIR" remote set-url origin "$REPO_URL"

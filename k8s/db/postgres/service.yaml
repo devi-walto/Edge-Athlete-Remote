@@ -1,0 +1,23 @@
+# service.yaml — the fixed name every school uses to reach the shared Postgres.
+#
+# A pod's own address changes every time it is replaced. This gives Postgres a
+# name that never does: from any namespace, postgres.edge-athlete (in full,
+# postgres.edge-athlete.svc.cluster.local), port 5432. Each school's settings
+# point there.
+
+apiVersion: v1
+# Service: a position name ("throw to the slot"). Whoever wears the jersey
+# patch app: postgres gets the ball, wherever they are standing today.
+kind: Service
+metadata:
+  name: postgres
+  namespace: edge-athlete
+spec:
+  # Reachable only from inside the cluster. Nothing outside the server can
+  # connect to the database.
+  type: ClusterIP
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432

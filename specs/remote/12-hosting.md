@@ -71,7 +71,7 @@ on my memory.
   local install is its own server.
 - **One shared Postgres, one database per school** (option B, Devin, 2026-10-14).
   Postgres is the database *server* (one running program); a *database* is one separate,
-  named set of tables inside it. The server runs **one** Postgres, in the platform
+  named set of tables inside it. The server runs **one** Postgres, in the shared
   namespace `edge-athlete`; each school gets **its own database** in it, with its own
   database login that can open only that database. So a school's app still cannot see
   another school's data, and one Postgres uses far less of the Dell's memory than one per
@@ -206,10 +206,13 @@ image and printed `v0.3.1-test.1`; a pod without it got `ImagePullBackOff`.
 
 ## Phase 1 — The app on the cluster, private
 
-- `k8s/platform/postgres/` (new): **the one shared Postgres**, in the platform namespace
-  `edge-athlete`. One copy, its data on a volume, replaced not doubled on update (the
-  practice cluster's `Recreate` strategy). Its administrator password is a Secret made
-  by a written step.
+- `k8s/db/postgres/` (new): **the one shared Postgres**, in the shared namespace
+  `edge-athlete`, applied by `eactl apply-db`. One copy, its data on a volume, replaced
+  not doubled on update (the practice cluster's `Recreate` strategy). Version 15.18,
+  matching a local install's 15. `max_connections` set to 100 (about 10 to 15 schools).
+  Its administrator password is the Secret `postgres-admin`, made by a written step.
+  The server's layers: cluster add-ons (`apply-cluster`), the database (`apply-db`; the
+  backup job joins it in Phase 5), then each school (`eactl new`).
 - `k8s/app/base/` (new), what **each school** runs, one subfolder per Compose service:
   - **mosquitto**: the repo's own `mosquitto.conf` as a ConfigMap; a volume for its data.
   - **django**: the image, **with migrations moved from the start command to an init
@@ -244,7 +247,7 @@ image and printed `v0.3.1-test.1`; a pod without it got `ImagePullBackOff`.
     of subdomains (`${SUBDOMAINS}`) instead of one; creates a subdomain's record if it is
     missing; its namespace included.
   - The DNS provider's keys stay a Secret created by a written step, never a file.
-- `eactl` starts here with what Phase 1 needs: `init`, `check`, `apply-cluster`, `new`,
+- `eactl` starts here with what Phase 1 needs: `init`, `check`, `apply-cluster`, `apply-db`, `new`,
   `list`. It fills in **only** the named placeholders (`${DOMAIN}`, `${ACME_EMAIL}`,
   `${SUBDOMAINS}`), so the updater script's own `$IP` and `$SUB` survive.
 - **Private until spec 05 is done:** a Traefik middleware lets in only the Tailscale and

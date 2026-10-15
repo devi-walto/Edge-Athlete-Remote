@@ -1,0 +1,13 @@
+# kustomization.yaml — the shared Postgres, one per server.
+#
+# Its administrator password is the Secret postgres-admin, made by hand before
+# this is applied (scripts/remote/README.md). Applied by `eactl apply-db`.
+
+# Kustomization: a list of files to apply together, plus any edits to them.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - storage.yaml
+  - deployment.yaml
+  - service.yaml

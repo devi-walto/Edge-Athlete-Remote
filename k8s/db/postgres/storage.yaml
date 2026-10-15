@@ -1,0 +1,25 @@
+# storage.yaml — the disk space the shared Postgres keeps every school's data in.
+#
+# A pod's own files vanish when it is replaced (an update, a crash, a reboot).
+# This claim asks the cluster for space that outlives any pod, and the
+# Deployment mounts it where Postgres writes its data. Delete this claim and
+# the data goes with it.
+
+apiVersion: v1
+# PersistentVolumeClaim: a locker ticket. It asks for a locker (the actual disk
+# space, a PersistentVolume); whichever pod holds the ticket gets that locker.
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  namespace: edge-athlete
+spec:
+  # Only one machine may use it at a time, which is all one Postgres needs.
+  accessModes: [ReadWriteOnce]
+  # k3s's built-in storage: a folder on the server's own disk, under
+  # /var/lib/rancher/k3s/storage/.
+  storageClassName: local-path
+  resources:
+    requests:
+      # With local-path this is a label, not a limit: Postgres can grow past it
+      # until the server's disk is full. Watch real usage with `eactl status`.
+      storage: 10Gi

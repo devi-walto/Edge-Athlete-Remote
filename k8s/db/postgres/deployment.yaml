@@ -1,0 +1,82 @@
+# deployment.yaml — the one Postgres every school on this server shares.
+#
+# Each school gets its own database inside it (made by `eactl new`), with a
+# login that can open only that database. This file runs the server itself:
+# the same Postgres major version as a local install (15), its data on the locker
+# from storage.yaml, its administrator password from the Secret postgres-admin
+# (made by hand, never in a file).
+
+apiVersion: apps/v1
+# Deployment: a position group with a set count. Kubernetes keeps exactly that
+# many copies running, and replaces one that dies.
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: edge-athlete
+spec:
+  # One copy. Two Postgres programs writing the same files would corrupt them.
+  replicas: 1
+  # On an update, stop the old copy completely before starting the new one,
+  # for the same reason. (The default starts the new one first.)
+  strategy:
+    type: Recreate
+  # Which pods belong to this group: the ones wearing this jersey patch.
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          # Pinned. 15 matches a local install, so a school's data copies between
+          # the two without conversion.
+          image: postgres:15.18
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-admin
+                  key: POSTGRES_PASSWORD
+            # A folder inside the mount, not the mount itself: Postgres refuses
+            # to start in a folder that already has anything in it.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          # How many connections Postgres allows at once, said out loud
+          # instead of left at a default. Each school uses about 5 to 8
+          # (django's workers, the listener, the publisher), so 100 is room for
+          # 10 to 15 schools. Past that: raise it, or add a connection pooler.
+          args: ["-c", "max_connections=100"]
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          # "Ready?" Until Postgres answers, nothing is sent to it.
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            periodSeconds: 5
+          # "Still alive?" Three missed answers in a row and it is restarted.
+          # Starts late so a slow first start is not mistaken for a hang.
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+          # requests: what the scheduler sets aside for it.
+          # limits: the most it may use. Past the memory limit it is restarted,
+          # rather than starving everything else on the server.
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: postgres-data

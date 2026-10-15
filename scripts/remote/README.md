@@ -1,6 +1,6 @@
-# scripts/remote/ — the hosted server
+# scripts/remote/ — the remote server
 
-Everything for running Edge Athlete as a hosted service: one server (a PC at home, or
+Everything for running Edge Athlete as a remote service: one server (a PC at home, or
 a machine on Azure or AWS) running Kubernetes (k3s), with many schools on it. The gym
 box's scripts are in `../basestation/` and `../rack-screen/`; nothing here touches them.
 
@@ -40,6 +40,31 @@ Scripts start from a machine that already works. Prepare it by hand, once:
    From then on, the DNS updater (`eactl apply-cluster`) keeps every record pointed at
    the server when the home IP changes, and adds the record for any new subdomain you
    give `eactl init`.
+6. **The server's two other secrets**, in the shared namespace `edge-athlete`. Both are
+   typed on the server and never saved in a file:
+
+   ```bash
+   kubectl create namespace edge-athlete
+   ```
+
+   - **The image pull key**, so the server can download the app's private images. A
+     GitHub token with only `read:packages`; it expires, so renew it before then.
+
+     ```bash
+     read -rs GHCR_TOKEN
+     kubectl -n edge-athlete create secret docker-registry ghcr-pull \
+       --docker-server=ghcr.io --docker-username=<github user> \
+       --docker-password="$GHCR_TOKEN"
+     unset GHCR_TOKEN
+     ```
+
+   - **The database's administrator password**: long and random, made and stored in
+     one step, so it is never shown. Nobody types it again; `eactl` reads it from here.
+
+     ```bash
+     kubectl -n edge-athlete create secret generic postgres-admin \
+       --from-literal=POSTGRES_PASSWORD="$(openssl rand -base64 32)"
+     ```
 
 ## From a new server to a running school
 
@@ -69,6 +94,7 @@ ssh -t user@server 'sudo bash /tmp/bootstrap.sh'
               ┌─ eactl <command> (you, from any folder) ────────────────┐
               │ check          is the cluster answering?                │
               │ apply-cluster  server add-ons, k8s/cluster (preview 1st)│
+              │ apply-db       the shared database, k8s/db (preview 1st)│
               │ new <school>   a school: its database, namespace, app   │
               │ list           every school, address, version, status   │
               └─────────────────────────────────────────────────────────┘
@@ -84,8 +110,8 @@ ssh -t user@server 'sudo bash /tmp/bootstrap.sh'
 |---|---|---|---|
 | The code and YAML | `/srv/edge-athlete/Edge-Athlete-Remote` | root | belongs to the machine, not to whoever logs in; replaced on update, never edited in place |
 | The settings | `/etc/edgeathlete/eactl.env` | root, readable by the operator | the machine's settings; survive every code update |
-| The deploy key | `/etc/edgeathlete/deploy-keys/` | root | the same place a gym box keeps its own |
-| The `eactl` shortcut | `/usr/local/bin/eactl` | root | typeable from any folder, like the gym box's `ea-*` |
+| The deploy key | `/etc/edgeathlete/deploy-keys/` | root | the same place a local install keeps its own |
+| The `eactl` shortcut | `/usr/local/bin/eactl` | root | typeable from any folder, like the local install's `ea-*` |
 | Your copy of the cluster key | `~/.kube/config` | you | it *is* your access, so it stays personal |
 
 The settings live apart from the code on purpose: the code can be replaced, moved or
