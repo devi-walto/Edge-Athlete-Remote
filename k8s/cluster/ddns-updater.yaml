@@ -46,6 +46,9 @@ spec:
               # A tiny image with only curl and a shell. Pinned: "latest" would
               # change underneath us on a rebuild.
               image: curlimages/curl:8.22.0
+              # Download it once, not every five minutes: a pinned version
+              # never changes, so the copy already on the server is right.
+              imagePullPolicy: IfNotPresent
               env:
                 - name: DOMAIN
                   value: "${DOMAIN}"

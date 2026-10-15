@@ -249,7 +249,21 @@ apply-cluster)
         echo "nothing applied"
         exit 0
     fi
-    echo "(applying comes in piece 4)"
+
+    # cert-manager first, then wait until it is ready: its webhook checks every
+    # issuer as it is created, and refuses them all while it is still starting.
+    echo
+    echo "==> applying cert-manager"
+    kube apply -f - <<< "$cert_manager" >/dev/null || { echo "[!] cert-manager did not apply"; exit 1; }
+    echo "==> waiting for cert-manager to be ready (up to 3 minutes)"
+    kube -n cert-manager wait --for=condition=Available deployment --all --timeout=180s \
+        || { echo "[!] cert-manager is not ready. Look: kubectl -n cert-manager get pods"; exit 1; }
+
+    echo "==> applying the add-ons"
+    kube apply -f - <<< "$addons" || { echo "[!] the add-ons did not apply"; exit 1; }
+
+    echo
+    echo "✓ k8s/cluster is on the cluster."
     ;;
 
 check)
