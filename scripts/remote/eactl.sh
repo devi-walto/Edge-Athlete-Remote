@@ -118,7 +118,7 @@ ask() {
     current="${!var:-}"
     while true; do
         if [ -n "$current" ]; then
-            read -r -p "$question [$current]: " answer
+            read -r -p "$question [saved: $current]: " answer
         else
             read -r -p "$question (e.g. $example): " answer
         fi
@@ -140,6 +140,10 @@ init)
     [ -r "$CONFIG" ] && . "$CONFIG"
 
     echo "==> this server's settings (saved to $CONFIG)"
+    if [ -r "$CONFIG" ]; then
+        echo "    Your saved answers are shown in [brackets]."
+        echo "    Press Enter to keep one, or type a new answer to replace it."
+    fi
     ask DOMAIN     "Type your domain"                            "example.com"
     ask ACME_EMAIL "Type an email for certificate warnings"      "you@example.com"
     ask SUBDOMAINS "Type your subdomains, separated by spaces"   "test demo"
