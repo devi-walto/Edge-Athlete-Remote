@@ -24,9 +24,10 @@ set -uo pipefail
 # in /usr/local/bin), so eactl works from any folder.
 REPO_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)"
 
-# The server's settings: asked once by `eactl init`, kept out of git.
-# EACTL_CONFIG points at a different file (a second server, or a test).
-CONFIG="${EACTL_CONFIG:-$REPO_DIR/eactl.env}"
+# The server's settings: asked once by `eactl init`. Kept in /etc, apart from
+# the code, so updating or moving the code never loses them.
+# EACTL_CONFIG points at a different file (for a test).
+CONFIG="${EACTL_CONFIG:-/etc/edgeathlete/eactl.env}"
 
 # The command list is the one at the top of this file: every "#   eactl ..." line.
 usage() {
@@ -34,8 +35,8 @@ usage() {
 }
 
 load_config() {
-    if [ ! -f "$CONFIG" ]; then
-        echo "[!] no eactl.env yet. Run: eactl init"
+    if [ ! -r "$CONFIG" ]; then
+        echo "[!] cannot read $CONFIG. Run: eactl init"
         exit 1
     fi
     # shellcheck source=/dev/null
@@ -89,21 +90,28 @@ case "$CMD" in
 init)
     # Load the saved answers, if any, so they show up as the defaults.
     # shellcheck source=/dev/null
-    [ -f "$CONFIG" ] && . "$CONFIG"
+    [ -r "$CONFIG" ] && . "$CONFIG"
 
-    echo "==> this server's settings (saved to $CONFIG, which git ignores)"
+    echo "==> this server's settings (saved to $CONFIG)"
     ask DOMAIN     "Type your domain"                            "example.com"
     ask ACME_EMAIL "Type an email for certificate warnings"      "you@example.com"
     ask SUBDOMAINS "Type your subdomains, separated by spaces"   "test demo"
 
-    # %q wraps each answer in quotes so it reads back exactly as typed.
+    # Write the answers to a scratch file first, then put it in place with sudo
+    # (only root can write in /etc). %q wraps each answer in quotes so it reads
+    # back exactly as typed.
+    TMP="$(mktemp)"
     {
         echo "# eactl.env — this server's settings. Made by 'eactl init'. NEVER commit."
         printf 'DOMAIN=%q\n'     "$DOMAIN"
         printf 'ACME_EMAIL=%q\n' "$ACME_EMAIL"
         printf 'SUBDOMAINS=%q\n' "$SUBDOMAINS"
-    } > "$CONFIG"
-    chmod 600 "$CONFIG"   # only you can read it
+    } > "$TMP"
+    # Owned by root, readable by your group, by nobody else (640).
+    sudo mkdir -p "$(dirname "$CONFIG")" \
+        && sudo install -m 640 -o root -g "$(id -gn)" "$TMP" "$CONFIG" \
+        || { rm -f "$TMP"; echo "[!] could not save $CONFIG"; exit 1; }
+    rm -f "$TMP"
     echo "==> saved"
 
     # Tools eactl needs. Ubuntu normally has both; k3s brings kubectl.
@@ -119,10 +127,11 @@ init)
     # Your own copy of the cluster key. If missing, make it (needs sudo once).
     if [ ! -r "$KUBECONFIG" ]; then
         echo "==> making your copy of the cluster key at $KUBECONFIG"
-        mkdir -p "$(dirname "$KUBECONFIG")"
-        sudo cp /etc/rancher/k3s/k3s.yaml "$KUBECONFIG"
-        sudo chown "$USER": "$KUBECONFIG"
-        chmod 600 "$KUBECONFIG"
+        mkdir -p "$(dirname "$KUBECONFIG")" \
+            && sudo cp /etc/rancher/k3s/k3s.yaml "$KUBECONFIG" \
+            && sudo chown "$USER": "$KUBECONFIG" \
+            && chmod 600 "$KUBECONFIG" \
+            || { echo "[!] could not make $KUBECONFIG. Is k3s installed?"; exit 1; }
     fi
     require_cluster
     echo "==> the cluster is answering"
@@ -130,10 +139,18 @@ init)
     # Make `eactl` typeable from any folder, the same way the gym box's ea-*
     # commands are: a shortcut in /usr/local/bin pointing at this file.
     LINK=/usr/local/bin/eactl
-    if [ "$(readlink "$LINK" 2>/dev/null)" != "$REPO_DIR/scripts/eactl/eactl.sh" ]; then
-        sudo ln -sfn "$REPO_DIR/scripts/eactl/eactl.sh" "$LINK"
+    if [ "$(readlink "$LINK" 2>/dev/null)" != "$REPO_DIR/scripts/remote/eactl.sh" ]; then
+        sudo ln -sfn "$REPO_DIR/scripts/remote/eactl.sh" "$LINK" \
+            || { echo "[!] could not link $LINK"; exit 1; }
         echo "==> linked $LINK"
     fi
+
+    # Every problem above stops with [!], so reaching here means it all worked.
+    echo
+    echo "✓ eactl init finished: this server is ready."
+    echo
+    echo "Commands:"
+    usage | sed 's/^/  /'
     ;;
 
 check)

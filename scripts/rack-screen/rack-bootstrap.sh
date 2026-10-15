@@ -60,7 +60,7 @@ if ! command -v git >/dev/null 2>&1 || ! command -v ssh-keygen >/dev/null 2>&1; 
     apt-get install -y -qq git ca-certificates openssh-client
 fi
 
-# >>> repo access — keep IDENTICAL in bootstrap.sh and rack-bootstrap.sh (a test checks)
+# >>> repo access — keep IDENTICAL in all three bootstraps: basestation/, rack-screen/, remote/ (a test checks)
 #
 # Only for SSH remotes. A file:// or https:// URL (the tests, or a public fork) needs
 # no key, and generating one there would just be clutter a human later wonders about.

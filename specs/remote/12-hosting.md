@@ -271,7 +271,7 @@ image and printed `v0.3.1-test.1`; a pod without it got `ImagePullBackOff`.
 
 ## Phase 2 — `eactl`
 
-`scripts/eactl/eactl.sh`, a bash script run on the server (SSH in first). Every command
+`scripts/remote/eactl.sh`, a bash script run on the server (SSH in first). Every command
 prints the `kubectl` it runs.
 
 | Command | Does |
@@ -427,7 +427,7 @@ the Dell.
   pinned** k3s version as the Dell. Safe to run twice. Opens with a plain-language
   comment on why it exists. Written from what was done by hand on the Dell, not invented.
 - **A release bundle** (Devin, 2026-10-14): `release.yml` also attaches
-  `eactl-<version>.tar.gz` (`scripts/eactl/` and `k8s/`, nothing else) to each version
+  `eactl-<version>.tar.gz` (`scripts/remote/` and `k8s/`, nothing else) to each version
   tag. A new server downloads the bundle for the version it will run, so its playbook
   always matches its images; no git needed. Until then (Phases 1–6), the server holds a
   clone, because the files change constantly.
