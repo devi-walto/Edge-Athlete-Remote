@@ -107,7 +107,7 @@ overlaps are called out inside each spec.
 
 | Work | Form item | Why not yet |
 |---|---|---|
-| Sensors over the internet, and MQTT over TLS on 8883 | 6 | Design is in `docs/remote/sensors.md`; hardware chosen (XIAO ESP32-C6 + BNO085); firmware not started |
+| Sensors over the internet, and MQTT over TLS on 8883 | 6 | Design is in `docs/remote/sensors.md`; hardware chosen (XIAO ESP32-C6 + BNO085); firmware not started. The firmware rewrite also moves reps to QoS 1 (ESP-MQTT) and the rack screen ignores repeated reps: "Getting every rep through" in that doc |
 
 Moved into [spec 12](remote/12-hosting.md) on 2026-10-14: hosting on k3s, the demo
 installation, and (as "if there is time") moving a database between a gym box and hosted.
