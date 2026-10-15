@@ -1,0 +1,15 @@
+# cert-manager/kustomization.yaml — installs cert-manager, the program that gets
+# and renews HTTPS certificates.
+#
+# Applied on its own, BEFORE ../kustomization.yaml: the issuers there are a kind
+# that cert-manager defines, so on a fresh machine they can only be created once
+# cert-manager is running. `eactl apply-cluster` does this order and the wait.
+#
+# The official file is referenced by its address, not copied (it is ~1 MB).
+# Pinned to the version running on the Dell; to upgrade, change the version here.
+
+# Kustomization: a list of files to apply together, plus any edits to them.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - https://github.com/cert-manager/cert-manager/releases/download/v1.21.2/cert-manager.yaml

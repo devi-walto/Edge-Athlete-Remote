@@ -3,6 +3,12 @@
 ._*
 .env
 
+# eactl: the server's own settings (domain, certificate email), asked once by
+# `eactl init`. Real values never enter the repo; the k8s files hold placeholders.
+eactl.env
+# what eactl writes after filling the placeholders in, just before applying
+.eactl-out/
+
 
 # django
 venv/

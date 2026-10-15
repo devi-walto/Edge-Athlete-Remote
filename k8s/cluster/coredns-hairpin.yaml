@@ -1,0 +1,26 @@
+# coredns-hairpin.yaml — lets pods inside the cluster reach our own public
+# addresses.
+#
+# From inside the network, a request to our public address goes out to the router,
+# which is meant to send it straight back in. Many home routers won't (a "NAT
+# hairpin"), so it hangs, and cert-manager's own check of a new address waits
+# forever. This tells the cluster's DNS (CoreDNS) that our public addresses mean
+# Traefik, by name, so the request never leaves the cluster.
+#
+# One rewrite line per public subdomain (plus one in the DNS updater).
+# ${DOMAIN} is filled in by `eactl apply-cluster` from eactl.env.
+
+apiVersion: v1
+# ConfigMap: a game-day info sheet. k3s's CoreDNS reads one with exactly this
+# name and namespace and adds its rules to its own.
+kind: ConfigMap
+metadata:
+  name: coredns-custom
+  namespace: kube-system
+data:
+  # A key ending in .override goes into CoreDNS's main block, the one that
+  # already knows every Service's name.
+  edge-athlete.override: |
+    # answer auto: the reply still names what was asked for, so the asker never
+    # notices the swap.
+    rewrite name exact test.${DOMAIN} traefik.kube-system.svc.cluster.local answer auto

@@ -49,9 +49,11 @@ on my memory.
 - **Build on what is already running** (Devin, 2026-10-14). The Dell's plumbing works:
   Traefik, cert-manager, the two certificate issuers, the DNS updater, the hairpin fix,
   Tailscale. It stays as it is. The work is the app's manifests and the image registry,
-  and then the app drops in on top. The plumbing is **copied into the repo unchanged**
-  so the repo matches the Dell; it is only changed where something is missing (pinning
-  cert-manager to the version already running, one line per new subdomain).
+  and then the app drops in on top. The plumbing is **brought into the repo**, and
+  **working on any new machine without hand edits beats matching the Dell exactly**
+  (Devin, 2026-10-14): a fixed address becomes a name, `latest` becomes a pinned
+  version, one subdomain becomes a list. Every such change is shown and proven before it
+  replaces the Dell's version.
 - **One node: the Dell**, Ubuntu Server LTS. A Mac mini was planned as a second node and
   cut on 2026-10-14; it was never in the Definition of Done. Nothing assumes one node,
   so adding one later stays possible.
@@ -102,9 +104,11 @@ on my memory.
   in the repo, not "latest".
 - **Managed from Devin's laptop over Tailscale.** The cluster's control port (6443) and
   SSH (22) are never forwarded. Only 80, 443 and later 8883 are.
-- **Operator commands are a thin wrapper**, `eactl`, run from the laptop. Named apart
-  from the two existing `ea.sh` files, which already mean different things on different
-  devices. Each command takes an installation name and is a few lines over `kubectl`.
+- **Operator commands are a thin wrapper**, `eactl`, a bash script that **runs on the
+  server**: SSH in, then type `eactl` (Devin, 2026-10-14; like the gym box's `ea-*`, and
+  the deploy runner on the server can call the same commands). Named apart from the two
+  existing `ea.sh` files, which already mean different things on different devices.
+  Each command is a few lines over `kubectl` and prints the command before running it.
 - **The public docs describe the setup in general terms.** No domain, home address or
   router details in the repo or on the docs site.
 
@@ -227,17 +231,22 @@ image and printed `v0.3.1-test.1`; a pod without it got `ImagePullBackOff`.
   annotation the practice site uses. Nothing in the cluster's add-ons is reinstalled.
 - `k8s/cluster/` (new): the Dell's working add-ons, brought into the repo with **only the
   changes a new machine needs**:
-  - **cert-manager**: the official v1.21.2 file, referenced by its address (pinned to the
-    version already running), not copied in.
-  - **the two certificate issuers**: as they are, with the email as `${ACME_EMAIL}`.
-  - **the hairpin fix** (`coredns-custom`): instead of Traefik's internal address on this
-    Dell (`10.43.x.x`, which a new machine would not have), it uses CoreDNS's `rewrite`
-    to send the site's name to the Traefik service, whatever its address. One line per
-    subdomain, generated from the settings.
-  - **the DNS updater**: its curl image pinned to an exact version instead of `latest`;
-    the domain and subdomains from the settings.
+  - **cert-manager** (`k8s/cluster/cert-manager/`): the official v1.21.2 file, referenced
+    by its address (pinned to the version already running), not copied in. Its own
+    folder, applied first: the issuers are a kind cert-manager defines, so on a fresh
+    machine they can only be created once it is running.
+  - **the two certificate issuers** (`letsencrypt-issuers.yaml`): as they are, with the
+    email as `${ACME_EMAIL}`.
+  - **the hairpin fix** (`coredns-hairpin.yaml`): instead of Traefik's internal address
+    on this Dell (`10.43.x.x`, which a new machine would not have), CoreDNS's `rewrite`
+    sends the site's name to Traefik by name. One line per public subdomain.
+  - **the DNS updater** (`ddns-updater.yaml`): curl pinned to an exact version; a list
+    of subdomains (`${SUBDOMAINS}`) instead of one; creates a subdomain's record if it is
+    missing; its namespace included.
   - The DNS provider's keys stay a Secret created by a written step, never a file.
-- `eactl` starts here with what Phase 1 needs: `init`, `apply-cluster`, `new`, `list`.
+- `eactl` starts here with what Phase 1 needs: `init`, `check`, `apply-cluster`, `new`,
+  `list`. It fills in **only** the named placeholders (`${DOMAIN}`, `${ACME_EMAIL}`,
+  `${SUBDOMAINS}`), so the updater script's own `$IP` and `$SUB` survive.
 - **Private until spec 05 is done:** a Traefik middleware lets in only the Tailscale and
   home network ranges. No public DNS record yet.
 
@@ -255,16 +264,15 @@ image and printed `v0.3.1-test.1`; a pod without it got `ImagePullBackOff`.
 - [ ] Two django copies started together: migrations run once.
 - [ ] From outside Tailscale and the home network, the address answers nothing.
 - [ ] The rate limit on sign-in still returns `429`.
-- [ ] `kubectl diff -k k8s/cluster` against the Dell shows no difference, and no secret
+- [ ] After `eactl apply-cluster`, its preview shows no difference, and no secret
       value appears anywhere in the repo or its history.
 
 **Stop. Devin reviews.**
 
 ## Phase 2 — `eactl`
 
-A small file in the repo (a Makefile or `justfile`; see open decisions), run from the
-laptop over Tailscale. Every command takes an installation name and prints the `kubectl`
-it runs.
+`scripts/eactl/eactl.sh`, a bash script run on the server (SSH in first). Every command
+prints the `kubectl` it runs.
 
 | Command | Does |
 |---|---|
@@ -281,7 +289,7 @@ it runs.
 
 **Done when:**
 
-- [ ] Each command works from the laptop over Tailscale, against the real installation.
+- [ ] Each command works on the server, against the real installation.
 - [ ] Each prints the underlying `kubectl` command before running it.
 - [ ] `restore` and anything else that deletes data asks for the installation name to be
       typed again.
@@ -410,11 +418,19 @@ The rule this spec is judged by, tested end to end. Last on purpose: the app is 
 existing cluster by Phase 1, and this phase proves the same result can be had without
 the Dell.
 
-- `infra/bootstrap.sh` (new): run once on a bare Ubuntu Server machine. Installs the
-  **same pinned** k3s version as the Dell and Tailscale, turns off SSH passwords, and
-  copies the cluster credentials to the operator's user. Safe to run twice. Opens with a
-  plain-language comment on why it exists. Written from what was done by hand on the
-  Dell, not invented.
+- **The machine itself is prepared by hand, from a written checklist, not a script**
+  (Devin, 2026-10-14): Linux installed with the operator's user; Tailscale joined; the
+  operator's laptop key added (`ssh-copy-id`) and SSH passwords turned off. Clouds
+  (AWS, Azure) ask for the key when the machine is made. Scripts start from a machine
+  that already works and is reachable.
+- `infra/bootstrap.sh` (new): run once on that prepared machine. Installs the **same
+  pinned** k3s version as the Dell. Safe to run twice. Opens with a plain-language
+  comment on why it exists. Written from what was done by hand on the Dell, not invented.
+- **A release bundle** (Devin, 2026-10-14): `release.yml` also attaches
+  `eactl-<version>.tar.gz` (`scripts/eactl/` and `k8s/`, nothing else) to each version
+  tag. A new server downloads the bundle for the version it will run, so its playbook
+  always matches its images; no git needed. Until then (Phases 1–6), the server holds a
+  clone, because the files change constantly.
 - **Secrets encrypted on disk from the start** (decided 2026-10-14). Before installing
   k3s, the bootstrap writes `secrets-encryption: true` into `/etc/rancher/k3s/config.yaml`,
   so the new cluster encrypts every Secret it ever stores. By default a Secret is only
@@ -426,8 +442,9 @@ the Dell.
 - **The Dell gets the same setting by hand**, walked through step by step with Devin:
   add the line, restart k3s, re-encrypt the Secrets already stored
   (`k3s secrets-encrypt reencrypt`), and check one is unreadable in the database file.
-- `docs/guides/hosting.md` (new): bootstrap, `kubectl apply -k k8s/cluster`, the written
-  secret steps, deploy the current tag, restore last night's backup.
+- `docs/guides/hosting.md` (new): the machine checklist, bootstrap, the release bundle,
+  `eactl init` and `eactl apply-cluster`, the written secret steps, deploy the current
+  tag, restore last night's backup.
 
 **Done when:**
 
@@ -466,7 +483,6 @@ athlete login. Would become `eactl copy-db`.
 |---|---|
 | Where Phase 7's throwaway machine runs | A free-tier cloud VM (amd64, like the Dell, and the closest thing to the AWS/Azure goal). A local VM on an Apple-chip Mac would be ARM and need ARM images |
 | Where backups are copied to | Off the house entirely (a cloud storage bucket) is the professional answer; the laptop over Tailscale is the cheap one |
-| `eactl` as a Makefile or a `justfile` | `justfile`: reads like a list of commands, takes arguments cleanly |
 | Secrets beyond a local file | A local, never-committed file per installation applied by `eactl secrets` now; Sealed Secrets or SOPS (encrypted secrets in the repo) as a later step |
 
 ## Acceptance criteria

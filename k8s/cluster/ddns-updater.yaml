@@ -1,0 +1,93 @@
+# ddns-updater.yaml — keeps our public addresses pointing at the house.
+#
+# A home internet connection's public IP can change without warning. Every five
+# minutes this asks "what is our IP now?" and, for each public subdomain, makes
+# the DNS provider's record match: updating it if it is stale, creating it if it
+# does not exist yet.
+#
+# ${DOMAIN} and ${SUBDOMAINS} are filled in by `eactl apply-cluster` from
+# eactl.env. The provider's API keys are NOT here: they live in the Secret
+# `porkbun-api`, made by a written step (see the spec), never a file.
+
+apiVersion: v1
+# Namespace: a squad of its own for this job, apart from the schools.
+kind: Namespace
+metadata:
+  name: ddns
+
+---
+apiVersion: batch/v1
+# CronJob: runs a short-lived pod on a schedule; each run does one task and
+# exits. Like Linux cron, but run by the cluster.
+kind: CronJob
+metadata:
+  name: ddns
+  namespace: ddns
+spec:
+  schedule: "*/5 * * * *"
+  # If a run is still going when the next is due, skip the new one.
+  concurrencyPolicy: Forbid
+  # Keep the last 3 good and 3 failed runs so their logs can be read.
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          # When the task finishes, the pod stays finished.
+          restartPolicy: Never
+          containers:
+            - name: ddns
+              # A tiny image with only curl and a shell. Pinned: "latest" would
+              # change underneath us on a rebuild.
+              image: curlimages/curl:8.22.0
+              env:
+                - name: DOMAIN
+                  value: "${DOMAIN}"
+                # Space-separated, e.g. "test lincoln demo".
+                - name: SUBDOMAINS
+                  value: "${SUBDOMAINS}"
+              # PORKBUN_API_KEY and PORKBUN_SECRET_KEY, from the Secret.
+              envFrom:
+                - secretRef:
+                    name: porkbun-api
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -u
+                  API=https://api.porkbun.com/api/json/v3
+                  AUTH="\"apikey\":\"$PORKBUN_API_KEY\",\"secretapikey\":\"$PORKBUN_SECRET_KEY\""
+
+                  # 1. What is our public IP right now?
+                  IP=$(curl -4 -fsS --max-time 10 https://ifconfig.me)
+                  if ! echo "$IP" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'; then
+                    echo "Did not get a valid IP back. Not touching DNS."
+                    exit 1
+                  fi
+                  echo "Public IP: $IP"
+
+                  # 2. Each subdomain in turn. One failing does not stop the
+                  #    rest; the run is marked failed at the end instead.
+                  FAILED=0
+                  for SUB in $SUBDOMAINS; do
+                    CURRENT=$(curl -fsS --max-time 10 -X POST \
+                      -H 'Content-Type: application/json' -d "{$AUTH}" \
+                      "$API/dns/retrieveByNameType/$DOMAIN/A/$SUB") || { echo "$SUB: could not read the record"; FAILED=1; continue; }
+
+                    if echo "$CURRENT" | grep -q "\"content\":\"$IP\""; then
+                      echo "$SUB.$DOMAIN already points to $IP."
+                    elif echo "$CURRENT" | grep -q '"records":\[\]'; then
+                      echo "$SUB.$DOMAIN has no record yet. Creating it."
+                      curl -fsS --max-time 10 -X POST -H 'Content-Type: application/json' \
+                        -d "{$AUTH,\"name\":\"$SUB\",\"type\":\"A\",\"content\":\"$IP\",\"ttl\":\"600\"}" \
+                        "$API/dns/create/$DOMAIN" || FAILED=1
+                      echo
+                    else
+                      echo "$SUB.$DOMAIN is out of date. Updating to $IP."
+                      curl -fsS --max-time 10 -X POST -H 'Content-Type: application/json' \
+                        -d "{$AUTH,\"content\":\"$IP\",\"ttl\":\"600\"}" \
+                        "$API/dns/editByNameType/$DOMAIN/A/$SUB" || FAILED=1
+                      echo
+                    fi
+                  done
+                  exit $FAILED
