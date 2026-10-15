@@ -7,7 +7,12 @@
 #
 # ${DOMAIN} and ${SUBDOMAINS} are filled in by `eactl apply-cluster` from
 # eactl.env. The provider's API keys are NOT here: they live in the Secret
-# `porkbun-api`, made by a written step (see the spec), never a file.
+# `porkbun-api`, never a file.
+#
+# Needs setting up by hand first (API keys, API access on for the domain, the
+# first A records, the Secret): scripts/remote/README.md, "Before you start",
+# item 5. Missing Secret: the pod never starts (CreateContainerConfigError).
+# API access off: each run logs "could not read the record".
 
 apiVersion: v1
 # Namespace: a squad of its own for this job, apart from the schools.

@@ -18,6 +18,28 @@ Scripts start from a machine that already works. Prepare it by hand, once:
 3. Your laptop's SSH key added (`ssh-copy-id user@server`) and SSH passwords turned
    off. AWS and Azure ask for the key when the machine is made.
 4. k3s installed.
+5. **Your domain and its DNS records**, at your domain provider (Porkbun today). Do all
+   of these; none is done for you:
+   1. The domain uses the provider's own nameservers.
+   2. **Create an API key pair** in the provider's account settings.
+   3. **Turn on API access for the domain** (a per-domain switch, off by default).
+   4. **Add an A record for each subdomain** (e.g. `test`, `demo`) pointing at the
+      server's public IP. Find the IP with `curl -4 ifconfig.me` on the server.
+   5. **Store the API keys on the server** as the Secret `porkbun-api`, typed by hand,
+      never saved in a file:
+
+      ```bash
+      kubectl create namespace ddns
+      read -rs PORKBUN_API_KEY; read -rs PORKBUN_SECRET_KEY
+      kubectl -n ddns create secret generic porkbun-api \
+        --from-literal=PORKBUN_API_KEY="$PORKBUN_API_KEY" \
+        --from-literal=PORKBUN_SECRET_KEY="$PORKBUN_SECRET_KEY"
+      unset PORKBUN_API_KEY PORKBUN_SECRET_KEY
+      ```
+
+   From then on, the DNS updater (`eactl apply-cluster`) keeps every record pointed at
+   the server when the home IP changes, and adds the record for any new subdomain you
+   give `eactl init`.
 
 ## From a new server to a running school
 
