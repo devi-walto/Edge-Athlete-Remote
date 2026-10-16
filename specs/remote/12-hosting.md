@@ -326,7 +326,7 @@ prints the `kubectl` it runs.
 
 | Command | Does |
 |---|---|
-| `status`, `logs <service>`, `shell` | see what is running, read logs, open a shell in django |
+| `status "Name"`, `logs "Name" <part> [-f]`, `shell "Name"` | a school's health (each part, release, certificate), a part's log, a shell in its django |
 | `setup-code "Name"` | issue the first-administrator code (spec 01), instead of the long `kubectl … setup_code` line |
 | `init` | (from Phase 1) once per server: ask the server-wide settings, save `eactl.env` |
 | `apply-cluster` | (from Phase 1) fill in the placeholders and apply `k8s/cluster` |
@@ -334,8 +334,8 @@ prints the `kubectl` it runs.
 | `new ["Name"]` | (from Phase 1) make a school on this server, with its database; public over HTTPS |
 | `list` | (from Phase 1) the directory: every school, its short name, status, release and address |
 | `update "Name" \| --all [--version V]` | (from Phase 1) bring schools up to date, or move them to a release; also the manual deploy and rollback |
-| `make-admin <username>` | the recovery command from spec 01 |
-| `secrets` | create or update the installation's Secret from a local file that is never committed |
+| `make-admin "Name" <username>` | the recovery command from spec 01 |
+| `remove "Name"` | delete a school and its database: you type its short name to confirm, and a safety copy of its database is kept first (`/var/lib/edgeathlete/snapshots/<short name>/`) |
 | `backup`, `restore <file>` | Phase 5 |
 
 **Done when:**

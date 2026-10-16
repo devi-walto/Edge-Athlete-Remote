@@ -11,6 +11,14 @@
 #   eactl list             every school: name, short name, status, release, address
 #   eactl update "Name"    bring a school up to date; --all for every school;
 #                          --version 0.3.2 to move to a release (or back to one)
+#   eactl status "Name"    a school's health: each part, its release, its certificate
+#   eactl logs "Name" P    what part P has been printing (django, react, mosquitto,
+#                          mqtt-listener, monitoring-publisher, setup); add -f to follow
+#   eactl shell "Name"     a command line inside the school's django
+#   eactl setup-code "Name"   issue the code that claims a new school's first administrator
+#   eactl make-admin "Name" USER   make an existing login an administrator again
+#   eactl remove "Name"    delete a school and its database (asks you to type its short
+#                          name, and keeps a safety copy of the database first)
 #
 # Why it exists: the remote service is many schools on one server. Every chore
 # (make a school, list them, apply the add-ons) is a few kubectl commands that
@@ -213,6 +221,31 @@ short_name_from() {
 # programs on the server could see them.
 psql_admin() {
     kubectl -n edge-athlete exec -i deploy/postgres -- psql -U postgres -v ON_ERROR_STOP=1 -q
+}
+
+# take_snapshot <short name> — a safety copy of one school's database, before
+# anything that deletes data (remove, and undoing migrations on a rollback).
+# Saved on this server, one folder per school, readable by root only:
+#   /var/lib/edgeathlete/snapshots/<short name>/<date>-<time>.sql
+# Keeps the last 5 per school, and none older than 30 days. Prints the file.
+SNAPSHOTS=/var/lib/edgeathlete/snapshots
+take_snapshot() {
+    local short="$1" db="school_${1//-/_}" dir file
+    dir="$SNAPSHOTS/$short"
+    file="$dir/$(date +%Y-%m-%d-%H%M%S).sql"
+    sudo install -d -m 700 -o root -g root "$SNAPSHOTS" "$dir" || return 1
+    echo "+ (pg_dump) $db -> $file" >&2
+    kubectl -n edge-athlete exec deploy/postgres -- pg_dump -U postgres --no-owner "$db" \
+        | sudo tee "$file" >/dev/null || return 1
+    sudo chmod 600 "$file"
+    # An empty file means the copy failed; don't pretend it worked.
+    if ! sudo test -s "$file"; then
+        echo "[!] the safety copy is empty" >&2; return 1
+    fi
+    # Tidy: none older than 30 days, then keep only the newest 5.
+    sudo find "$dir" -name '*.sql' -mtime +30 -delete
+    sudo sh -c "ls -1t '$dir'/*.sql | tail -n +6 | xargs -r rm -f"
+    echo "$file"
 }
 
 # relpath <target> <from> — the path to <target> as seen from folder <from>.
@@ -544,6 +577,105 @@ list)
 {{end}}' | while IFS=$'\t' read -r dn sn st ve ad; do
         printf '%-24s %-26s %-10s %-10s %s\n' "$dn" "$sn" "$st" "$ve" "$ad"
     done
+    ;;
+
+status)
+    # One screen: is every part of the school healthy, which release, certificate.
+    short="$(find_school "${1:-}")" || exit 1
+    require_cluster
+    ns="ea-$short"
+    echo "$(school_info "$short" display-name) ($short)"
+    echo "  address   https://$(school_info "$short" address)"
+    echo "  release   $(school_info "$short" version)"
+    echo "  status    $(school_info "$short" status)"
+    echo
+    echo "  part                    ready   restarts"
+    kubectl -n "$ns" get pods -o go-template='{{range .items}}{{index .metadata.labels "app"}}	{{range .status.containerStatuses}}{{if .ready}}yes{{else}}NO{{end}}	{{.restartCount}}{{end}}
+{{end}}' | sort | while IFS=$'\t' read -r part ready restarts; do
+        printf '  %-23s %-7s %s\n' "$part" "$ready" "$restarts"
+    done
+    echo
+    cert="$(kubectl -n "$ns" get certificate school-tls -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null)"
+    until="$(kubectl -n "$ns" get certificate school-tls -o jsonpath='{.status.notAfter}' 2>/dev/null)"
+    if [ "$cert" = True ]; then
+        echo "  certificate  valid, renews itself (expires ${until%%T*})"
+    else
+        echo "  certificate  NOT ready: does the address have its DNS record and hairpin line?"
+        echo "               Look: kubectl -n $ns describe certificate school-tls"
+    fi
+    ;;
+
+logs)
+    # What one part of a school has been printing: the last 100 lines, or -f to
+    # keep following. "setup" is django's start-up step (migrations, recover_racks).
+    short="$(find_school "${1:-}")" || exit 1
+    part="${2:-}"; follow=""
+    [ "${3:-}" = -f ] && follow="-f"
+    ns="ea-$short"
+    case "$part" in
+        django|react|mosquitto|mqtt-listener|monitoring-publisher)
+            kube -n "$ns" logs "deploy/$part" --tail=100 $follow ;;
+        setup)
+            kube -n "$ns" logs deploy/django -c prepare-database --tail=100 $follow ;;
+        *)  echo 'usage: eactl logs "School Name" <part> [-f]'
+            echo '  parts: django react mosquitto mqtt-listener monitoring-publisher setup'
+            exit 1 ;;
+    esac
+    ;;
+
+shell)
+    # A command line inside the school's django: run manage.py commands by hand
+    # (python manage.py shell for a Python prompt). Type exit to leave.
+    short="$(find_school "${1:-}")" || exit 1
+    echo "==> inside $short's django. Type exit to leave."
+    kube -n "ea-$short" exec -it deploy/django -- sh
+    ;;
+
+setup-code)
+    # Issue the one-time code that claims a new school's first administrator
+    # (spec 01). Send it to the school; it expires and works once. Running this
+    # again replaces any earlier code, which is also how to cancel one.
+    short="$(find_school "${1:-}")" || exit 1
+    shift || true
+    kube -n "ea-$short" exec deploy/django -- python manage.py setup_code "$@"
+    ;;
+
+make-admin)
+    # Make an existing login an administrator again, for a school whose only
+    # administrator is locked out (spec 01). Never creates a login or sets a
+    # password. Add --reactivate if that login was switched off.
+    short="$(find_school "${1:-}")" || exit 1
+    user="${2:-}"
+    [ -n "$user" ] || { echo 'usage: eactl make-admin "School Name" <username> [--reactivate]'; exit 1; }
+    shift 2
+    kube -n "ea-$short" exec deploy/django -- python manage.py make_admin "$user" "$@"
+    ;;
+
+remove)
+    # Delete a school: its app, its settings, its database and its database
+    # login. Takes a safety copy of the database first, and only goes ahead once
+    # you've typed the school's short name.
+    short="$(find_school "${1:-}")" || exit 1
+    require_cluster
+    ns="ea-$short"
+    db="school_${short//-/_}"
+    echo "==> about to DELETE $(school_info "$short" display-name) ($short):"
+    echo "    its app and settings (namespace $ns)"
+    echo "    its database $db and its login, with everything in it"
+    echo "    A safety copy of the database is kept in $SNAPSHOTS/$short/"
+    read -r -p "Type the short name ($short) to confirm: " typed
+    [ "$typed" = "$short" ] || { echo "not removed"; exit 0; }
+
+    echo "==> safety copy of its database"
+    snap="$(take_snapshot "$short")" || { echo "[!] no safety copy, so nothing was removed"; exit 1; }
+    echo "    saved: $snap"
+    echo "==> its app and settings"
+    kube delete namespace "$ns" --wait=true || exit 1
+    echo "==> its database and login"
+    echo "+ (psql) DROP DATABASE $db; DROP ROLE $db" >&2
+    printf '%s\n' "DROP DATABASE $db;" "DROP ROLE $db;" | psql_admin || exit 1
+    echo
+    echo "✓ removed $short. Its safety copy: $snap"
     ;;
 
 update)
