@@ -378,8 +378,11 @@ prints the `kubectl` it runs.
      them and warns that undoing them deletes the data they hold, then offers to **undo
      them first, with the newer release still running** (Django undoes migrations itself,
      `migrate <app> <last one the older release knows>`), **then switch**. Before undoing,
-     it saves a **safety copy of that school's database** (`pg_dump`, one file on the
-     server, named with the school and the time), and asks `(y/N)`.
+     it saves a **safety copy of that school's database** (`pg_dump`) and asks `(y/N)`.
+     Safety copies live on the server, **one folder per school**:
+     `/var/lib/edgeathlete/snapshots/<short name>/<date>-<time>.sql` (root-only).
+     **Kept: the last 5 per school, and none older than 30 days**: they're for undoing a
+     rollback soon after, not long-term (that's Phase 5).
   4. If a migration can't be undone (a data step without its undo written), it stops
      before switching, and points at the safety copy.
 
@@ -446,8 +449,14 @@ prints the `kubectl` it runs.
 
 ## Phase 5 — Backups, and a restore that has been done
 
-- A CronJob per installation: a nightly database dump, kept for a set number of days,
-  **copied off the Dell** (see open decisions for where).
+- A CronJob per installation: a nightly database dump, **copied off the Dell**, so a dead
+  disk, a stolen machine or a house problem doesn't take the backups with it.
+  - **Where (recommended, 2026-10-16):** a cloud storage bucket (e.g. Backblaze B2 or AWS
+    S3; well under $1 a month at this size). The laptop over Tailscale is the free
+    fallback, but only while it's on, and it's in the same house.
+  - **Kept: 7 daily, 4 weekly, 6 monthly**, in **one folder per school**.
+  - **Encrypted before leaving the Dell**: they hold athletes' data. The key is kept like
+    any other secret, never in the repo.
 - `eactl backup` and `eactl restore` (Phase 2) use the same format.
 
 **Done when:**
@@ -566,7 +575,7 @@ athlete login. Would become `eactl copy-db`.
 | Decision | Recommendation |
 |---|---|
 | Where Phase 7's throwaway machine runs | A free-tier cloud VM (amd64, like the Dell, and the closest thing to the AWS/Azure goal). A local VM on an Apple-chip Mac would be ARM and need ARM images |
-| Where backups are copied to | Off the house entirely (a cloud storage bucket) is the professional answer; the laptop over Tailscale is the cheap one |
+| Where backups are copied to | A cloud storage bucket (recommended 2026-10-16, see Phase 5); the laptop over Tailscale is the free fallback |
 | Secrets beyond a local file | A local, never-committed file per installation applied by `eactl secrets` now; Sealed Secrets or SOPS (encrypted secrets in the repo) as a later step |
 
 ## Acceptance criteria
