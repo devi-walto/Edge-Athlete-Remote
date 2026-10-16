@@ -9,7 +9,9 @@
 # django does them itself (spec 05): the sign-in rate limit, and telling
 # browsers never to keep a copy of sign-in replies.
 #
-# ${SCHOOL_HOST} and ${NAMESPACE} are filled in by `eactl new` for each school.
+# ${SCHOOL_HOST} is filled in by eactl for each school. Whether the school is
+# private (the Tailscale-only guard) or public (HTTPS for its address) is added
+# by one of the components in ../components/.
 
 apiVersion: networking.k8s.io/v1
 # Ingress: routing rules for the reverse proxy (the protection call in the
@@ -17,12 +19,6 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: school
-  annotations:
-    # Run every request through the guard in private-only.yaml first, so only
-    # Tailscale devices get in while the school is in testing.
-    # Traefik names it <namespace>-<name>@kubernetescrd: "the Middleware object
-    # called private-only, in this school's namespace."
-    traefik.ingress.kubernetes.io/router.middlewares: ${NAMESPACE}-private-only@kubernetescrd
 spec:
   # Which reverse proxy follows these rules: Traefik, the one k3s provides.
   ingressClassName: traefik

@@ -4,8 +4,9 @@
 # school, filling in that school's name, address, release and settings. Nothing
 # in this folder names a school.
 #
-# The placeholders (${NAMESPACE}, ${SCHOOL_HOST}) are filled in
-# by eactl; never apply this folder with plain `kubectl apply -k`.
+# The placeholder ${SCHOOL_HOST} is filled in by eactl, which also adds one of
+# the components in ../components/ (private or https). Never apply this folder
+# with plain `kubectl apply -k`.
 
 # Kustomization: a list of files to apply together, plus any edits to them.
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -18,7 +19,6 @@ resources:
   - workers.yaml
   - react.yaml
   - ingress.yaml
-  - private-only.yaml
 
 # The broker's settings, made from the repo's own mosquitto/mosquitto.conf, the
 # file a local install uses. One copy for local and remote, so they can't drift.
