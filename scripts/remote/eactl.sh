@@ -7,7 +7,7 @@
 #   eactl check            is this server's cluster answering?
 #   eactl apply-cluster    put the server-wide add-ons (k8s/cluster) on the cluster
 #   eactl apply-db         put the shared database (k8s/db) on the cluster
-#   eactl new --name "N" --version V   make a new school (starts private)
+#   eactl new "Name"       make a new school (starts private)
 #   eactl list             every school: name, short name, access, release, address
 #   eactl apply-school S   rebuild school S exactly as the template says
 #
@@ -394,22 +394,37 @@ new)
     # Make a new school on this server: its own namespace, its own database and
     # database login in the shared Postgres, its settings and secrets, and the app
     # from the template. Every new school starts PRIVATE (Tailscale only).
-    #   eactl new --name "Demo U" --version v0.3.1 [--address name.example.com]
+    #   eactl new "Demo U"                       the usual way
+    #   eactl new "Demo U" --version v0.3.2      a different release than the others
+    #   eactl new "Demo U" --address x.y.com     an address other than the usual one
     name="" version="" address=""
     while [ $# -gt 0 ]; do
         case "$1" in
-            --name) name="${2:-}"; shift 2 ;;
             --version) version="${2:-}"; shift 2 ;;
             --address) address="${2:-}"; shift 2 ;;
-            *) echo "unknown option $1"; exit 1 ;;
+            --*) echo "unknown option $1"; exit 1 ;;
+            *) name="$1"; shift ;;
         esac
     done
-    if [ -z "$name" ] || [ -z "$version" ]; then
-        echo 'usage: eactl new --name "School Name" --version v0.3.1 [--address name.example.com]'
+    if [ -z "$name" ]; then
+        echo 'usage: eactl new "School Name" [--version v0.3.1] [--address name.example.com]'
         exit 1
     fi
     load_config
     require_cluster
+
+    # The release: by default, the one the other schools run, so every school
+    # stays on the same version. Asked for if there's no single answer.
+    if [ -z "$version" ]; then
+        releases="$(kubectl get namespaces -l ea/school -o jsonpath='{range .items[*]}{.metadata.labels.ea/version}{"\n"}{end}' | sort -u | grep -v '^$')"
+        if [ "$(printf '%s\n' "$releases" | grep -c .)" = 1 ]; then
+            version="$releases"
+        else
+            [ -n "$releases" ] && echo "    the schools here run: $(echo $releases)"
+            read -r -p "Which release should it run (e.g. v0.3.1)? " version
+            [ -n "$version" ] || { echo "nothing made"; exit 0; }
+        fi
+    fi
     for s in postgres-admin ghcr-pull; do
         kubectl -n edge-athlete get secret "$s" >/dev/null 2>&1 || {
             echo "[!] Secret $s is missing in edge-athlete. See scripts/remote/README.md, item 6."; exit 1; }
