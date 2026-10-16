@@ -1,11 +1,9 @@
 # private-only.yaml — keeps a school that's still being tested private.
 #
 # Traefik (the reverse proxy every visit passes through) checks each visitor's
-# address against this list before passing the visit on. Only these get in:
-#   - Tailscale devices: every one has an address in 100.64.0.0/10
-#   - devices on the server's own home network: ${HOME_RANGE}, asked by
-#     `eactl init` (it's personal, so it's never written in the repo)
-# Anyone else gets "403 Forbidden".
+# address before passing the visit on. Only Tailscale devices get in: every one
+# has an address in 100.64.0.0/10. Anyone else gets "403 Forbidden". To test a
+# school, put the device on Tailscale.
 #
 # This only works because Traefik sees each visitor's real address
 # (k8s/cluster/traefik-keep-visitor-address.yaml). It comes off when the school
@@ -21,5 +19,4 @@ metadata:
 spec:
   ipAllowList:
     sourceRange:
-      - 100.64.0.0/10
-      - ${HOME_RANGE}
+      - 100.64.0.0/10   # Tailscale

@@ -145,13 +145,6 @@ ask() {
     printf -v "$var" '%s' "$answer"
 }
 
-# The home network this server is on, worked out from its own routes: the line
-# for its network card, skipping the cluster's, Docker's and Tailscale's own.
-# Prints e.g. 192.168.1.0/24, or nothing if it can't tell.
-find_home_range() {
-    ip -4 route show scope link 2>/dev/null \
-        | awk '$2 == "dev" && $3 !~ /^(cni|flannel|docker|veth|tailscale|lo)/ { print $1; exit }'
-}
 
 CMD="${1:-help}"
 shift || true
@@ -182,19 +175,6 @@ Use an address you actually read."
 for test.example.com. The DNS updater keeps each one pointed at this server,
 and each needs its first A record made by hand (scripts/remote/README.md)."
 
-    ask HOME_RANGE "Type your home network's range" "192.168.1.0/24" \
-"While a school is still being tested, only your Tailscale devices and devices
-on this server's own home network can open it. This is that home network's
-range of addresses. To find it yourself, run on this server:
-    ip -4 route show scope link
-and take the first part of the line for its network card (not cni0, flannel,
-docker or tailscale), e.g. 192.168.1.0/24." \
-        "$(find_home_range)"
-    if ! [[ "$HOME_RANGE" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+$ ]]; then
-        echo "[!] \"$HOME_RANGE\" doesn't look like a range (e.g. 192.168.1.0/24). Run eactl init again."
-        exit 1
-    fi
-
     # Write the answers to a scratch file first, then put it in place with sudo
     # (only root can write in /etc). %q wraps each answer in quotes so it reads
     # back exactly as typed.
@@ -204,7 +184,6 @@ docker or tailscale), e.g. 192.168.1.0/24." \
         printf 'DOMAIN=%q\n'     "$DOMAIN"
         printf 'ACME_EMAIL=%q\n' "$ACME_EMAIL"
         printf 'SUBDOMAINS=%q\n' "$SUBDOMAINS"
-        printf 'HOME_RANGE=%q\n' "$HOME_RANGE"
     } > "$TMP"
     # Owned by root, readable by your group, by nobody else (640).
     sudo mkdir -p "$(dirname "$CONFIG")" \

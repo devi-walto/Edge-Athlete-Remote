@@ -19,7 +19,7 @@ metadata:
   name: school
   annotations:
     # Run every request through the guard in private-only.yaml first, so only
-    # Tailscale and the home network get in while the school is in testing.
+    # Tailscale devices get in while the school is in testing.
     # Traefik names it <namespace>-<name>@kubernetescrd: "the Middleware object
     # called private-only, in this school's namespace."
     traefik.ingress.kubernetes.io/router.middlewares: ${NAMESPACE}-private-only@kubernetescrd

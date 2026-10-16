@@ -233,8 +233,9 @@ image and printed `v0.3.1-test.1`; a pod without it got `ImagePullBackOff`.
   - An **Ingress** that does what `nginx.conf` does: `/api/`, `/admin/` and the two
     static paths to django, `/` to react, for the school's own host name. (The sign-in
     limit and `no-store` are already in the app when remote: spec 05 Phase 3.)
-  - The **private-only guard**: a Traefik `ipAllowList` Middleware (Tailscale
-    `100.64.0.0/10` and the home range `eactl init` finds and asks for).
+  - The **private-only guard**: a Traefik `ipAllowList` Middleware allowing only
+    Tailscale (`100.64.0.0/10`). No home-network range (Devin, 2026-10-16): test devices
+    go on Tailscale, and a server's own network means nothing on a cloud machine.
   - Live updates in the browser connect to port 9001 directly, which isn't reachable
     yet: they arrive in Phase 4 with the `wss` path. Pages, sign-in and data work now.
 - **Traefik keeps each visitor's real address** (found and fixed 2026-10-16,
@@ -267,8 +268,8 @@ image and printed `v0.3.1-test.1`; a pod without it got `ImagePullBackOff`.
 - `eactl` starts here with what Phase 1 needs: `init`, `check`, `apply-cluster`, `apply-db`, `new`,
   `list`. It fills in **only** the named placeholders (`${DOMAIN}`, `${ACME_EMAIL}`,
   `${SUBDOMAINS}`), so the updater script's own `$IP` and `$SUB` survive.
-- **Private until spec 05 is done:** a Traefik middleware lets in only the Tailscale and
-  home network ranges. No public DNS record yet.
+- **Private until Phase 4:** a Traefik middleware lets in only Tailscale devices. No
+  public DNS record yet.
 
 **Done when:**
 
@@ -283,7 +284,7 @@ image and printed `v0.3.1-test.1`; a pod without it got `ImagePullBackOff`.
       ignored by git, and the committed files hold only placeholders.
 - [ ] During an update, migrations run once, in the new django copy, before the old one
       stops.
-- [ ] From outside Tailscale and the home network, the address answers nothing.
+- [ ] From outside Tailscale, the school answers `403`.
 - [ ] The rate limit on sign-in still returns `429`.
 - [ ] After `eactl apply-cluster`, its preview shows no difference, and no secret
       value appears anywhere in the repo or its history.

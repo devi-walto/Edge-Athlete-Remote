@@ -4,7 +4,7 @@
 # school, filling in that school's name, address, release and settings. Nothing
 # in this folder names a school.
 #
-# The placeholders (${NAMESPACE}, ${SCHOOL_HOST}, ${HOME_RANGE}) are filled in
+# The placeholders (${NAMESPACE}, ${SCHOOL_HOST}) are filled in
 # by eactl; never apply this folder with plain `kubectl apply -k`.
 
 # Kustomization: a list of files to apply together, plus any edits to them.

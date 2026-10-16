@@ -9,7 +9,7 @@
 # Two things need the real address:
 #   - the sign-in limit (10 wrong passwords a minute per address). With one
 #     shared address, a stranger's wrong guesses would lock everyone out.
-#   - the "Tailscale and home network only" guard on a school still in testing.
+#   - the "Tailscale only" guard on a school still in testing.
 #
 # The fix: take the helper out of the way. Traefik answers on ports 80 and 443
 # itself, and its front-door Service becomes inside-only, which the helper

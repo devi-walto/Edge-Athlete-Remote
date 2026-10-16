@@ -66,8 +66,7 @@ Decided and built on October 16.
 
 - **The sign-in limit.** Online, the app refuses an address after 10 wrong passwords in
   a minute (spec 05, "hosted mode").
-- **The guard on a school still in testing**, which lets in only Tailscale and the home
-  network.
+- **The guard on a school still in testing**, which lets in only Tailscale devices.
 
 k3s ships with a small built-in helper, **ServiceLB**. A cloud provider normally gives a
 cluster its front door to the internet; a machine at home has no cloud, so ServiceLB
