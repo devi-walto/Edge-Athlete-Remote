@@ -76,19 +76,34 @@ on my memory.
   database login that can open only that database. So a school's app still cannot see
   another school's data, and one Postgres uses far less of the Dell's memory than one per
   school, with one backup job. The cost: if that Postgres is down, every school is.
-- **Everything else a school runs is its own**, in its own namespace `ea-<school>`:
+- **A school is found by a fixed short name, never by its display name** (Devin,
+  2026-10-16). Schools nationwide can share a name, so each one gets:
+
+  | | Example | Rules |
+  |---|---|---|
+  | **Display name** | Demo U | any text; shown to people; can change |
+  | **Short name** | `demo-u-k7m2qx` | the name, lowercased and cut to about 20 characters, plus 6 random letters and digits; **never changes**, even if the school renames; tab-completes in `eactl` |
+  | Namespace | `ea-demo-u-k7m2qx` | from the short name |
+  | Database and its login | `school_demo_u_k7m2qx` | from the short name (`_`, which Postgres prefers) |
+  | Address | `demo-u-k7m2qx.<domain>` | from the short name; clicked, never typed |
+
+  People never type a school's address: they follow a login link, or (after the class)
+  pick their school on a public landing page that sends them to it (spec 13).
+  `eactl find <text>` searches display names.
+- **Everything else a school runs is its own**, in its own namespace `ea-<short name>`:
   Django, the two workers, the broker, the screens, one ConfigMap and one Secret
   (mirroring today's `.env`), and a copy of the image pull key.
 - **A directory of schools, from day one.** `eactl new` labels each school's namespace
-  (`ea/installation=<school>`, its address, its version, and `ea/status=active`), and
-  `eactl list` reads those labels; `eactl status <school>` drills into one. The full
+  (`ea/school=<short name>`, `ea/version`, `ea/status=active`) and annotates it with
+  what labels can't hold (`ea/display-name`, which may contain spaces, and
+  `ea/address`). `eactl list` reads them; `eactl status <short name>` drills into one. The full
   directory (a registry database and a web console) is after the class:
   [spec 13](../later/13-registry-and-console.md).
 - **Server settings are asked once and kept out of the repo.** `eactl init` asks for the
   domain, the email for certificate warnings and similar server-wide answers, and saves
   them to `eactl.env` on the laptop, which git ignores. The repo's files use
   placeholders (`${DOMAIN}`, `${ACME_EMAIL}`) that `eactl` fills in when applying. A new
-  school's questions (its name, its subdomain) are asked by `eactl new`.
+  school's display name is given to `eactl new`; everything else is made from it.
 - **Images live in GitHub's container registry** (`ghcr.io`), **private**, even while the
   repo is public. The cluster pulls with a read-only token stored as a Secret.
 - **Tests run on pull requests; deploys run on version tags.** A tag like `v0.4.0` (patch
@@ -351,8 +366,14 @@ prints the `kubectl` it runs.
 **Starts only when spec 05 is done** (the open routes require a login when hosted,
 `DEBUG` is refused, hosts are checked).
 
-- A public subdomain for the real installation: its DNS record, its line in the DDNS
-  job, its line in `coredns-custom`, its certificate.
+- **One wildcard for every school, instead of one setup per school** (to decide here;
+  proposed 2026-10-16). Since nobody types a school's address, each could live under one
+  wildcard: a DNS record `*.<domain>`, a **wildcard certificate** (Let's Encrypt issues
+  those only through the DNS check, via the DNS provider's API that the DNS updater
+  already uses, instead of HTTP), and one hairpin rule for the whole domain. Then
+  `eactl new` needs no DNS or certificate work at all. The alternative is the old way:
+  per school, a DNS record, a line in the DDNS job, a line in `coredns-custom` and a
+  certificate.
 - The real overlay sets `EA_DEPLOYMENT=remote` and its allowed hosts and trusted origins.
 - The Tailscale-only middleware comes off the site.
 - **The broker goes online through the site's own address.** Traefik routes a path on
@@ -403,16 +424,16 @@ prints the `kubectl` it runs.
 
 Decided 2026-10-14. The demo is **set up the way a new school's installation would be,
 from start to finish, by hand**, so it doubles as the rehearsal of onboarding a real
-customer. Devin then hands Dr. Prather invented login details as if he were that
-school's administrator, and demos the whole app from there.
+customer. Devin then hands the faculty reviewer invented login details as if they were
+that school's administrator, and demos the whole app from there.
 
-- **A new school is `eactl new demo`**, from the same base as the real one: its own
-  namespace, subdomain (with its two lines, in `coredns-custom` and the DDNS job), Secret,
-  and its own database in the shared Postgres. Never a hand-edited copy of another
+- **The demo is Demo U** (`eactl new --name "Demo U"`, Devin, 2026-10-16), made in
+  Phase 1, from the same base as any school: its own namespace, address, Secret, and its
+  own database in the shared Postgres. The walkthrough below is rehearsed on it. Never a hand-edited copy of another
   school's files, and never a new server.
 - **It starts empty, like a real new school.** First-run setup with a setup code from
   `eactl setup-code`, exactly as spec 01 built it. Devin claims it, creates **an
-  administrator login for Dr. Prather** with an invented username and a real (not
+  administrator login for the faculty reviewer** with an invented username and a real (not
   well-known) password, and hands those over. No `coach` / `coachpass`; spec 01's rule
   against well-known logins holds here too.
 - Any data in it is **invented**: entered through the app during the walkthrough, or
@@ -425,7 +446,7 @@ school's administrator, and demos the whole app from there.
 
 - [ ] *(By hand)* The demo was set up from nothing by following the hosting guide, and
       the guide now has every step that was needed.
-- [ ] *(Browser)* Signed in with the login details handed to Dr. Prather, the demo shows
+- [ ] *(Browser)* Signed in with the login details handed to the faculty reviewer, the demo shows
       the administrator's view: Coaches page, adding a coach, the whole workspace.
 - [ ] The demo runs at its own address with its own database; nothing in it can read the
       real installation (separate namespaces, separate Secrets, separate databases).

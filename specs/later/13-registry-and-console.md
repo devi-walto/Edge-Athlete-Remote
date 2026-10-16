@@ -82,12 +82,37 @@ ever appear in the registry.**
 - The installation's name on the sign-in card (reads "Coach workspace" today) is read from
   the registry by each school's app.
 
+### A school picker, not central logins (Devin, 2026-10-16)
+
+People don't type a school's address. They open **one public landing page**, find their
+school, and are sent to it; they sign in **there**, on the school's own address, exactly
+as today.
+
+```text
+landing page ─ search or scroll "Demo U" ─▶ remembered in this browser ─▶ demo-u-k7m2qx.<domain>
+                                                                          └─ that school's own sign-in
+```
+
+- **Logins stay in each school's own database.** The landing page never sees a
+  password, holds no accounts and has no database of its own. Nothing about sign-in,
+  login links (specs 01, 03) or local installs changes.
+- **The directory is public**: display name, city, state and address of every school,
+  from this registry (or, before it exists, the namespace annotations `eactl list`
+  reads). It holds no user data. Search and a scrollable list are both fine.
+- **The choice is remembered in the browser** (IndexedDB or localStorage on the landing
+  page), so the next visit goes straight to the school.
+- **No install option on the landing page.** It has no web app manifest and offers
+  nothing to install. The app is installed from the school's own address, after the
+  first visit, so each installed app belongs to one school.
+- **It's a new screen:** a mockup on the Final designs page first. Remote only.
+
 ## Phases (outline; to be cut properly when scheduled)
 
 0. `ea_registry` and its import from the namespace labels; `eactl list` reads it.
 1. The console, read-only: list and detail pages, operator sign-in.
 2. Actions: add, suspend and reactivate, upgrade.
 3. The installation's name on each school's sign-in card.
+4. The school picker landing page.
 
 ## Non-goals
 
