@@ -564,8 +564,9 @@ name made from it can't."
     echo "  - its address needs a DNS record and a line in the hairpin rules before its"
     echo "    certificate can be issued (scripts/remote/README.md), unless the domain"
     echo "    has a wildcard record"
+    echo "  - check it (each part, and its certificate):  eactl status \"$name\""
     echo "  - to claim it, issue a setup code and send it to the school:"
-    echo "      kubectl -n $ns exec deploy/django -- python manage.py setup_code"
+    echo "      eactl setup-code \"$name\""
     echo "  - see every school: eactl list"
     ;;
 
