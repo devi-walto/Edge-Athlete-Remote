@@ -12,3 +12,4 @@ resources:
   - letsencrypt-issuers.yaml
   - coredns-hairpin.yaml
   - ddns-updater.yaml
+  - traefik-keep-visitor-address.yaml

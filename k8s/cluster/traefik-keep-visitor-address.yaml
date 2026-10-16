@@ -1,0 +1,53 @@
+# traefik-keep-visitor-address.yaml — lets the app see who is really visiting.
+#
+# Why: out of the box, k3s puts a small helper (ServiceLB) between the server's
+# ports 80/443 and Traefik, the front door. The helper writes its own address on
+# every visitor as it hands them on, so the app sees one visitor for everyone.
+# (Tested 2026-10-16: a visit from a laptop on Tailscale arrived as the helper's
+# 10.42.x.x address, even with the helper's "keep the address" setting on.)
+#
+# Two things need the real address:
+#   - the sign-in limit (10 wrong passwords a minute per address). With one
+#     shared address, a stranger's wrong guesses would lock everyone out.
+#   - the "Tailscale and home network only" guard on a school still in testing.
+#
+# The fix: take the helper out of the way. Traefik answers on ports 80 and 443
+# itself, and its front-door Service becomes inside-only, which the helper
+# ignores. The hairpin rule still works: it finds Traefik by name.
+#
+# To undo: delete this object (kubectl -n kube-system delete helmchartconfig
+# traefik) and k3s puts Traefik back the way it was.
+
+apiVersion: helm.cattle.io/v1
+# HelmChartConfig: k3s installs Traefik itself, from a package (a Helm chart).
+# This changes that package's settings without reinstalling it: k3s reads it
+# and updates its own Traefik within a minute or so.
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |
+    # Traefik listens on the server's own ports 80 and 443, so visitors reach
+    # it directly, with their address intact.
+    ports:
+      web:
+        hostPort: 80
+      websecure:
+        hostPort: 443
+    # Its Service only gives it a name inside the cluster now. ServiceLB only
+    # handles front-door ("LoadBalancer") Services, so it stops claiming 80/443.
+    # (In this chart the type is under service.spec; a plain service.type is
+    # silently ignored, which took the practice site down for 4 minutes on
+    # 2026-10-16. Check the chart's own values.yaml before changing these.)
+    service:
+      spec:
+        type: ClusterIP
+    # Only one Traefik can hold port 80 on one machine. So on an update, stop
+    # the old one first, then start the new one (a few seconds offline),
+    # instead of the default, which would wait forever for the port to free up.
+    updateStrategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxUnavailable: 1
+        maxSurge: 0
