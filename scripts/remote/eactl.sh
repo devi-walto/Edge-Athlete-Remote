@@ -19,6 +19,7 @@
 #   eactl make-admin "Name" USER   make an existing login an administrator again
 #   eactl remove "Name"    delete a school and its database (asks you to type its short
 #                          name, and keeps a safety copy of the database first)
+#   eactl restore "Name"   put back one of the school's safety copies (lists them)
 #
 # Why it exists: the remote service is many schools on one server. Every chore
 # (make a school, list them, apply the add-ons) is a few kubectl commands that
@@ -223,14 +224,15 @@ psql_admin() {
     kubectl -n edge-athlete exec -i deploy/postgres -- psql -U postgres -v ON_ERROR_STOP=1 -q
 }
 
-# take_snapshot <short name> — a safety copy of one school's database, before
-# anything that deletes data (remove, and undoing migrations on a rollback).
+# take_snapshot <short name> "<why>" — a safety copy of one school's database,
+# before anything that deletes data (remove, restore, undoing migrations). The
+# reason is saved beside it (<file>.note), so `eactl restore` can show it.
 # Saved on this server, one folder per school, readable by root only:
 #   /var/lib/edgeathlete/snapshots/<short name>/<date>-<time>.sql
 # Keeps the last 5 per school, and none older than 30 days. Prints the file.
 SNAPSHOTS=/var/lib/edgeathlete/snapshots
 take_snapshot() {
-    local short="$1" db="school_${1//-/_}" dir file
+    local short="$1" why="${2:-}" db="school_${1//-/_}" dir file
     dir="$SNAPSHOTS/$short"
     file="$dir/$(date +%Y-%m-%d-%H%M%S).sql"
     sudo install -d -m 700 -o root -g root "$SNAPSHOTS" "$dir" || return 1
@@ -238,13 +240,14 @@ take_snapshot() {
     kubectl -n edge-athlete exec deploy/postgres -- pg_dump -U postgres --no-owner "$db" \
         | sudo tee "$file" >/dev/null || return 1
     sudo chmod 600 "$file"
+    [ -n "$why" ] && printf '%s\n' "$why" | sudo tee "$file.note" >/dev/null
     # An empty file means the copy failed; don't pretend it worked.
     if ! sudo test -s "$file"; then
         echo "[!] the safety copy is empty" >&2; return 1
     fi
     # Tidy: none older than 30 days, then keep only the newest 5.
-    sudo find "$dir" -name '*.sql' -mtime +30 -delete
-    sudo sh -c "ls -1t '$dir'/*.sql | tail -n +6 | xargs -r rm -f"
+    sudo find "$dir" \( -name '*.sql' -o -name '*.sql.note' \) -mtime +30 -delete
+    sudo sh -c "ls -1t '$dir'/*.sql | tail -n +6 | while read -r old; do rm -f \"\$old\" \"\$old.note\"; done"
     echo "$file"
 }
 
@@ -677,7 +680,7 @@ remove)
     [ "$typed" = "$short" ] || { echo "not removed"; exit 0; }
 
     echo "==> safety copy of its database"
-    snap="$(take_snapshot "$short")" || { echo "[!] no safety copy, so nothing was removed"; exit 1; }
+    snap="$(take_snapshot "$short" "before: eactl remove")" || { echo "[!] no safety copy, so nothing was removed"; exit 1; }
     echo "    saved: $snap"
 
     # The order matters. Deleting a namespace waits for everything in it to
@@ -709,6 +712,86 @@ remove)
     fi
     echo
     echo "✓ removed $short. Its safety copy: $snap"
+    ;;
+
+restore)
+    # Put back one of a school's safety copies. Lists them (newest first, with
+    # why each was taken), asks which, and replaces the school's database with it
+    # after a fresh safety copy of the database as it is now, so a restore can be
+    # undone too.
+    short="$(find_school "${1:-}")" || exit 1
+    require_cluster
+    ns="ea-$short"
+    db="school_${short//-/_}"
+    dir="$SNAPSHOTS/$short"
+
+    mapfile -t copies < <(sudo sh -c "ls -1t '$dir'/*.sql 2>/dev/null")
+    if [ "${#copies[@]}" = 0 ]; then
+        echo "[!] no safety copies for $short (in $dir)"; exit 1
+    fi
+    echo "Safety copies for $(school_info "$short" display-name) ($short):"
+    for i in "${!copies[@]}"; do
+        f="${copies[$i]}"
+        when="$(basename "$f" .sql | sed -E 's/^([0-9-]{10})-([0-9]{2})([0-9]{2})([0-9]{2})$/\1 \2:\3/')"
+        size="$(sudo du -h "$f" | cut -f1)"
+        why="$(sudo cat "$f.note" 2>/dev/null)"
+        printf '  %d) %s   %6s   %s\n' "$((i + 1))" "$when" "$size" "${why:+($why)}"
+    done
+    read -r -p "Which one? (1-${#copies[@]}): " pick
+    if ! [[ "$pick" =~ ^[0-9]+$ ]] || [ "$pick" -lt 1 ] || [ "$pick" -gt "${#copies[@]}" ]; then
+        echo "nothing restored"; exit 0
+    fi
+    chosen="${copies[$((pick - 1))]}"
+
+    # A copy from a NEWER release knows database changes this release doesn't, and
+    # this release's code can't use it. Compare the migrations recorded in the
+    # copy with the ones the running code knows.
+    echo "==> checking the copy against $short's release ($(school_info "$short" version))"
+    known="$(kubectl -n "$ns" exec deploy/django -- python manage.py shell -c "
+from django.db.migrations.loader import MigrationLoader
+for app, name in sorted(MigrationLoader(None, ignore_no_migrations=True).disk_migrations): print(app, name)" 2>/dev/null)"
+    in_copy="$(sudo awk '/^COPY public.django_migrations /{on=1; next} on && /^\\\.$/{exit} on {print $2, $3}' "$chosen")"
+    if [ -z "$known" ]; then
+        echo "[!] couldn't ask $short's django which database changes it knows; nothing restored"; exit 1
+    fi
+    unknown="$(comm -13 <(printf '%s\n' "$known" | sort) <(printf '%s\n' "$in_copy" | sort))"
+    if [ -n "$unknown" ]; then
+        echo "[!] this copy is from a newer release: it has database changes $short's release doesn't know:"
+        printf '      %s\n' $unknown | paste - - | sed 's/\t/ /'
+        echo "    Move $short to that release first (eactl update \"$short\" --version ...), then restore."
+        exit 1
+    fi
+    echo "    fine: the release knows every database change in the copy"
+
+    echo
+    echo "==> about to REPLACE $short's database with the copy from $(basename "$chosen" .sql)."
+    echo "    Everything recorded since then is lost. A safety copy of the database as it"
+    echo "    is right now is taken first."
+    read -r -p "Type the short name ($short) to confirm: " typed
+    [ "$typed" = "$short" ] || { echo "nothing restored"; exit 0; }
+
+    echo "==> safety copy of the database as it is now"
+    snap="$(take_snapshot "$short" "before: eactl restore")" || { echo "[!] no safety copy, so nothing was restored"; exit 1; }
+    echo "    saved: $snap"
+
+    echo "==> switching its app off, so nothing writes during the restore"
+    kube -n "$ns" scale deployment --all --replicas=0 >/dev/null
+    kube -n "$ns" wait --for=delete pod --all --timeout=120s >/dev/null 2>&1 || true
+
+    echo "==> emptying the database and loading the copy"
+    echo "+ (psql) DROP DATABASE $db WITH (FORCE); CREATE DATABASE $db OWNER $db; then the copy, as $db" >&2
+    printf '%s\n' "DROP DATABASE $db WITH (FORCE);" "CREATE DATABASE $db OWNER $db;" \
+        "REVOKE CONNECT ON DATABASE $db FROM PUBLIC;" | psql_admin || exit 1
+    # Loaded as the school's own login (SET ROLE), so it owns every table it
+    # restores, exactly as when django made them.
+    { echo "SET ROLE $db;"; sudo cat "$chosen"; } \
+        | kubectl -n edge-athlete exec -i deploy/postgres -- psql -U postgres -d "$db" -v ON_ERROR_STOP=1 -q >/dev/null \
+        || { echo "[!] the copy didn't load. The copy taken just before: $snap"; exit 1; }
+
+    echo "==> switching its app back on (its start-up step brings an older copy up to date)"
+    update_school "$short" --yes || exit 1
+    echo
+    echo "✓ restored $short from $(basename "$chosen" .sql). If that was wrong, restore $(basename "$snap" .sql)."
     ;;
 
 update)
