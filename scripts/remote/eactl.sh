@@ -7,6 +7,9 @@
 #   eactl check            is this server's cluster answering?
 #   eactl apply-cluster    put the server-wide add-ons (k8s/cluster) on the cluster
 #   eactl apply-db         put the shared database (k8s/db) on the cluster
+#   eactl new --name "N" --version V   make a new school (starts private)
+#   eactl list             every school: name, short name, access, release, address
+#   eactl apply-school S   rebuild school S exactly as the template says
 #
 # Why it exists: the remote service is many schools on one server. Every chore
 # (make a school, list them, apply the add-ons) is a few kubectl commands that
@@ -83,6 +86,100 @@ render() {
     kubectl kustomize "$REPO_DIR/$1" \
         | DOMAIN="$DOMAIN" ACME_EMAIL="$ACME_EMAIL" SUBDOMAINS="$SUBDOMAINS" \
           HAIRPIN_RULES="$rules" envsubst "$PLACEHOLDERS"
+}
+
+# ── Schools ──────────────────────────────────────────────────────────────────
+#
+# A school is known by its short name (demo-u-u3fyig), which never changes. Its
+# namespace is ea-<short name>, and the namespace itself remembers everything
+# else about it:
+#   labels       ea/school=<short name>  ea/access=private|public  ea/version=v0.3.1
+#   annotations  ea/display-name="Demo U"  ea/address=<its web address>
+# (Labels can't hold spaces, so the display name is an annotation.)
+
+APP_IMAGES="ghcr.io/devi-walto/edge-athlete-django ghcr.io/devi-walto/edge-athlete-react"
+
+# school_info <short name> <field> — read one thing the namespace remembers.
+school_info() {
+    local ns="ea-$1"
+    case "$2" in
+        access|version) kubectl get namespace "$ns" -o "jsonpath={.metadata.labels.ea/$2}" ;;
+        address|display-name)
+            kubectl get namespace "$ns" -o "jsonpath={.metadata.annotations.ea/$2}" ;;
+    esac
+}
+
+# require_school <short name> — stop with a plain message if there's no such school.
+require_school() {
+    if ! kubectl get namespace "ea-$1" -o name >/dev/null 2>&1; then
+        echo "[!] no school called \"$1\". See: eactl list"
+        exit 1
+    fi
+}
+
+# build_school <short name> — the school's full YAML: the base template, plus the
+# private or https component, at the school's release, in its namespace.
+#
+# Kustomize builds from a folder, so this writes a tiny one in a temporary
+# folder (one file: "the base, plus this component, at this release") and points
+# it back at the repo. Kustomize only accepts relative paths for that, so they're
+# worked out from the temporary folder's real location.
+build_school() {
+    local short="$1" ns="ea-$1" access version address component tmp img
+    access="$(school_info "$short" access)"
+    version="$(school_info "$short" version)"
+    address="$(school_info "$short" address)"
+    case "$access" in
+        private) component=private ;;
+        public)  component=https ;;
+        *) echo "[!] $short has no ea/access label (private or public)" >&2; return 1 ;;
+    esac
+    tmp="$(mktemp -d)" && tmp="$(cd "$tmp" && pwd -P)"
+    {
+        echo "apiVersion: kustomize.config.k8s.io/v1beta1"
+        echo "kind: Kustomization"
+        echo "namespace: $ns"
+        echo "resources:"
+        echo "  - $(relpath "$REPO_DIR/k8s/app/base" "$tmp")"
+        echo "components:"
+        echo "  - $(relpath "$REPO_DIR/k8s/app/components/$component" "$tmp")"
+        echo "images:"
+        for img in $APP_IMAGES; do
+            echo "  - name: $img"
+            echo "    newTag: $version"
+        done
+    } > "$tmp/kustomization.yaml"
+    kubectl kustomize --load-restrictor=LoadRestrictionsNone "$tmp" \
+        | NAMESPACE="$ns" SCHOOL_HOST="$address" envsubst '${NAMESPACE} ${SCHOOL_HOST}'
+    local rc=$?
+    rm -f "$tmp/kustomization.yaml" && rmdir "$tmp"
+    return $rc
+}
+
+# short_name_from "Demo U" — demo-u-k7m2qx: the display name made safe (lowercase
+# letters, digits and dashes, at most 20 characters), plus 6 random characters
+# that start with a letter, so two schools with the same name never collide.
+short_name_from() {
+    local base tail
+    # iconv turns accented letters into plain ones first (Ü -> U), where it can.
+    base="$(printf '%s' "$1" | { iconv -f UTF-8 -t ASCII//TRANSLIT 2>/dev/null || cat; } \
+        | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-' \
+        | tr -s '-' | sed 's/^-*//; s/-*$//' | cut -c1-20 | sed 's/-*$//')"
+    [ -n "$base" ] || base=school
+    tail="$(LC_ALL=C tr -dc 'a-z' < /dev/urandom | head -c1)$(LC_ALL=C tr -dc 'a-z0-9' < /dev/urandom | head -c5)"
+    echo "$base-$tail"
+}
+
+# psql_admin — run SQL, read from stdin, as the shared Postgres's administrator.
+# Passwords travel in the SQL on stdin, never on a command line where other
+# programs on the server could see them.
+psql_admin() {
+    kubectl -n edge-athlete exec -i deploy/postgres -- psql -U postgres -v ON_ERROR_STOP=1 -q
+}
+
+# relpath <target> <from> — the path to <target> as seen from folder <from>.
+relpath() {
+    python3 -c 'import os, sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))' "$1" "$2"
 }
 
 # preview <label> <yaml> — show what applying <yaml> would change on the
@@ -293,6 +390,148 @@ apply-cluster)
     echo "✓ k8s/cluster is on the cluster."
     ;;
 
+new)
+    # Make a new school on this server: its own namespace, its own database and
+    # database login in the shared Postgres, its settings and secrets, and the app
+    # from the template. Every new school starts PRIVATE (Tailscale only).
+    #   eactl new --name "Demo U" --version v0.3.1 [--address name.example.com]
+    name="" version="" address=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --name) name="${2:-}"; shift 2 ;;
+            --version) version="${2:-}"; shift 2 ;;
+            --address) address="${2:-}"; shift 2 ;;
+            *) echo "unknown option $1"; exit 1 ;;
+        esac
+    done
+    if [ -z "$name" ] || [ -z "$version" ]; then
+        echo 'usage: eactl new --name "School Name" --version v0.3.1 [--address name.example.com]'
+        exit 1
+    fi
+    load_config
+    require_cluster
+    for s in postgres-admin ghcr-pull; do
+        kubectl -n edge-athlete get secret "$s" >/dev/null 2>&1 || {
+            echo "[!] Secret $s is missing in edge-athlete. See scripts/remote/README.md, item 6."; exit 1; }
+    done
+
+    short="$(short_name_from "$name")"
+    ns="ea-$short"
+    db="school_${short//-/_}"          # Postgres prefers _ over -
+    address="${address:-$short.$DOMAIN}"
+
+    echo "==> about to make a new school:"
+    echo "    display name   $name"
+    echo "    short name     $short   (never changes)"
+    echo "    namespace      $ns"
+    echo "    database       $db   (with a login of the same name)"
+    echo "    address        $address"
+    echo "    release        $version"
+    echo "    access         private (Tailscale only, until it goes public)"
+    read -r -p "Make it? (y/N) " answer
+    [ "$answer" = y ] || { echo "nothing made"; exit 0; }
+
+    echo
+    echo "==> its namespace, which also records everything about it"
+    kube create namespace "$ns" || exit 1
+    kube label namespace "$ns" ea/school="$short" ea/access=private ea/version="$version"
+    kube annotate namespace "$ns" ea/display-name="$name" ea/address="$address"
+
+    echo "==> its database and login in the shared Postgres"
+    echo "+ (psql) CREATE ROLE $db … ; CREATE DATABASE $db OWNER $db ; REVOKE CONNECT … FROM PUBLIC" >&2
+    pw="$(openssl rand -hex 24)"
+    printf '%s\n' \
+        "CREATE ROLE $db LOGIN PASSWORD '$pw';" \
+        "CREATE DATABASE $db OWNER $db;" \
+        "REVOKE CONNECT ON DATABASE $db FROM PUBLIC;" | psql_admin || exit 1
+
+    echo "==> its settings (ConfigMap) and secrets (Secret)"
+    kube -n "$ns" create configmap school-settings \
+        --from-literal=EA_DEPLOYMENT=remote --from-literal=DEBUG=False \
+        --from-literal=EA_INSTALLATION_NAME="$name" \
+        --from-literal=ALLOWED_HOSTS="$address,localhost" \
+        --from-literal=POSTGRES_DB="$db" --from-literal=POSTGRES_USER="$db" \
+        --from-literal=MQTT_HOST=mosquitto --from-literal=MQTT_PORT=1883
+    echo "+ kubectl -n $ns create secret generic school-secrets (values hidden)" >&2
+    kubectl -n "$ns" create secret generic school-secrets \
+        --from-literal=POSTGRES_PASSWORD="$pw" \
+        --from-literal=SECRET_KEY="$(openssl rand -base64 48)" || exit 1
+    unset pw
+
+    echo "==> a copy of the image pull key"
+    echo "+ kubectl -n $ns create secret … ghcr-pull (copied from edge-athlete)" >&2
+    kubectl -n edge-athlete get secret ghcr-pull -o json \
+        | python3 -c 'import json,sys; s=json.load(sys.stdin); print(json.dumps({"apiVersion":"v1","kind":"Secret","type":s["type"],"metadata":{"name":"ghcr-pull"},"data":s["data"]}))' \
+        | kubectl -n "$ns" apply -f - || exit 1
+
+    echo "==> the app, from the template"
+    school="$(build_school "$short")" || exit 1
+    kube -n "$ns" apply -f - <<< "$school" || exit 1
+    for d in mosquitto django react mqtt-listener monitoring-publisher; do
+        kube -n "$ns" rollout status "deployment/$d" --timeout=300s || {
+            echo "[!] $d is not ready. Look: kubectl -n $ns get pods"; exit 1; }
+    done
+
+    echo
+    echo "✓ made $short (\"$name\"), private, at $address"
+    echo
+    echo "Next:"
+    echo "  - open it over Tailscale; to claim it, issue a setup code:"
+    echo "      kubectl -n $ns exec deploy/django -- python manage.py setup_code"
+    echo "  - see every school: eactl list"
+    ;;
+
+list)
+    # Every school on this server, from what each namespace remembers.
+    require_cluster
+    printf '%-24s %-26s %-8s %-10s %s\n' "NAME" "SHORT NAME" "ACCESS" "RELEASE" "ADDRESS"
+    kubectl get namespaces -l ea/school -o go-template='{{range .items}}{{index .metadata.annotations "ea/display-name"}}	{{index .metadata.labels "ea/school"}}	{{index .metadata.labels "ea/access"}}	{{index .metadata.labels "ea/version"}}	{{index .metadata.annotations "ea/address"}}
+{{end}}' | while IFS=$'\t' read -r dn sn ac ve ad; do
+        printf '%-24s %-26s %-8s %-10s %s\n' "$dn" "$sn" "$ac" "$ve" "$ad"
+    done
+    ;;
+
+apply-school)
+    # Rebuild one school exactly as its namespace says it should be: used after
+    # a change to the template, a release, or going public.
+    short="${1:-}"
+    [ -n "$short" ] || { echo "usage: eactl apply-school <short name>   (see: eactl list)"; exit 1; }
+    require_cluster
+    require_school "$short"
+    ns="ea-$short"
+
+    school="$(build_school "$short")" || exit 1
+    CHANGES=0
+    preview "$(school_info "$short" display-name) ($short)" "$school" || exit 1
+    # The guard from when it was private, if it's public now. (A preview only
+    # shows what's in the new build, so leftovers are listed here.)
+    if [ "$(school_info "$short" access)" = public ] \
+        && kubectl -n "$ns" get middleware private-only >/dev/null 2>&1; then
+        echo "    and remove: the Tailscale-only guard (the school is public)"
+        CHANGES=1
+    fi
+    echo
+    if [ "$CHANGES" = 0 ]; then
+        echo "✓ $short already matches the template. Nothing to do."
+        exit 0
+    fi
+    read -r -p "Apply these changes? (y/N) " answer
+    [ "$answer" = y ] || { echo "nothing applied"; exit 0; }
+
+    echo
+    kube -n "$ns" apply -f - <<< "$school" || { echo "[!] $short did not apply"; exit 1; }
+    if [ "$(school_info "$short" access)" = public ]; then
+        kube -n "$ns" delete middleware private-only --ignore-not-found
+    fi
+    echo "==> waiting for every part to be ready"
+    for d in mosquitto django react mqtt-listener monitoring-publisher; do
+        kube -n "$ns" rollout status "deployment/$d" --timeout=240s || {
+            echo "[!] $d is not ready. Look: kubectl -n $ns get pods"; exit 1; }
+    done
+    echo
+    echo "✓ $short is up to date: $(school_info "$short" address)"
+    ;;
+
 apply-db)
     # The shared database every school keeps its own database in. Applied on
     # its own, with its own preview: if it goes wrong, every school is affected.
@@ -329,6 +568,14 @@ apply-db)
     echo "==> waiting for Postgres to answer (up to 3 minutes)"
     kube -n edge-athlete rollout status deployment/postgres --timeout=180s \
         || { echo "[!] Postgres is not ready. Look: kubectl -n edge-athlete get pods"; exit 1; }
+
+    # Every login may connect to Postgres's own maintenance databases (postgres,
+    # template1) unless told otherwise. They hold no school data, but a school's
+    # login has no business there either, so close them. Safe to repeat.
+    echo "==> closing the maintenance databases to school logins"
+    echo "+ (psql) REVOKE CONNECT ON DATABASE postgres, template1 FROM PUBLIC" >&2
+    printf '%s\n' "REVOKE CONNECT ON DATABASE postgres FROM PUBLIC;" \
+        "REVOKE CONNECT ON DATABASE template1 FROM PUBLIC;" | psql_admin || exit 1
 
     echo
     echo "✓ the shared database is running: postgres.edge-athlete, port 5432."
