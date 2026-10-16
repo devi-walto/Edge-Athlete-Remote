@@ -19,6 +19,7 @@
 #   eactl make-admin "Name" USER   make an existing login an administrator again
 #   eactl remove "Name"    delete a school and its database (asks you to type its short
 #                          name, and keeps a safety copy of the database first)
+#   eactl backup "Name"    take a safety copy of the school's database now
 #   eactl restore "Name"   put back one of the school's safety copies (lists them)
 #
 # Why it exists: the remote service is many schools on one server. Every chore
@@ -712,6 +713,17 @@ remove)
     fi
     echo
     echo "✓ removed $short. Its safety copy: $snap"
+    ;;
+
+backup)
+    # A safety copy of one school's database, now, labelled "by hand". The same
+    # kind `remove` and `restore` take first; `restore` lists them all. (The
+    # nightly copies off the server are Phase 5.)
+    short="$(find_school "${1:-}")" || exit 1
+    require_cluster
+    snap="$(take_snapshot "$short" "by hand")" || { echo "[!] the copy failed"; exit 1; }
+    echo "✓ saved $snap"
+    echo "  (kept: the newest 5 for this school, none older than 30 days)"
     ;;
 
 restore)
