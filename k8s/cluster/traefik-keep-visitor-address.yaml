@@ -6,10 +6,9 @@
 # (Tested 2026-10-16: a visit from a laptop on Tailscale arrived as the helper's
 # 10.42.x.x address, even with the helper's "keep the address" setting on.)
 #
-# Two things need the real address:
-#   - the sign-in limit (10 wrong passwords a minute per address). With one
-#     shared address, a stranger's wrong guesses would lock everyone out.
-#   - the "Tailscale only" guard on a school still in testing.
+# The sign-in limit needs the real address: 10 wrong passwords a minute per
+# address. With one shared address, a stranger's wrong guesses would lock
+# everyone out. (So does any address-based rule added later.)
 #
 # The fix: take the helper out of the way. Traefik answers on ports 80 and 443
 # itself, and its front-door Service becomes inside-only, which the helper

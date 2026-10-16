@@ -62,19 +62,17 @@ why it is the fallback and not the plan.
 
 Decided and built on October 16.
 
-**What forced it.** Two things depend on knowing **where each visitor is coming from**:
-
-- **The sign-in limit.** Online, the app refuses an address after 10 wrong passwords in
-  a minute (spec 05, "hosted mode").
-- **The guard on a school still in testing**, which lets in only Tailscale devices.
+**What forced it.** The **sign-in limit** depends on knowing **where each visitor is
+coming from**: online, the app refuses an address after 10 wrong passwords in a minute
+(spec 05, "hosted mode"). A Tailscale-only guard for schools in testing needed it too;
+that guard was later dropped (every school is public, protected by its setup code).
 
 k3s ships with a small built-in helper, **ServiceLB**. A cloud provider normally gives a
 cluster its front door to the internet; a machine at home has no cloud, so ServiceLB
 does the job: it takes the machine's ports 80 and 443 and forwards every visit to
 Traefik, the cluster's front door. But as it forwards a visit, it **writes its own
-address in place of the visitor's.** Every visitor looked identical, so the guard could
-not tell anyone apart, and one stranger's wrong guesses would have locked everyone out
-of signing in.
+address in place of the visitor's.** Every visitor looked identical, so one stranger's
+wrong guesses would have locked everyone out of signing in.
 
 It was measured, not assumed. A small test app that reports the address it sees was
 visited from a laptop on Tailscale (an address starting `100.`); it saw the helper's
