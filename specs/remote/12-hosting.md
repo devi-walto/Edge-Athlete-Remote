@@ -350,7 +350,9 @@ prints the `kubectl` it runs.
 ## Phase 3 — Deploy on a version tag (CD)
 
 - A **GitHub runner on the Dell, for deploys only.** It runs one job: after Phase 0's
-  images exist for a tag, set the installation to that tag and wait for it to be healthy.
+  images exist for a tag, run **`eactl update --all --version <tag>`** (no questions
+  asked, since the tag was the decision) and wait for every school to be healthy. The
+  demo school updates first; if it fails its health check, the others aren't touched.
 - **Its cluster access is limited**: a Kubernetes service account that may update the
   app's namespaces and nothing else (no cluster-wide rights, no secrets outside them).
 - **Guarded for a public repo:**
@@ -359,14 +361,37 @@ prints the `kubectl` it runs.
   - GitHub's **"require approval for all outside contributors"** setting is on, so no
     workflow from a stranger's fork runs until Devin approves it;
   - the runner deletes its working files after each job.
-- **The release:** `main` moved forward to match `SprintBranch`, then the tag. By hand
-  for this class; a `release.yml` "release now" button (and later a schedule) does both
-  steps. This is the only way `main` moves.
+- **The release** (Devin, 2026-10-16): **every 3 days, a scheduled GitHub job moves
+  `main` forward to match `SprintBranch`** (a fast-forward only: everything on
+  `SprintBranch` already passed CI in a pull request). Devin **tags the commits on `main`**
+  he wants released. This is the only way `main` moves.
+- **A tag must be on `main`.** The release workflow checks it and refuses otherwise.
+  (`v0.3.1` was tagged on `feature-hosting` for the Oct 16 demo, before this check
+  existed.)
+- **Rolling back checks the database first** (Devin, 2026-10-16). Before moving a school
+  to an **older** release, `eactl update`:
+  1. asks the school's database which migrations it has applied (`django_migrations`);
+  2. asks the target release's image which migrations it knows (a throwaway pod that only
+     lists its migration files, and never touches a database);
+  3. compares them. **No difference:** it says so ("no database changes, safe to
+     switch") and carries on. **Applied but unknown to the older release:** it lists
+     them and warns that undoing them deletes the data they hold, then offers to **undo
+     them first, with the newer release still running** (Django undoes migrations itself,
+     `migrate <app> <last one the older release knows>`), **then switch**. Before undoing,
+     it saves a **safety copy of that school's database** (`pg_dump`, one file on the
+     server, named with the school and the time), and asks `(y/N)`.
+  4. If a migration can't be undone (a data step without its undo written), it stops
+     before switching, and points at the safety copy.
 
 **Done when:**
 
 - [ ] Tagging a version deploys it; `/api/system/info/` then reports that version.
 - [ ] Deploying the previous tag rolls back, and the data is untouched.
+- [ ] Rolling back across a migration warns and lists it; choosing to undo saves a
+      safety copy first, undoes it with the newer release, then switches. Rolling back
+      with no migration in between says it's safe and just switches.
+- [ ] `main` moves forward to `SprintBranch` on its 3-day schedule; a tag on any other
+      branch is refused.
 - [ ] A deploy that fails its health check leaves the previous version serving.
 - [ ] The runner's credentials are refused when used to read another namespace's
       Secrets or to change the cluster's add-ons.
