@@ -391,6 +391,15 @@ and each needs its first A record made by hand (scripts/remote/README.md)."
         echo "==> linked $LINK"
     fi
 
+    # Tab completion: a shortcut in bash's completion folder pointing at
+    # eactl-completion.bash, so it updates with the code. Read by new terminals.
+    COMPLETION=/etc/bash_completion.d/eactl
+    if [ "$(readlink "$COMPLETION" 2>/dev/null)" != "$REPO_DIR/scripts/remote/eactl-completion.bash" ]; then
+        sudo ln -sfn "$REPO_DIR/scripts/remote/eactl-completion.bash" "$COMPLETION" \
+            || { echo "[!] could not install tab completion"; exit 1; }
+        echo "==> tab completion installed (open a new terminal to use it)"
+    fi
+
     # Every problem above stops with [!], so reaching here means it all worked.
     echo
     echo "✓ eactl init finished: this server is ready."
@@ -670,11 +679,34 @@ remove)
     echo "==> safety copy of its database"
     snap="$(take_snapshot "$short")" || { echo "[!] no safety copy, so nothing was removed"; exit 1; }
     echo "    saved: $snap"
-    echo "==> its app and settings"
-    kube delete namespace "$ns" --wait=true || exit 1
+
+    # The order matters. Deleting a namespace waits for everything in it to
+    # finish cleaning up, which can be slow (an unfinished certificate request
+    # holds it open). So: switch the app off, drop the database while nothing is
+    # using it, cancel any certificate request, and only then delete the
+    # namespace, giving up with a clear message after 3 minutes.
+    echo "==> switching its app off"
+    kube -n "$ns" scale deployment --all --replicas=0 >/dev/null
+    kube -n "$ns" wait --for=delete pod --all --timeout=120s >/dev/null 2>&1 || true
+
     echo "==> its database and login"
-    echo "+ (psql) DROP DATABASE $db; DROP ROLE $db" >&2
-    printf '%s\n' "DROP DATABASE $db;" "DROP ROLE $db;" | psql_admin || exit 1
+    echo "+ (psql) DROP DATABASE $db WITH (FORCE); DROP ROLE $db" >&2
+    printf '%s\n' "DROP DATABASE $db WITH (FORCE);" "DROP ROLE $db;" | psql_admin || exit 1
+
+    echo "==> cancelling any unfinished certificate request"
+    kubectl -n "$ns" delete certificates.cert-manager.io,certificaterequests.cert-manager.io,orders.acme.cert-manager.io,challenges.acme.cert-manager.io --all --ignore-not-found --wait=false >/dev/null 2>&1 || true
+
+    echo "==> its namespace (up to 3 minutes)"
+    kube delete namespace "$ns" --wait=false >/dev/null
+    for i in $(seq 1 36); do
+        kubectl get namespace "$ns" >/dev/null 2>&1 || break
+        sleep 5
+    done
+    if kubectl get namespace "$ns" >/dev/null 2>&1; then
+        echo "[!] the database is gone, but the namespace is still being cleaned up."
+        echo "    It usually finishes by itself. To see what's holding it:"
+        echo "      kubectl get namespace $ns -o jsonpath='{.status.conditions}'"
+    fi
     echo
     echo "✓ removed $short. Its safety copy: $snap"
     ;;
