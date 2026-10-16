@@ -4,9 +4,9 @@
 # school, filling in that school's name, address, release and settings. Nothing
 # in this folder names a school.
 #
-# The placeholder ${SCHOOL_HOST} is filled in by eactl, which also adds one of
-# the components in ../components/ (private or https). Never apply this folder
-# with plain `kubectl apply -k`.
+# The placeholder ${SCHOOL_HOST} is filled in by eactl, which also sets the
+# school's namespace and release. Never apply this folder with plain
+# `kubectl apply -k`.
 
 # Kustomization: a list of files to apply together, plus any edits to them.
 apiVersion: kustomize.config.k8s.io/v1beta1

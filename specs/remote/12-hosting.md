@@ -248,9 +248,11 @@ image and printed `v0.3.1-test.1`; a pod without it got `ImagePullBackOff`.
   - An **Ingress** that does what `nginx.conf` does: `/api/`, `/admin/` and the two
     static paths to django, `/` to react, for the school's own host name. (The sign-in
     limit and `no-store` are already in the app when remote: spec 05 Phase 3.)
-  - The **private-only guard**: a Traefik `ipAllowList` Middleware allowing only
-    Tailscale (`100.64.0.0/10`). No home-network range (Devin, 2026-10-16): test devices
-    go on Tailscale, and a server's own network means nothing on a cloud machine.
+  - **HTTPS for the school's address** (cert-manager, Let's Encrypt). **Every school is
+    public** (Devin, 2026-10-16). A Tailscale-only guard was built and dropped: a school's
+    address points at the public IP, so even a Tailscale device's browser arrives from the
+    internet and was refused; and a new school is already protected by its one-time
+    setup code. Switching a school off is spec 13's **suspend** (app off, data kept).
   - Live updates in the browser connect to port 9001 directly, which isn't reachable
     yet: they arrive in Phase 4 with the `wss` path. Pages, sign-in and data work now.
 - **Traefik keeps each visitor's real address** (found and fixed 2026-10-16,
@@ -283,8 +285,10 @@ image and printed `v0.3.1-test.1`; a pod without it got `ImagePullBackOff`.
 - `eactl` starts here with what Phase 1 needs: `init`, `check`, `apply-cluster`, `apply-db`, `new`,
   `list`. It fills in **only** the named placeholders (`${DOMAIN}`, `${ACME_EMAIL}`,
   `${SUBDOMAINS}`), so the updater script's own `$IP` and `$SUB` survive.
-- **Private until Phase 4:** a Traefik middleware lets in only Tailscale devices. No
-  public DNS record yet.
+- **`eactl update`** brings one school (`"Demo U"` or its short name) or all of them
+  (`--all`) in line with the template, optionally moving them to a release
+  (`--version 0.3.2`). It replaces separate `deploy` and `rollback` commands; Phase 3's
+  automatic deploy runs `eactl update --all --version <tag>`.
 
 **Done when:**
 
@@ -299,7 +303,7 @@ image and printed `v0.3.1-test.1`; a pod without it got `ImagePullBackOff`.
       ignored by git, and the committed files hold only placeholders.
 - [ ] During an update, migrations run once, in the new django copy, before the old one
       stops.
-- [ ] From outside Tailscale, the school answers `403`.
+- [ ] `eactl update "Demo U"` rebuilds Demo U with no differences from what's running.
 - [ ] The rate limit on sign-in still returns `429`.
 - [ ] After `eactl apply-cluster`, its preview shows no difference, and no secret
       value appears anywhere in the repo or its history.
@@ -323,14 +327,15 @@ prints the `kubectl` it runs.
 | Command | Does |
 |---|---|
 | `status`, `logs <service>`, `shell` | see what is running, read logs, open a shell in django |
-| `setup-code` | print the first-administrator code (spec 01) |
+| `setup-code "Name"` | issue the first-administrator code (spec 01), instead of the long `kubectl … setup_code` line |
 | `init` | (from Phase 1) once per server: ask the server-wide settings, save `eactl.env` |
 | `apply-cluster` | (from Phase 1) fill in the placeholders and apply `k8s/cluster` |
-| `new <school>` | (from Phase 1) make a school's installation on this server, with its database |
-| `list` | (from Phase 1) the directory: every school, its address, version and status |
+| `apply-db` | (from Phase 1) the shared database |
+| `new ["Name"]` | (from Phase 1) make a school on this server, with its database; public over HTTPS |
+| `list` | (from Phase 1) the directory: every school, its short name, status, release and address |
+| `update "Name" \| --all [--version V]` | (from Phase 1) bring schools up to date, or move them to a release; also the manual deploy and rollback |
 | `make-admin <username>` | the recovery command from spec 01 |
 | `secrets` | create or update the installation's Secret from a local file that is never committed |
-| `deploy <version>`, `rollback` | the manual version of Phase 3, for when CI is down |
 | `backup`, `restore <file>` | Phase 5 |
 
 **Done when:**

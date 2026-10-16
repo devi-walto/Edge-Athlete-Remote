@@ -69,7 +69,7 @@ ever appear in the registry.**
 | List schools | the registry, with live health and version |
 | Open a school | its detail page: health, version, logs, backups |
 | Add a school | what `eactl new` does, from the console, and a registry row |
-| Change a school's status | suspended: the school's app is scaled to zero and its address shows a notice; its data is untouched. Active again: scaled back up |
+| Change a school's status | suspended: the school's app is scaled to zero and its address shows a notice; its data is untouched. Active again: scaled back up. This is also how a school is kept closed: there is no private mode (decided 2026-10-16); during the class the `ea/status` label exists but only `active` is used |
 | Upgrade a school | set its version, through the same deploy path as CD |
 | Back up, restore | the same as `eactl backup` / `restore` |
 | First administrator | issue a setup code for a new school (spec 01), or recover an administrator |

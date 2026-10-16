@@ -9,9 +9,9 @@
 # django does them itself (spec 05): the sign-in rate limit, and telling
 # browsers never to keep a copy of sign-in replies.
 #
-# ${SCHOOL_HOST} is filled in by eactl for each school. Whether the school is
-# private (the Tailscale-only guard) or public (HTTPS for its address) is added
-# by one of the components in ../components/.
+# ${SCHOOL_HOST} is filled in by eactl for each school. Every school is public,
+# over HTTPS. (A new school is protected by its one-time setup code until it's
+# claimed; a school can be suspended, which switches it off, in spec 13.)
 
 apiVersion: networking.k8s.io/v1
 # Ingress: routing rules for the reverse proxy (the protection call in the
@@ -19,9 +19,20 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: school
+  annotations:
+    # Ask cert-manager for an HTTPS certificate from Let's Encrypt (see
+    # k8s/cluster/letsencrypt-issuers.yaml). It's only issued once the address
+    # leads to this server: its DNS record, and its line in the hairpin rules.
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   # Which reverse proxy follows these rules: Traefik, the one k3s provides.
   ingressClassName: traefik
+  # Serve this address over HTTPS, with the certificate cert-manager keeps (and
+  # renews) in the Secret school-tls.
+  tls:
+    - hosts:
+        - ${SCHOOL_HOST}
+      secretName: school-tls
   rules:
     # Only requests addressed to this school's own name. Every school has its
     # own name, so one Traefik can serve many schools side by side.

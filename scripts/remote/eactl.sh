@@ -7,9 +7,10 @@
 #   eactl check            is this server's cluster answering?
 #   eactl apply-cluster    put the server-wide add-ons (k8s/cluster) on the cluster
 #   eactl apply-db         put the shared database (k8s/db) on the cluster
-#   eactl new "Name"       make a new school (starts private)
-#   eactl list             every school: name, short name, access, release, address
-#   eactl apply-school S   rebuild school S exactly as the template says
+#   eactl new "Name"       make a new school (public, HTTPS)
+#   eactl list             every school: name, short name, status, release, address
+#   eactl update "Name"    bring a school up to date; --all for every school;
+#                          --version 0.3.2 to move to a release (or back to one)
 #
 # Why it exists: the remote service is many schools on one server. Every chore
 # (make a school, list them, apply the add-ons) is a few kubectl commands that
@@ -36,7 +37,7 @@ CONFIG="${EACTL_CONFIG:-/etc/edgeathlete/eactl.env}"
 
 # The command list is the one at the top of this file: every "#   eactl ..." line.
 usage() {
-    grep '^#   eactl ' "$0" | sed 's/^#   //'
+    sed -n '/^#   eactl help/,/^#$/p' "$0" | sed 's/^#   //; /^#$/d'
 }
 
 load_config() {
@@ -93,9 +94,10 @@ render() {
 # A school is known by its short name (demo-u-u3fyig), which never changes. Its
 # namespace is ea-<short name>, and the namespace itself remembers everything
 # else about it:
-#   labels       ea/school=<short name>  ea/access=private|public  ea/version=v0.3.1
+#   labels       ea/school=<short name>  ea/version=v0.3.1  ea/status=active
 #   annotations  ea/display-name="Demo U"  ea/address=<its web address>
-# (Labels can't hold spaces, so the display name is an annotation.)
+# (Labels can't hold spaces, so the display name is an annotation.) Every school
+# is public over HTTPS; "suspended" (switched off, data kept) comes in spec 13.
 
 APP_IMAGES="ghcr.io/devi-walto/edge-athlete-django ghcr.io/devi-walto/edge-athlete-react"
 
@@ -103,37 +105,42 @@ APP_IMAGES="ghcr.io/devi-walto/edge-athlete-django ghcr.io/devi-walto/edge-athle
 school_info() {
     local ns="ea-$1"
     case "$2" in
-        access|version) kubectl get namespace "$ns" -o "jsonpath={.metadata.labels.ea/$2}" ;;
+        version|status) kubectl get namespace "$ns" -o "jsonpath={.metadata.labels.ea/$2}" ;;
         address|display-name)
             kubectl get namespace "$ns" -o "jsonpath={.metadata.annotations.ea/$2}" ;;
     esac
 }
 
-# require_school <short name> — stop with a plain message if there's no such school.
-require_school() {
-    if ! kubectl get namespace "ea-$1" -o name >/dev/null 2>&1; then
-        echo "[!] no school called \"$1\". See: eactl list"
-        exit 1
+# find_school <display name or short name> — prints the school's short name.
+# A display name is matched whole, ignoring capitals ("demo u" finds "Demo U").
+# Stops with a plain message if there's no match, or if two schools share that
+# name (then their short names are listed, to use instead).
+find_school() {
+    local wanted="$1" matches
+    if kubectl get namespace "ea-$wanted" -o name >/dev/null 2>&1; then
+        echo "$wanted"; return 0
     fi
+    matches="$(kubectl get namespaces -l ea/school -o go-template='{{range .items}}{{index .metadata.labels "ea/school"}}	{{index .metadata.annotations "ea/display-name"}}
+{{end}}' | awk -F'\t' -v w="$wanted" 'tolower($2) == tolower(w) { print $1 }')"
+    case "$(printf '%s\n' "$matches" | grep -c .)" in
+        1) echo "$matches" ;;
+        0) echo "[!] no school called \"$wanted\". See: eactl list" >&2; return 1 ;;
+        *) echo "[!] more than one school is called \"$wanted\". Use its short name:" >&2
+           printf '      %s\n' $matches >&2; return 1 ;;
+    esac
 }
 
-# build_school <short name> — the school's full YAML: the base template, plus the
-# private or https component, at the school's release, in its namespace.
+# build_school <short name> — the school's full YAML: the base template at the
+# school's release, in its namespace, for its address.
 #
 # Kustomize builds from a folder, so this writes a tiny one in a temporary
-# folder (one file: "the base, plus this component, at this release") and points
+# folder (one file: "the base, in this namespace, at this release") and points
 # it back at the repo. Kustomize only accepts relative paths for that, so they're
 # worked out from the temporary folder's real location.
 build_school() {
-    local short="$1" ns="ea-$1" access version address component tmp img
-    access="$(school_info "$short" access)"
+    local short="$1" ns="ea-$1" version address tmp img
     version="$(school_info "$short" version)"
     address="$(school_info "$short" address)"
-    case "$access" in
-        private) component=private ;;
-        public)  component=https ;;
-        *) echo "[!] $short has no ea/access label (private or public)" >&2; return 1 ;;
-    esac
     tmp="$(mktemp -d)" && tmp="$(cd "$tmp" && pwd -P)"
     {
         echo "apiVersion: kustomize.config.k8s.io/v1beta1"
@@ -141,8 +148,6 @@ build_school() {
         echo "namespace: $ns"
         echo "resources:"
         echo "  - $(relpath "$REPO_DIR/k8s/app/base" "$tmp")"
-        echo "components:"
-        echo "  - $(relpath "$REPO_DIR/k8s/app/components/$component" "$tmp")"
         echo "images:"
         for img in $APP_IMAGES; do
             echo "  - name: $img"
@@ -150,10 +155,43 @@ build_school() {
         done
     } > "$tmp/kustomization.yaml"
     kubectl kustomize --load-restrictor=LoadRestrictionsNone "$tmp" \
-        | NAMESPACE="$ns" SCHOOL_HOST="$address" envsubst '${NAMESPACE} ${SCHOOL_HOST}'
+        | SCHOOL_HOST="$address" envsubst '${SCHOOL_HOST}'
     local rc=$?
     rm -f "$tmp/kustomization.yaml" && rmdir "$tmp"
     return $rc
+}
+
+# update_school <short name> — show what would change, ask, apply, and wait until
+# every part is ready. Used by `eactl update` and `eactl new`.
+# Pass "--yes" second to skip the question (eactl new has already asked).
+update_school() {
+    local short="$1" ns="ea-$1" school answer
+    school="$(build_school "$short")" || return 1
+    CHANGES=0
+    if [ "${2:-}" != --yes ]; then
+        preview "$(school_info "$short" display-name) ($short) at $(school_info "$short" version)" "$school" || return 1
+        # Left over from before every school was public: the old Tailscale-only
+        # guard. (A preview only shows what's in the new build, so it's listed.)
+        if kubectl -n "$ns" get middleware private-only >/dev/null 2>&1; then
+            echo "    and remove: the old Tailscale-only guard, no longer used"
+            CHANGES=1
+        fi
+        echo
+        if [ "$CHANGES" = 0 ]; then
+            echo "✓ $short already matches. Nothing to do."
+            return 0
+        fi
+        read -r -p "Apply these changes to $short? (y/N) " answer
+        [ "$answer" = y ] || { echo "nothing applied to $short"; return 0; }
+    fi
+    kube -n "$ns" apply -f - <<< "$school" || { echo "[!] $short did not apply"; return 1; }
+    kube -n "$ns" delete middleware private-only --ignore-not-found >/dev/null 2>&1
+    echo "==> waiting for every part of $short to be ready"
+    for d in mosquitto django react mqtt-listener monitoring-publisher; do
+        kube -n "$ns" rollout status "deployment/$d" --timeout=300s || {
+            echo "[!] $d is not ready. Look: kubectl -n $ns get pods"; return 1; }
+    done
+    echo "✓ $short is up to date: $(school_info "$short" address), $(school_info "$short" version)"
 }
 
 # short_name_from "Demo U" — demo-u-k7m2qx: the display name made safe (lowercase
@@ -393,7 +431,8 @@ apply-cluster)
 new)
     # Make a new school on this server: its own namespace, its own database and
     # database login in the shared Postgres, its settings and secrets, and the app
-    # from the template. Every new school starts PRIVATE (Tailscale only).
+    # from the template. It's public over HTTPS straight away; until someone claims
+    # it with its one-time setup code, that's all anyone can do there.
     #   eactl new                                asks for the name
     #   eactl new "Demo U"                       the same, in one line
     #   eactl new "Demo U" --version v0.3.2      a different release than the others
@@ -446,14 +485,13 @@ name made from it can't."
     echo "    database       $db   (with a login of the same name)"
     echo "    address        $address"
     echo "    release        $version"
-    echo "    access         private (Tailscale only, until it goes public)"
     read -r -p "Make it? (y/N) " answer
     [ "$answer" = y ] || { echo "nothing made"; exit 0; }
 
     echo
     echo "==> its namespace, which also records everything about it"
     kube create namespace "$ns" || exit 1
-    kube label namespace "$ns" ea/school="$short" ea/access=private ea/version="$version"
+    kube label namespace "$ns" ea/school="$short" ea/version="$version" ea/status=active
     kube annotate namespace "$ns" ea/display-name="$name" ea/address="$address"
 
     echo "==> its database and login in the shared Postgres"
@@ -484,18 +522,16 @@ name made from it can't."
         | kubectl -n "$ns" apply -f - || exit 1
 
     echo "==> the app, from the template"
-    school="$(build_school "$short")" || exit 1
-    kube -n "$ns" apply -f - <<< "$school" || exit 1
-    for d in mosquitto django react mqtt-listener monitoring-publisher; do
-        kube -n "$ns" rollout status "deployment/$d" --timeout=300s || {
-            echo "[!] $d is not ready. Look: kubectl -n $ns get pods"; exit 1; }
-    done
+    update_school "$short" --yes || exit 1
 
     echo
-    echo "✓ made $short (\"$name\"), private, at $address"
+    echo "✓ made $short (\"$name\") at https://$address"
     echo
     echo "Next:"
-    echo "  - open it over Tailscale; to claim it, issue a setup code:"
+    echo "  - its address needs a DNS record and a line in the hairpin rules before its"
+    echo "    certificate can be issued (scripts/remote/README.md), unless the domain"
+    echo "    has a wildcard record"
+    echo "  - to claim it, issue a setup code and send it to the school:"
     echo "      kubectl -n $ns exec deploy/django -- python manage.py setup_code"
     echo "  - see every school: eactl list"
     ;;
@@ -503,52 +539,51 @@ name made from it can't."
 list)
     # Every school on this server, from what each namespace remembers.
     require_cluster
-    printf '%-24s %-26s %-8s %-10s %s\n' "NAME" "SHORT NAME" "ACCESS" "RELEASE" "ADDRESS"
-    kubectl get namespaces -l ea/school -o go-template='{{range .items}}{{index .metadata.annotations "ea/display-name"}}	{{index .metadata.labels "ea/school"}}	{{index .metadata.labels "ea/access"}}	{{index .metadata.labels "ea/version"}}	{{index .metadata.annotations "ea/address"}}
-{{end}}' | while IFS=$'\t' read -r dn sn ac ve ad; do
-        printf '%-24s %-26s %-8s %-10s %s\n' "$dn" "$sn" "$ac" "$ve" "$ad"
+    printf '%-24s %-26s %-10s %-10s %s\n' "NAME" "SHORT NAME" "STATUS" "RELEASE" "ADDRESS"
+    kubectl get namespaces -l ea/school -o go-template='{{range .items}}{{index .metadata.annotations "ea/display-name"}}	{{index .metadata.labels "ea/school"}}	{{index .metadata.labels "ea/status"}}	{{index .metadata.labels "ea/version"}}	{{index .metadata.annotations "ea/address"}}
+{{end}}' | while IFS=$'\t' read -r dn sn st ve ad; do
+        printf '%-24s %-26s %-10s %-10s %s\n' "$dn" "$sn" "$st" "$ve" "$ad"
     done
     ;;
 
-apply-school)
-    # Rebuild one school exactly as its namespace says it should be: used after
-    # a change to the template, a release, or going public.
-    short="${1:-}"
-    [ -n "$short" ] || { echo "usage: eactl apply-school <short name>   (see: eactl list)"; exit 1; }
-    require_cluster
-    require_school "$short"
-    ns="ea-$short"
-
-    school="$(build_school "$short")" || exit 1
-    CHANGES=0
-    preview "$(school_info "$short" display-name) ($short)" "$school" || exit 1
-    # The guard from when it was private, if it's public now. (A preview only
-    # shows what's in the new build, so leftovers are listed here.)
-    if [ "$(school_info "$short" access)" = public ] \
-        && kubectl -n "$ns" get middleware private-only >/dev/null 2>&1; then
-        echo "    and remove: the Tailscale-only guard (the school is public)"
-        CHANGES=1
-    fi
-    echo
-    if [ "$CHANGES" = 0 ]; then
-        echo "✓ $short already matches the template. Nothing to do."
-        exit 0
-    fi
-    read -r -p "Apply these changes? (y/N) " answer
-    [ "$answer" = y ] || { echo "nothing applied"; exit 0; }
-
-    echo
-    kube -n "$ns" apply -f - <<< "$school" || { echo "[!] $short did not apply"; exit 1; }
-    if [ "$(school_info "$short" access)" = public ]; then
-        kube -n "$ns" delete middleware private-only --ignore-not-found
-    fi
-    echo "==> waiting for every part to be ready"
-    for d in mosquitto django react mqtt-listener monitoring-publisher; do
-        kube -n "$ns" rollout status "deployment/$d" --timeout=240s || {
-            echo "[!] $d is not ready. Look: kubectl -n $ns get pods"; exit 1; }
+update)
+    # Bring schools up to date with the template, or move them to a release.
+    #   eactl update "Demo U"                    one school, at its current release
+    #   eactl update --all                        every school
+    #   eactl update --all --version 0.3.2        every school to a release (a deploy)
+    #   eactl update "Demo U" --version 0.3.1     one school to a release (a rollback)
+    # Going back is only safe if the newer release didn't change the database;
+    # otherwise restore a backup instead.
+    target="" version="" all=no
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --all) all=yes; shift ;;
+            --version) version="${2:-}"; shift 2 ;;
+            --*) echo "unknown option $1"; exit 1 ;;
+            *) target="$1"; shift ;;
+        esac
     done
-    echo
-    echo "✓ $short is up to date: $(school_info "$short" address)"
+    if [ "$all" = no ] && [ -z "$target" ]; then
+        echo 'usage: eactl update "School Name" | --all   [--version 0.3.2]'
+        exit 1
+    fi
+    require_cluster
+    # "0.3.1" and "v0.3.1" mean the same release.
+    [ -n "$version" ] && version="v${version#v}"
+
+    if [ "$all" = yes ]; then
+        schools="$(kubectl get namespaces -l ea/school -o jsonpath='{range .items[*]}{.metadata.labels.ea/school}{" "}{end}')"
+    else
+        schools="$(find_school "$target")" || exit 1
+    fi
+    for short in $schools; do
+        if [ -n "$version" ] && [ "$(school_info "$short" version)" != "$version" ]; then
+            echo "==> $short: release $(school_info "$short" version) -> $version"
+            kube label namespace "ea-$short" ea/version="$version" --overwrite >/dev/null
+        fi
+        update_school "$short" || exit 1
+        echo
+    done
     ;;
 
 apply-db)
