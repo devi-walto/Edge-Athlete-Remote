@@ -12,6 +12,7 @@
 import { useEffect, useState } from 'react'
 
 let answer = null   // 'local' | 'remote' once known
+let name = null     // the installation's name ("Demo U"), when the server has one
 let asking = null   // the one request in flight, shared by everyone who asks
 
 export function getDeployment() {
@@ -22,10 +23,23 @@ export function getDeployment() {
       .catch(() => ({}))
       .then((info) => {
         answer = info.deployment === 'remote' ? 'remote' : 'local'
+        name = typeof info.name === 'string' && info.name.trim() ? info.name.trim() : null
         return answer
       })
   }
   return asking
+}
+
+/** The installation's name, or null (a local install, or not known yet). */
+export function useInstallationName() {
+  const [value, setValue] = useState(name)
+  useEffect(() => {
+    if (answer) return undefined
+    let cancelled = false
+    getDeployment().then(() => { if (!cancelled) setValue(name) })
+    return () => { cancelled = true }
+  }, [])
+  return value
 }
 
 /** 'local' or 'remote', or null on the first render before the server has answered. */
@@ -43,5 +57,6 @@ export default function useDeployment() {
 /** Tests only: forget the answer so the next ask goes to the server again. */
 export function forgetDeploymentForTests() {
   answer = null
+  name = null
   asking = null
 }

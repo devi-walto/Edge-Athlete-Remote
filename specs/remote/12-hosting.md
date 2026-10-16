@@ -304,6 +304,15 @@ image and printed `v0.3.1-test.1`; a pod without it got `ImagePullBackOff`.
 - [ ] After `eactl apply-cluster`, its preview shows no difference, and no secret
       value appears anywhere in the repo or its history.
 
+**Demo go-live, 2026-10-16** (ahead of the full phase, for a demo). Demo U
+(`demo-u-u3fyig`) was created by hand at `test.<domain>` (the practice site's route was
+retired and backed up), with HTTPS, in remote mode, and made public. **`v0.3.1` was tagged
+on `feature-hosting`, not on `main`**, for the setup screen's "Welcome to Demo U" and its
+"ask support" message; `main` catches up at the next merge. Still to fold into the repo:
+`eactl new` doing those steps, the template's HTTPS lines, `apply-db` closing the
+maintenance databases to school logins (`REVOKE CONNECT … FROM PUBLIC` on `postgres` and
+`template1`, done by hand), invented seed names, and Demo U's own address.
+
 **Stop. Devin reviews.**
 
 ## Phase 2 — `eactl`
