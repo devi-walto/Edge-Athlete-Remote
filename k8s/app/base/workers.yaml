@@ -1,0 +1,115 @@
+# workers.yaml — one school's two background workers. They have no web page;
+# they move messages between the broker and the database, one in each direction.
+#
+#   mqtt-listener          INTO the database. Listens to the broker for each
+#                          sensor's "I'm alive" message (a pulse) and records it,
+#                          so the coach can see which sensors are connected.
+#
+#   monitoring-publisher   OUT of the database. Whenever something in the room
+#                          changes, the app writes a note in the MonitoringEvent
+#                          table ("something changed"). This worker sends those
+#                          notes out over the broker, in order, so the coach's
+#                          room-monitoring screen (and every other screen)
+#                          refreshes. Think of an outbox tray: a note leaves the
+#                          tray only once it's actually been delivered, so if the
+#                          broker is down, the notes wait instead of being lost.
+#                          (Django also sends quick live updates to rack tablets
+#                          itself; this worker is only the never-lose-it kind.
+#                          See django/event_handler/realtime/broadcast/publisher.py.)
+#
+# Both are the django image started with a different command, with the same
+# names as on a local install. Neither sets up the database tables: django's
+# setup step does that (see django.yaml).
+
+apiVersion: apps/v1
+# Deployment: a position group with a set count. One listener, kept running.
+kind: Deployment
+metadata:
+  name: mqtt-listener
+spec:
+  # Exactly one. Two listeners would both hear every pulse and record it twice.
+  replicas: 1
+  # Stop the old one before starting the new one, so there are never two
+  # listening at once, even for a moment during an update.
+  strategy:
+    type: Recreate
+  # The jersey patch: which pods belong to this group.
+  selector:
+    matchLabels:
+      app: mqtt-listener
+  template:
+    metadata:
+      labels:
+        app: mqtt-listener
+    spec:
+      # The key for downloading the private image (see django.yaml).
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: mqtt-listener
+          # Filled in by eactl with the same release as the school's django.
+          image: ghcr.io/devi-walto/edge-athlete-django:set-by-eactl
+          command: ["python", "manage.py", "run_mqtt_subscriber"]
+          env:
+            # Print each log line straight away instead of holding it back, so
+            # `kubectl logs` shows what's happening as it happens.
+            - name: PYTHONUNBUFFERED
+              value: "1"
+          # The school's settings: where the broker and database are, and the
+          # database login. The same as django's.
+          envFrom:
+            - configMapRef:
+                name: school-settings
+            - secretRef:
+                name: school-secrets
+          # No health check: it has no web page to ask. If it crashes (the
+          # broker restarts, say), Kubernetes simply starts it again, which is
+          # what a local install's "restart: unless-stopped" does.
+          resources:
+            requests:
+              cpu: 20m
+              memory: 96Mi
+            limits:
+              memory: 256Mi
+
+---
+apiVersion: apps/v1
+# Deployment: one publisher, kept running.
+kind: Deployment
+metadata:
+  name: monitoring-publisher
+spec:
+  # Exactly one, so each note is sent once. (The worker also checks this itself:
+  # it takes a lock in the school's database and refuses to run if another copy
+  # already holds it.)
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: monitoring-publisher
+  template:
+    metadata:
+      labels:
+        app: monitoring-publisher
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: monitoring-publisher
+          image: ghcr.io/devi-walto/edge-athlete-django:set-by-eactl
+          command: ["python", "manage.py", "publish_monitoring_events"]
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+          envFrom:
+            - configMapRef:
+                name: school-settings
+            - secretRef:
+                name: school-secrets
+          resources:
+            requests:
+              cpu: 20m
+              memory: 96Mi
+            limits:
+              memory: 256Mi

@@ -1,0 +1,77 @@
+# ingress.yaml — which requests go where, for one school's address.
+#
+# This is the same job nginx/nginx.conf does on a local install: look at the
+# path of each request and send it to django or to react. Here the reverse proxy
+# is Traefik (already running on the server, shared by every school), and this
+# file is the routing it follows for this school.
+#
+# Two things nginx.conf does that are NOT repeated here, because in remote mode
+# django does them itself (spec 05): the sign-in rate limit, and telling
+# browsers never to keep a copy of sign-in replies.
+#
+# ${SCHOOL_HOST} and ${NAMESPACE} are filled in by `eactl new` for each school.
+
+apiVersion: networking.k8s.io/v1
+# Ingress: routing rules for the reverse proxy (the protection call in the
+# football picture): "requests for this address and this path go to this Service."
+kind: Ingress
+metadata:
+  name: school
+  annotations:
+    # Run every request through the guard in private-only.yaml first, so only
+    # Tailscale and the home network get in while the school is in testing.
+    # Traefik names it <namespace>-<name>@kubernetescrd: "the Middleware object
+    # called private-only, in this school's namespace."
+    traefik.ingress.kubernetes.io/router.middlewares: ${NAMESPACE}-private-only@kubernetescrd
+spec:
+  # Which reverse proxy follows these rules: Traefik, the one k3s provides.
+  ingressClassName: traefik
+  rules:
+    # Only requests addressed to this school's own name. Every school has its
+    # own name, so one Traefik can serve many schools side by side.
+    - host: ${SCHOOL_HOST}
+      http:
+        # Traefik picks the LONGEST matching path, so /api/... goes to django
+        # even though "/" (react) would match everything. Same rules as
+        # nginx.conf.
+        paths:
+          # The app's API: everything the screens ask the server for.
+          - path: /api/
+            pathType: Prefix
+            backend:
+              service:
+                name: django
+                port:
+                  number: 8000
+          # Django's own admin pages.
+          - path: /admin/
+            pathType: Prefix
+            backend:
+              service:
+                name: django
+                port:
+                  number: 8000
+          # The stylesheets and scripts those admin pages (and the API's
+          # browsable pages) load. Django serves these itself.
+          - path: /static/admin/
+            pathType: Prefix
+            backend:
+              service:
+                name: django
+                port:
+                  number: 8000
+          - path: /static/rest_framework/
+            pathType: Prefix
+            backend:
+              service:
+                name: django
+                port:
+                  number: 8000
+          # Everything else: the screens themselves.
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: react
+                port:
+                  number: 80

@@ -114,12 +114,27 @@ require_cluster() {
 # ask VAR "question" "example" — asks. If there is a saved answer it shows in
 # [brackets] and Enter keeps it; otherwise the example is shown and an answer
 # is required.
+#
+# ask VAR "question" "example" "explanation" ["found"]
+#   explanation: printed above the question, so anyone knows what is being asked
+#                for and how to find it.
+#   found:       an answer eactl worked out itself on this server, offered when
+#                there is no saved answer yet.
 ask() {
-    local var="$1" question="$2" example="$3" current answer
+    local var="$1" question="$2" example="$3" explanation="$4" found="${5:-}"
+    local current answer label=""
     current="${!var:-}"
+    if [ -n "$current" ]; then
+        label="saved: $current"
+    elif [ -n "$found" ]; then
+        current="$found"
+        label="found on this server: $found"
+    fi
+    echo
+    printf '%s\n' "$explanation" | sed 's/^/    /'
     while true; do
-        if [ -n "$current" ]; then
-            read -r -p "$question [saved: $current]: " answer
+        if [ -n "$label" ]; then
+            read -r -p "$question [$label]: " answer
         else
             read -r -p "$question (e.g. $example): " answer
         fi
@@ -128,6 +143,14 @@ ask() {
         echo "    an answer is needed"
     done
     printf -v "$var" '%s' "$answer"
+}
+
+# The home network this server is on, worked out from its own routes: the line
+# for its network card, skipping the cluster's, Docker's and Tailscale's own.
+# Prints e.g. 192.168.1.0/24, or nothing if it can't tell.
+find_home_range() {
+    ip -4 route show scope link 2>/dev/null \
+        | awk '$2 == "dev" && $3 !~ /^(cni|flannel|docker|veth|tailscale|lo)/ { print $1; exit }'
 }
 
 CMD="${1:-help}"
@@ -145,9 +168,32 @@ init)
         echo "    Your saved answers are shown in [brackets]."
         echo "    Press Enter to keep one, or type a new answer to replace it."
     fi
-    ask DOMAIN     "Type your domain"                            "example.com"
-    ask ACME_EMAIL "Type an email for certificate warnings"      "you@example.com"
-    ask SUBDOMAINS "Type your subdomains, separated by spaces"   "test demo"
+    ask DOMAIN "Type your domain" "example.com" \
+"The domain this server's sites live under: the one you bought from your domain
+provider (Porkbun today). Just the domain, with nothing in front of it."
+
+    ask ACME_EMAIL "Type an email for certificate warnings" "you@example.com" \
+"Let's Encrypt gives this server its free HTTPS certificates. It emails this
+address only if a certificate is close to expiring and hasn't renewed itself.
+Use an address you actually read."
+
+    ask SUBDOMAINS "Type your subdomains, separated by spaces" "test demo" \
+"The names in front of your domain that should lead to this server: \"test\"
+for test.example.com. The DNS updater keeps each one pointed at this server,
+and each needs its first A record made by hand (scripts/remote/README.md)."
+
+    ask HOME_RANGE "Type your home network's range" "192.168.1.0/24" \
+"While a school is still being tested, only your Tailscale devices and devices
+on this server's own home network can open it. This is that home network's
+range of addresses. To find it yourself, run on this server:
+    ip -4 route show scope link
+and take the first part of the line for its network card (not cni0, flannel,
+docker or tailscale), e.g. 192.168.1.0/24." \
+        "$(find_home_range)"
+    if ! [[ "$HOME_RANGE" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+$ ]]; then
+        echo "[!] \"$HOME_RANGE\" doesn't look like a range (e.g. 192.168.1.0/24). Run eactl init again."
+        exit 1
+    fi
 
     # Write the answers to a scratch file first, then put it in place with sudo
     # (only root can write in /etc). %q wraps each answer in quotes so it reads
@@ -158,6 +204,7 @@ init)
         printf 'DOMAIN=%q\n'     "$DOMAIN"
         printf 'ACME_EMAIL=%q\n' "$ACME_EMAIL"
         printf 'SUBDOMAINS=%q\n' "$SUBDOMAINS"
+        printf 'HOME_RANGE=%q\n' "$HOME_RANGE"
     } > "$TMP"
     # Owned by root, readable by your group, by nobody else (640).
     sudo mkdir -p "$(dirname "$CONFIG")" \

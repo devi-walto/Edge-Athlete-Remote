@@ -1,0 +1,118 @@
+# mosquitto.yaml — one school's message broker (MQTT).
+#
+# Why a school needs one: sensors and screens don't talk to each other directly.
+# A sensor sends each rep to the broker, and the broker passes it on to whoever
+# is listening (the rack screen, django's listener). Every school gets its own
+# broker, so one school's messages can never reach another school.
+#
+# Same broker and same settings file as a local install: the repo's
+# mosquitto/mosquitto.conf, loaded in by kustomization.yaml.
+
+apiVersion: v1
+# PersistentVolumeClaim: a locker ticket. Why the broker needs a locker: when a
+# rack screen blinks offline, the broker holds that screen's reps until it comes
+# back. Keeping them on disk means a broker restart doesn't lose them either.
+kind: PersistentVolumeClaim
+metadata:
+  name: mosquitto-data
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi   # a label, not a limit (see k8s/db/postgres/storage.yaml)
+
+---
+apiVersion: apps/v1
+# Deployment: a position group with a set count. Kubernetes keeps one broker
+# running and starts a new one if it stops.
+kind: Deployment
+metadata:
+  name: mosquitto
+spec:
+  # Exactly one. Two brokers would split the school's messages between them, so
+  # a screen connected to one would miss reps sent to the other.
+  replicas: 1
+  # When updating, stop the old broker before starting the new one, so the two
+  # never use the locker at the same time.
+  strategy:
+    type: Recreate
+  # The jersey patch: which pods belong to this group.
+  selector:
+    matchLabels:
+      app: mosquitto
+  template:
+    metadata:
+      labels:
+        app: mosquitto
+    spec:
+      containers:
+        - name: mosquitto
+          # Pinned, so a rebuild months from now gets exactly this broker.
+          image: eclipse-mosquitto:2.0.22
+          ports:
+            # Plain MQTT, for programs: django's listener and publisher (and,
+            # on a local install, the sensors).
+            - containerPort: 1883
+            # MQTT wrapped in WebSockets, for screens in a browser. A web page
+            # isn't allowed to use plain MQTT, only web-style connections.
+            # Online, Traefik adds the encryption (wss) in front of this.
+            - containerPort: 9001
+          volumeMounts:
+            # The settings file, placed exactly where the broker looks for it.
+            # subPath puts in just that one file and leaves the rest of the
+            # folder as the image ships it.
+            - name: config
+              mountPath: /mosquitto/config/mosquitto.conf
+              subPath: mosquitto.conf
+            # The locker, where mosquitto.conf says to keep held messages.
+            - name: data
+              mountPath: /mosquitto/data
+          # "Ready?" Is the broker accepting connections yet? Until it is,
+          # nothing is sent its way.
+          readinessProbe:
+            tcpSocket:
+              port: 1883
+            periodSeconds: 5
+          # "Still alive?" The same question, asked less often. Three misses in
+          # a row and it's restarted.
+          livenessProbe:
+            tcpSocket:
+              port: 1883
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          # A broker for one gym's racks needs very little. The limit stops a
+          # runaway from taking memory the rest of the server needs.
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+      volumes:
+        - name: config
+          configMap:
+            name: mosquitto-config   # made by kustomization.yaml from the repo's file
+        - name: data
+          persistentVolumeClaim:
+            claimName: mosquitto-data
+
+---
+apiVersion: v1
+# Service: a position name. Inside this school, "mosquitto" always reaches the
+# broker, whatever its pod's address is today. It's the same name the app uses
+# on a local install (MQTT_HOST=mosquitto), so the app needs no changes.
+kind: Service
+metadata:
+  name: mosquitto
+spec:
+  # Inside the server only. Phase 4 lets browsers reach 9001 through the site's
+  # own address; sensors over the internet come with the sensors spec.
+  type: ClusterIP
+  selector:
+    app: mosquitto
+  ports:
+    - name: mqtt
+      port: 1883
+    - name: websockets
+      port: 9001

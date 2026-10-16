@@ -1,0 +1,133 @@
+# django.yaml — one school's app server: the API, the admin pages, and every
+# rule about athletes, sessions and sets.
+#
+# The same image a local install builds, downloaded from the registry. What
+# changes is HOW it starts. A local install's start command does three things
+# in a row: set up the database tables (migrate), clear any racks left stuck by a
+# reboot (recover_racks), then start the web server. Here the first two move into
+# a separate step that must finish before the web server starts. The image itself
+# is unchanged, so a local install still starts the old way.
+
+apiVersion: apps/v1
+# Deployment: a position group with a set count. Kubernetes keeps one app server
+# running and starts a replacement if it stops.
+kind: Deployment
+metadata:
+  name: django
+spec:
+  # One copy. Its web server already runs 3 workers inside it, plenty for one
+  # school. One copy also means only one can ever be setting up the database
+  # tables at a time (see initContainers below).
+  replicas: 1
+  # On an update, start the new copy first and only stop the old one once the
+  # new one is ready, so the school's site never goes dark. (Unlike Postgres and
+  # the broker, two app servers side by side for a moment is harmless.)
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1          # one extra copy allowed during an update
+      maxUnavailable: 0    # never fewer than one ready copy
+  # The jersey patch: which pods belong to this group.
+  selector:
+    matchLabels:
+      app: django
+  template:
+    metadata:
+      labels:
+        app: django
+    spec:
+      # The key for downloading private images from GitHub's registry. Each
+      # school gets its own copy of it (made by `eactl new`).
+      imagePullSecrets:
+        - name: ghcr-pull
+
+      # Steps that must finish, in order, before the app server starts. If one
+      # fails, the app server never starts with a half-ready database, and
+      # Kubernetes keeps retrying.
+      initContainers:
+        - name: prepare-database
+          # The release is filled in by eactl: normally the same release for
+          # every school, but it can differ (a new release tried on the demo
+          # first, or one school rolled back on its own).
+          image: ghcr.io/devi-walto/edge-athlete-django:set-by-eactl
+          # migrate:       create or update the school's database tables.
+          # recover_racks: end any set left open by a restart and reset the
+          #                racks (see management/commands/recover_racks.py).
+          # *** Online, this also runs when a new version is deployed, so a
+          # deploy during a training session ends that school's open sets.
+          # Deploy outside training hours until that's changed.
+          command: ["sh", "-c", "python manage.py migrate && python manage.py recover_racks"]
+          envFrom:
+            - configMapRef:
+                name: school-settings
+            - secretRef:
+                name: school-secrets
+
+      containers:
+        - name: django
+          image: ghcr.io/devi-walto/edge-athlete-django:set-by-eactl
+          # The same web server and settings as the image's own start command,
+          # minus migrate and recover_racks, which ran above.
+          command:
+            - gunicorn
+            - basestation_config.wsgi:application
+            - --bind=0.0.0.0:8000
+            - --workers=3              # 3 requests handled at once
+            - --timeout=60             # a request stuck for 60s gets its worker replaced
+            - --graceful-timeout=30    # on shutdown, give requests 30s to finish
+            - --access-logfile=-       # requests show in `kubectl logs`
+            - --error-logfile=-
+          ports:
+            - containerPort: 8000
+          # The school's settings, the same names a local install keeps in .env.
+          # school-settings: ordinary settings. school-secrets: passwords and
+          # keys. Both are made per school by `eactl new`.
+          envFrom:
+            - configMapRef:
+                name: school-settings
+            - secretRef:
+                name: school-secrets
+          # "Ready?" asks the app's own health page, which also checks the
+          # database. Until it says yes, no visitors are sent here.
+          # The Host header: django only answers names it's told to trust
+          # (ALLOWED_HOSTS), so the check says it's "localhost", which every
+          # school's settings include.
+          readinessProbe:
+            httpGet:
+              path: /api/health/
+              port: 8000
+              httpHeaders:
+                - name: Host
+                  value: localhost
+            periodSeconds: 10
+            timeoutSeconds: 5
+          # "Still alive?" only asks whether the web server answers at all, NOT
+          # the database. Otherwise a short Postgres hiccup would make every
+          # school's app server fail this and get restarted for nothing.
+          livenessProbe:
+            tcpSocket:
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          # Three web workers plus the app: a few hundred MB. The limit keeps
+          # one school from taking memory the other schools need.
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 768Mi
+
+---
+apiVersion: v1
+# Service: a position name. "django" always reaches the app server, the same
+# name nginx uses on a local install.
+kind: Service
+metadata:
+  name: django
+spec:
+  type: ClusterIP   # inside the server only; visitors come in through the Ingress
+  selector:
+    app: django
+  ports:
+    - port: 8000

@@ -213,18 +213,35 @@ image and printed `v0.3.1-test.1`; a pod without it got `ImagePullBackOff`.
   Its administrator password is the Secret `postgres-admin`, made by a written step.
   The server's layers: cluster add-ons (`apply-cluster`), the database (`apply-db`; the
   backup job joins it in Phase 5), then each school (`eactl new`).
-- `k8s/app/base/` (new), what **each school** runs, one subfolder per Compose service:
-  - **mosquitto**: the repo's own `mosquitto.conf` as a ConfigMap; a volume for its data.
-  - **django**: the image, **with migrations moved from the start command to an init
-    container** (a step Kubernetes runs once before the app starts), so two copies can
-    never migrate at once. `recover_racks` moves with it. The Dockerfile's own start
-    command is left as it is, so the gym box is unchanged.
-  - **mqtt-listener**, **monitoring-publisher**: the django image with their commands.
+- `k8s/app/base/` (new), what **each school** runs, one file per Compose service; the
+  Services keep the Compose names (`mosquitto`, `django`, `react`), so the app's settings
+  need no changes:
+  - **mosquitto**: Mosquitto 2.0.22, the repo's own `mosquitto.conf` as a ConfigMap
+    (generated from the file, so local and remote share one copy); a volume for the
+    messages it holds for an offline screen.
+  - **postgres alias**: an `ExternalName` Service called `postgres` pointing at the
+    shared Postgres, because `settings.py` names its database host `postgres`. No app
+    change.
+  - **django**: one copy, **with migrations moved from the start command to an init
+    container** (a step Kubernetes runs once before the app starts). `recover_racks`
+    moves with it. The Dockerfile's own start command is left as it is, so a local
+    install is unchanged. Ready = `/api/health/` (it checks the database); alive = the
+    port answers (so a database blip doesn't restart every school).
+  - **mqtt-listener**, **monitoring-publisher**: the django image with their commands,
+    one each, `Recreate`.
   - **react**: the image.
   - An **Ingress** that does what `nginx.conf` does: `/api/`, `/admin/` and the two
-    static paths to django, `/` to react. (The sign-in limit is already in the app when
-    remote: spec 05 Phase 3.)
-  - Health checks from today's `/api/health/`.
+    static paths to django, `/` to react, for the school's own host name. (The sign-in
+    limit and `no-store` are already in the app when remote: spec 05 Phase 3.)
+  - The **private-only guard**: a Traefik `ipAllowList` Middleware (Tailscale
+    `100.64.0.0/10` and the home range `eactl init` finds and asks for).
+  - Live updates in the browser connect to port 9001 directly, which isn't reachable
+    yet: they arrive in Phase 4 with the `wss` path. Pages, sign-in and data work now.
+- **Traefik keeps each visitor's real address** (found and fixed 2026-10-16,
+  `k8s/cluster/traefik-keep-visitor-address.yaml`): k3s's ServiceLB rewrote every
+  visitor's address, which breaks both the guard and the per-address sign-in limit.
+  Traefik now binds ports 80/443 itself and its Service is `ClusterIP`. See
+  `docs/remote/hosting.md`, "Keeping each visitor's real address".
 - **The first school is made with `eactl new`**, which: creates its namespace with the
   directory labels; creates its database and database login in the shared Postgres;
   writes its ConfigMap (from `.env.example`'s names, pointing at its own database);
@@ -264,7 +281,8 @@ image and printed `v0.3.1-test.1`; a pod without it got `ImagePullBackOff`.
       after the school's django pod and the shared postgres pod are deleted.
 - [ ] No domain, email or address of Devin's appears in the repo: `eactl.env` is
       ignored by git, and the committed files hold only placeholders.
-- [ ] Two django copies started together: migrations run once.
+- [ ] During an update, migrations run once, in the new django copy, before the old one
+      stops.
 - [ ] From outside Tailscale and the home network, the address answers nothing.
 - [ ] The rate limit on sign-in still returns `429`.
 - [ ] After `eactl apply-cluster`, its preview shows no difference, and no secret
@@ -427,7 +445,9 @@ the Dell.
   (AWS, Azure) ask for the key when the machine is made. Scripts start from a machine
   that already works and is reachable.
 - `infra/bootstrap.sh` (new): run once on that prepared machine. Installs the **same
-  pinned** k3s version as the Dell. Safe to run twice. Opens with a plain-language
+  pinned** k3s version as the Dell. Safe to run twice. On a cloud machine, installs k3s
+  with `--disable=servicelb` and uses the cloud's load balancer instead (see Phase 1's
+  visitor-address fix). Opens with a plain-language
   comment on why it exists. Written from what was done by hand on the Dell, not invented.
 - **A release bundle** (Devin, 2026-10-14): `release.yml` also attaches
   `eactl-<version>.tar.gz` (`scripts/remote/` and `k8s/`, nothing else) to each version
@@ -507,6 +527,7 @@ athlete login. Would become `eactl copy-db`.
 | A fork's pull request runs code on the Dell | Tests and builds run on GitHub's machines; the Dell runner deploys only, on tags only Devin can create; fork approval required |
 | The home connection or the Dell goes down before a live demo | Backups off the Dell; the rebuild rehearsal is timed; record the end-to-end demo on video early (Definition of Done #7 allows video) |
 | A new subdomain silently fails its certificate | The two-line rule (coredns-custom + DDNS) is in the hosting guide and in Phase 4's and 6's checklists |
+| A deploy during a training session ends that school's open sets (`recover_racks` runs in django's start-up step) | Deploy outside training hours; later, a setting that skips it online |
 | Time: this spec is large for four weeks | Phases 0–1 put the app on the cluster quickly by reusing the plumbing; 5 and 7 can shrink to a documented restore if time runs out; the database move is optional |
 
 ## Docs to update when done
