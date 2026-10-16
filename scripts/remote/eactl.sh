@@ -394,7 +394,8 @@ new)
     # Make a new school on this server: its own namespace, its own database and
     # database login in the shared Postgres, its settings and secrets, and the app
     # from the template. Every new school starts PRIVATE (Tailscale only).
-    #   eactl new "Demo U"                       the usual way
+    #   eactl new                                asks for the name
+    #   eactl new "Demo U"                       the same, in one line
     #   eactl new "Demo U" --version v0.3.2      a different release than the others
     #   eactl new "Demo U" --address x.y.com     an address other than the usual one
     name="" version="" address=""
@@ -406,9 +407,12 @@ new)
             *) name="$1"; shift ;;
         esac
     done
+    # No name given: ask for it, the way `eactl init` asks its questions.
     if [ -z "$name" ]; then
-        echo 'usage: eactl new "School Name" [--version v0.3.1] [--address name.example.com]'
-        exit 1
+        ask name "Type the school's name" "Lincoln High School" \
+"The school's name, as people will see it: on the sign-in screen and in
+eactl list. Spaces and capitals are fine. It can be changed later; the short
+name made from it can't."
     fi
     load_config
     require_cluster
