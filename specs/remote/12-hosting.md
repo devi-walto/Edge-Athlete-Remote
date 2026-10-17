@@ -308,6 +308,15 @@ image and printed `v0.3.1-test.1`; a pod without it got `ImagePullBackOff`.
 - [ ] After `eactl apply-cluster`, its preview shows no difference, and no secret
       value appears anywhere in the repo or its history.
 
+**Result, 2026-10-16.** `eactl new "Name"` makes a school end to end (namespace that
+records the school, database and login, settings and secrets, pull key, the app) and
+`eactl list` reads the namespaces; `eactl update` rebuilds a school with no differences
+from what's running. Tested with two schools side by side: each answers as itself, and
+one school's login gets `permission denied` on the other's database. Found and fixed on
+the way: k3s's ServiceLB rewrote every visitor's address (Traefik now binds 80/443);
+school logins could connect to Postgres's maintenance databases (closed by `apply-db`).
+Every school is public over HTTPS; the Tailscale-only stage was built and dropped.
+
 **Demo go-live, 2026-10-16** (ahead of the full phase, for a demo). Demo U
 (`demo-u-u3fyig`) was created by hand at `test.<domain>` (the practice site's route was
 retired and backed up), with HTTPS, in remote mode, and made public. **`v0.3.1` was tagged
@@ -340,10 +349,25 @@ prints the `kubectl` it runs.
 
 **Done when:**
 
-- [ ] Each command works on the server, against the real installation.
-- [ ] Each prints the underlying `kubectl` command before running it.
-- [ ] `restore` and anything else that deletes data asks for the installation name to be
+- [x] Each command works on the server, against the real installation.
+- [x] Each prints the underlying `kubectl` command before running it.
+- [x] `restore` and anything else that deletes data asks for the installation name to be
       typed again.
+
+**Result, 2026-10-17.** Commands: `status`, `logs` (including `setup`, django's start-up
+step), `shell`, `setup-code`, `make-admin`, `remove`, `backup`, `restore`, plus tab
+completion (commands, short names, log parts) installed by `init`. `secrets` was dropped:
+`new` makes a school's secrets. Safety copies live in
+`/var/lib/edgeathlete/snapshots/<short name>/`, each with a note of why it was taken.
+Tested by Devin on the Dell: `restore` put a school's database back to a copy taken
+before a setup code was issued, and the code was gone afterwards; the restored tables
+are owned by the school's login. Found and fixed: `remove` hung on deleting the
+namespace (an unfinished certificate request held it; now the app is switched off, the
+database dropped `WITH (FORCE)`, the request cancelled, then the namespace with a
+3-minute limit); `remove` and `restore` waited 2 minutes on cert-manager's helper pod
+(they now wait only for the school's own five parts). Not yet exercised: `make-admin`
+(no school has a claimed administrator to recover); it passes straight through to spec
+01's tested command.
 
 **Stop. Devin reviews.**
 
