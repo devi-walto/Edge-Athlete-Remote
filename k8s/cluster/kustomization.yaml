@@ -13,3 +13,4 @@ resources:
   - coredns-hairpin.yaml
   - ddns-updater.yaml
   - traefik-keep-visitor-address.yaml
+  - deployer.yaml

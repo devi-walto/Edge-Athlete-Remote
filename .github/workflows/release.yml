@@ -1,14 +1,15 @@
-# release.yml — turn a version tag into the app's images, stored in GitHub's registry.
+# release.yml — turn a version tag on main into the app's images, then deploy them.
 #
 # Why this file exists: Kubernetes never builds images; it runs images that already
-# exist in a registry. When Devin tags a release (v0.4.0, v0.4.1, ...), this builds
-# the django and react images from the SAME Dockerfiles a gym box uses, names each
-# one with the tag, and stores them in GitHub's container registry (ghcr.io), where
-# the cluster on the Dell can pull them. Deploying them is a later step (spec 12,
-# Phase 3); this file only builds and stores.
+# exist in a registry. When Devin tags a release on main (v0.4.0, v0.4.1, ...):
+#   1. images  (GitHub's machines): build the django and react images from the SAME
+#      Dockerfiles a local install uses, name them with the tag, and store them
+#      privately in GitHub's container registry (ghcr.io).
+#   2. deploy  (the runner on the server): move every school to that release with
+#      eactl, the demo school first (spec 12, Phase 3).
 #
-# This is a GitHub Actions file: GitHub reads it, not Docker or k3s. It runs on
-# GitHub's own machines, not the Dell (the repo is public), and only a tag starts it.
+# This is a GitHub Actions file: GitHub reads it, not Docker or k3s. Only a tag
+# starts it, and a tag that isn't on main is refused.
 
 name: Release images
 
@@ -66,3 +67,30 @@ jobs:
         run: |
           docker push "$REGISTRY/edge-athlete-django:$VERSION"
           docker push "$REGISTRY/edge-athlete-react:$VERSION"
+
+  deploy:
+    name: move every school to this release
+    needs: images            # only once both images are stored
+    # The runner on the server, which only does deploys (its label, given when it
+    # was registered). It reaches out to GitHub for this job; nothing is opened
+    # inward. Its cluster login can update schools and nothing else
+    # (k8s/cluster/deployer.yaml).
+    runs-on: [self-hosted, ea-deploy]
+    timeout-minutes: 30
+    env:
+      VERSION: ${{ github.ref_name }}
+    steps:
+      # This release's own eactl and templates, so a release deploys exactly what
+      # it contains.
+      - uses: actions/checkout@v4
+
+      # The demo school (labelled ea/canary=true) goes first; if it fails, no other
+      # school is touched. --yes: no questions; a release that would need database
+      # changes undone stops here and waits for a person.
+      - name: Update every school
+        run: ./scripts/remote/eactl.sh update --all --version "$VERSION" --yes
+
+      # Leave nothing from this repo on the server between deploys.
+      - name: Clean up
+        if: always()
+        run: find "$GITHUB_WORKSPACE" -mindepth 1 -delete

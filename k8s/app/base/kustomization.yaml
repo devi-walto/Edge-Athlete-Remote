@@ -19,6 +19,7 @@ resources:
   - workers.yaml
   - react.yaml
   - ingress.yaml
+  - deployer-access.yaml
 
 # The broker's settings, made from the repo's own mosquitto/mosquitto.conf, the
 # file a local install uses. One copy for local and remote, so they can't drift.

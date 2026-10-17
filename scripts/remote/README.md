@@ -117,6 +117,81 @@ ssh -t user@server 'sudo bash /tmp/bootstrap.sh'
 The settings live apart from the code on purpose: the code can be replaced, moved or
 upgraded without losing them.
 
+## The deploy runner (automatic deploys on a version tag)
+
+Once set up, tagging a release on `main` builds its images on GitHub's machines, then
+a **runner on this server** moves every school to it (`eactl update --all --version
+<tag> --yes`), the demo school first. The runner reaches out to GitHub for its jobs;
+nothing is opened inward. It runs as its own user, with a cluster login that can
+update schools and nothing else (`k8s/cluster/deployer.yaml`, applied by
+`eactl apply-cluster`). Set up once per server:
+
+1. **A user for the runner**, with no password and no sudo:
+
+   ```bash
+   sudo useradd --create-home --shell /bin/bash ea-deploy
+   ```
+
+2. **Its cluster login**: a kubeconfig made from the deploy login's key, readable by
+   that user only.
+
+   ```bash
+   TOKEN=$(kubectl -n edge-athlete get secret ea-deployer-token -o jsonpath='{.data.token}' | base64 -d)
+   CA=$(kubectl -n edge-athlete get secret ea-deployer-token -o jsonpath='{.data.ca\.crt}')
+   sudo -u ea-deploy mkdir -p /home/ea-deploy/.kube
+   sudo -u ea-deploy tee /home/ea-deploy/.kube/config >/dev/null <<EOF
+   apiVersion: v1
+   kind: Config
+   clusters:
+     - name: local
+       cluster: { server: https://127.0.0.1:6443, certificate-authority-data: $CA }
+   users:
+     - name: ea-deployer
+       user: { token: $TOKEN }
+   contexts:
+     - name: deploy
+       context: { cluster: local, user: ea-deployer }
+   current-context: deploy
+   EOF
+   sudo chmod 600 /home/ea-deploy/.kube/config
+   unset TOKEN CA
+   ```
+
+   Check it can see schools but not their secrets (the second line should say
+   `Forbidden`):
+
+   ```bash
+   sudo -u ea-deploy kubectl get namespaces -l ea/school
+   sudo -u ea-deploy kubectl -n <a school's namespace> get secrets
+   ```
+
+3. **The runner itself** (GitHub's own program). On GitHub: the repo → Settings →
+   Actions → Runners → **New self-hosted runner** → Linux. It shows a one-time
+   registration token: use it in the `config.sh` line below, never save it anywhere.
+
+   ```bash
+   sudo -u ea-deploy bash -c 'mkdir -p ~/actions-runner && cd ~/actions-runner \
+     && curl -fsSLo runner.tar.gz https://github.com/actions/runner/releases/download/v2.337.0/actions-runner-linux-x64-2.337.0.tar.gz \
+     && tar xzf runner.tar.gz && rm runner.tar.gz'
+   sudo -u ea-deploy bash -c 'cd ~/actions-runner && ./config.sh --unattended \
+     --url https://github.com/devi-walto/Edge-Athlete-Remote \
+     --token <the registration token> --name "$(hostname)-deploy" --labels ea-deploy'
+   cd /home/ea-deploy/actions-runner && sudo ./svc.sh install ea-deploy && sudo ./svc.sh start
+   ```
+
+   On GitHub, the runner then shows as **Idle** with the label `ea-deploy`.
+
+4. **Mark the demo school to go first** on every deploy (a new one can use
+   `eactl new "Name" --canary` instead):
+
+   ```bash
+   kubectl label namespace ea-<demo short name> ea/canary=true --overwrite
+   ```
+
+5. **Keep strangers' code off it.** On GitHub: Settings → Actions → General →
+   **"Require approval for all outside collaborators"**, and a tag rule so only you
+   can push `v*` tags. The deploy job only runs on tags.
+
 ## Later: from a clone to a release bundle
 
 While the code changes daily, the server holds a git clone. Once it settles, each

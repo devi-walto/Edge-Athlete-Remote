@@ -9,8 +9,9 @@
 #   eactl apply-db         put the shared database (k8s/db) on the cluster
 #   eactl new "Name"       make a new school (public, HTTPS)
 #   eactl list             every school: name, short name, status, release, address
-#   eactl update "Name"    bring a school up to date; --all for every school;
-#                          --version 0.3.2 to move to a release (or back to one)
+#   eactl update "Name"    bring a school up to date; --all for every school (the
+#                          demo first); --version 0.3.2 to move to a release (or back
+#                          to one, after checking its database changes)
 #   eactl status "Name"    a school's health: each part, its release, its certificate
 #   eactl logs "Name" P    what part P has been printing (django, react, mosquitto,
 #                          mqtt-listener, monitoring-publisher, setup); add -f to follow
@@ -173,6 +174,84 @@ build_school() {
     return $rc
 }
 
+# ── Database changes between releases ───────────────────────────────────────
+#
+# Each release's code knows a list of database changes (Django "migrations").
+# Each school's database records which ones it has had applied. Moving a school
+# to an OLDER release is only safe if that release knows every change already
+# applied; otherwise its code meets tables it doesn't understand.
+
+# migrations_applied <short name> — "app name" lines: what the school's database has.
+# Asked through the school's own django, so it needs no access to the shared Postgres.
+migrations_applied() {
+    kubectl -n "ea-$1" exec deploy/django -c django -- python manage.py shell -c "
+from django.db.migrations.recorder import MigrationRecorder
+for m in MigrationRecorder.Migration.objects.order_by('app', 'name'): print(m.app, m.name)" 2>/dev/null
+}
+
+# migrations_known <short name> <release> — "app name" lines: what that release's
+# code knows. A throwaway pod of that release's image lists its migration files,
+# without touching any database, then disappears.
+migrations_known() {
+    local short="$1" image="ghcr.io/devi-walto/edge-athlete-django:$2" pod="migration-list-$RANDOM"
+    kubectl -n "ea-$short" run "$pod" --rm -i --restart=Never --quiet \
+        --pod-running-timeout=60s \
+        --image="$image" --env=SECRET_KEY=only-to-list-migrations \
+        --overrides='{"spec":{"imagePullSecrets":[{"name":"ghcr-pull"}]}}' \
+        --command -- python manage.py shell -c "
+from django.db.migrations.loader import MigrationLoader
+for app, name in sorted(MigrationLoader(None, ignore_no_migrations=True).disk_migrations): print(app, name)" \
+        </dev/null 2>/dev/null   # nothing to read: -i would otherwise swallow your typed answers
+    # --rm only cleans up a pod that ran. One whose image couldn't be downloaded
+    # (a release that doesn't exist) is left waiting, so remove it either way.
+    kubectl -n "ea-$short" delete pod "$pod" --ignore-not-found --wait=false >/dev/null 2>&1
+}
+
+# check_release_change <short name> <new release> [--yes]
+# Before moving a school to another release: are there database changes it has
+# that the new release doesn't know? Moving forward, there never are. Moving back,
+# there may be. If so: with --yes (the automatic deploy), stop; otherwise offer to
+# undo them first, with the release that made them, after a safety copy.
+check_release_change() {
+    local short="$1" new="$2" yes="${3:-}" applied known unknown apps app target answer snap
+    echo "==> $short: checking database changes against $new"
+    applied="$(migrations_applied "$short")"
+    known="$(migrations_known "$short" "$new")"
+    if [ -z "$applied" ] || [ -z "$known" ]; then
+        echo "[!] couldn't compare database changes (is $new a real release?). Nothing changed."
+        return 1
+    fi
+    unknown="$(comm -13 <(printf '%s\n' "$known" | sort) <(printf '%s\n' "$applied" | sort))"
+    if [ -z "$unknown" ]; then
+        echo "    no database changes $new doesn't know: safe to switch"
+        return 0
+    fi
+    echo "    ⚠ $new doesn't know these database changes, which $short already has:"
+    printf '%s\n' "$unknown" | sed 's/^/        /'
+    if [ "$yes" = --yes ]; then
+        echo "[!] not undoing database changes without a person deciding. Run by hand:"
+        echo "      eactl update $short --version $new"
+        return 1
+    fi
+    echo "    Undoing them deletes the data they hold. A safety copy is taken first."
+    read -r -p "Undo them, then switch $short to $new? (y/N) " answer
+    [ "$answer" = y ] || { echo "    nothing changed"; return 1; }
+    snap="$(take_snapshot "$short" "before: undoing database changes for $new")" \
+        || { echo "[!] no safety copy, so nothing was undone"; return 1; }
+    echo "    safety copy: $snap"
+    # For each app with unknown changes, go back to the last change the new release
+    # knows for that app ("zero" if it knows none), using the release that's running
+    # now, which is the one that has the instructions for undoing them.
+    apps="$(printf '%s\n' "$unknown" | awk '{print $1}' | sort -u)"
+    for app in $apps; do
+        target="$(printf '%s\n' "$known" | awk -v a="$app" '$1 == a {print $2}' | sort | tail -1)"
+        target="${target:-zero}"
+        kube -n "ea-$short" exec deploy/django -c django -- python manage.py migrate "$app" "$target" --noinput \
+            || { echo "[!] couldn't undo $app's changes. Nothing was switched. Safety copy: $snap"; return 1; }
+    done
+    echo "    undone"
+}
+
 # update_school <short name> — show what would change, ask, apply, and wait until
 # every part is ready. Used by `eactl update` and `eactl new`.
 # Pass "--yes" second to skip the question (eactl new has already asked).
@@ -182,12 +261,6 @@ update_school() {
     CHANGES=0
     if [ "${2:-}" != --yes ]; then
         preview "$(school_info "$short" display-name) ($short) at $(school_info "$short" version)" "$school" || return 1
-        # Left over from before every school was public: the old Tailscale-only
-        # guard. (A preview only shows what's in the new build, so it's listed.)
-        if kubectl -n "$ns" get middleware private-only >/dev/null 2>&1; then
-            echo "    and remove: the old Tailscale-only guard, no longer used"
-            CHANGES=1
-        fi
         echo
         if [ "$CHANGES" = 0 ]; then
             echo "✓ $short already matches. Nothing to do."
@@ -197,7 +270,6 @@ update_school() {
         [ "$answer" = y ] || { echo "nothing applied to $short"; return 0; }
     fi
     kube -n "$ns" apply -f - <<< "$school" || { echo "[!] $short did not apply"; return 1; }
-    kube -n "$ns" delete middleware private-only --ignore-not-found >/dev/null 2>&1
     echo "==> waiting for every part of $short to be ready"
     for d in mosquitto django react mqtt-listener monitoring-publisher; do
         kube -n "$ns" rollout status "deployment/$d" --timeout=300s || {
@@ -485,11 +557,13 @@ new)
     #   eactl new "Demo U"                       the same, in one line
     #   eactl new "Demo U" --version v0.3.2      a different release than the others
     #   eactl new "Demo U" --address x.y.com     an address other than the usual one
-    name="" version="" address=""
+    #   eactl new "Demo U" --canary              updated first on every deploy (the demo)
+    name="" version="" address="" canary=false
     while [ $# -gt 0 ]; do
         case "$1" in
             --version) version="${2:-}"; shift 2 ;;
             --address) address="${2:-}"; shift 2 ;;
+            --canary) canary=true; shift ;;
             --*) echo "unknown option $1"; exit 1 ;;
             *) name="$1"; shift ;;
         esac
@@ -533,13 +607,14 @@ name made from it can't."
     echo "    database       $db   (with a login of the same name)"
     echo "    address        $address"
     echo "    release        $version"
+    [ "$canary" = true ] && echo "    updated first  yes: on every deploy, before the other schools"
     read -r -p "Make it? (y/N) " answer
     [ "$answer" = y ] || { echo "nothing made"; exit 0; }
 
     echo
     echo "==> its namespace, which also records everything about it"
     kube create namespace "$ns" || exit 1
-    kube label namespace "$ns" ea/school="$short" ea/version="$version" ea/status=active
+    kube label namespace "$ns" ea/school="$short" ea/version="$version" ea/status=active ea/canary="$canary"
     kube annotate namespace "$ns" ea/display-name="$name" ea/address="$address"
 
     echo "==> its database and login in the shared Postgres"
@@ -818,19 +893,22 @@ update)
     #   eactl update --all                        every school
     #   eactl update --all --version 0.3.2        every school to a release (a deploy)
     #   eactl update "Demo U" --version 0.3.1     one school to a release (a rollback)
-    # Going back is only safe if the newer release didn't change the database;
-    # otherwise restore a backup instead.
-    target="" version="" all=no
+    #   --yes                                     no questions (the automatic deploy)
+    # With --all, schools labelled ea/canary=true (the demo) go first; if one of
+    # them fails, no other school is touched. Before a school changes release, its
+    # database changes are checked against that release (check_release_change).
+    target="" version="" all=no yes=""
     while [ $# -gt 0 ]; do
         case "$1" in
             --all) all=yes; shift ;;
             --version) version="${2:-}"; shift 2 ;;
+            --yes) yes=--yes; shift ;;
             --*) echo "unknown option $1"; exit 1 ;;
             *) target="$1"; shift ;;
         esac
     done
     if [ "$all" = no ] && [ -z "$target" ]; then
-        echo 'usage: eactl update "School Name" | --all   [--version 0.3.2]'
+        echo 'usage: eactl update "School Name" | --all   [--version 0.3.2] [--yes]'
         exit 1
     fi
     require_cluster
@@ -838,16 +916,26 @@ update)
     [ -n "$version" ] && version="v${version#v}"
 
     if [ "$all" = yes ]; then
-        schools="$(kubectl get namespaces -l ea/school -o jsonpath='{range .items[*]}{.metadata.labels.ea/school}{" "}{end}')"
+        # Canaries first, then everyone else.
+        schools="$(kubectl get namespaces -l 'ea/school,ea/canary=true' -o jsonpath='{range .items[*]}{.metadata.labels.ea/school}{" "}{end}')"
+        schools="$schools $(kubectl get namespaces -l 'ea/school,ea/canary!=true' -o jsonpath='{range .items[*]}{.metadata.labels.ea/school}{" "}{end}')"
     else
         schools="$(find_school "$target")" || exit 1
     fi
     for short in $schools; do
-        if [ -n "$version" ] && [ "$(school_info "$short" version)" != "$version" ]; then
-            echo "==> $short: release $(school_info "$short" version) -> $version"
+        old="$(school_info "$short" version)"
+        if [ -n "$version" ] && [ "$old" != "$version" ]; then
+            check_release_change "$short" "$version" "$yes" || exit 1
+            echo "==> $short: release $old -> $version"
             kube label namespace "ea-$short" ea/version="$version" --overwrite >/dev/null
         fi
-        update_school "$short" || exit 1
+        if ! update_school "$short" $yes; then
+            # Put the record back, so it still says what's actually running.
+            [ -n "$version" ] && [ "$old" != "$version" ] \
+                && kube label namespace "ea-$short" ea/version="$old" --overwrite >/dev/null
+            echo "[!] stopped at $short; schools after it were not touched"
+            exit 1
+        fi
         echo
     done
     ;;

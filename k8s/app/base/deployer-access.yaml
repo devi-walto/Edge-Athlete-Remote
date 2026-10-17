@@ -1,0 +1,19 @@
+# deployer-access.yaml — lets the automatic deploy update this school.
+#
+# Hands the permissions in k8s/cluster/deployer.yaml ("ea-deployer-school") to
+# the deploy login, in this school's namespace only. Being in the template, every
+# school gets it, including new ones.
+
+apiVersion: rbac.authorization.k8s.io/v1
+# RoleBinding: gives a list of permissions to a login, inside one namespace.
+kind: RoleBinding
+metadata:
+  name: ea-deployer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ea-deployer-school
+subjects:
+  - kind: ServiceAccount
+    name: ea-deployer
+    namespace: edge-athlete

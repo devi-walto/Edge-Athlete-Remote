@@ -44,8 +44,8 @@ _eactl() {
 
     # Options.
     case "$cmd" in
-        update) COMPREPLY=( $(compgen -W "--all --version" -- "$cur") ) ;;
-        new)    COMPREPLY=( $(compgen -W "--version --address" -- "$cur") ) ;;
+        update) COMPREPLY=( $(compgen -W "--all --version --yes" -- "$cur") ) ;;
+        new)    COMPREPLY=( $(compgen -W "--version --address --canary" -- "$cur") ) ;;
     esac
 }
 
