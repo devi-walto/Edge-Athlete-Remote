@@ -1,0 +1,16 @@
+# kustomization.yaml — the server-wide add-ons every Edge Athlete server needs,
+# whatever schools it runs.
+#
+# Applied after cert-manager/ (see that file for why). The ${...} placeholders
+# are filled in by `eactl apply-cluster` from eactl.env; never apply this folder
+# with plain `kubectl apply -k`, or the placeholders go in literally.
+
+# Kustomization: a list of files to apply together, plus any edits to them.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - letsencrypt-issuers.yaml
+  - coredns-hairpin.yaml
+  - ddns-updater.yaml
+  - traefik-keep-visitor-address.yaml
+  - deployer.yaml

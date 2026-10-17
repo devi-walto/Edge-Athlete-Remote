@@ -1,0 +1,27 @@
+# postgres-alias.yaml — lets the app find the shared database by the name it
+# already uses.
+#
+# Why this exists: the app looks for its database at the name "postgres"
+# (written into django's settings.py). On a local install, that's the Postgres
+# container right next to it. On the remote server, every school shares ONE
+# Postgres, which lives in another namespace at postgres.edge-athlete.
+#
+# Rather than change the app, each school gets a name "postgres" that simply
+# forwards to the shared one. The app keeps asking for "postgres" and never
+# knows the difference, so local and remote run the same code.
+#
+# Which database inside that Postgres a school opens, and with which login, is
+# in the school's own settings (made by `eactl new`): it can open only its own.
+
+apiVersion: v1
+# Service: a position name. This one is an ExternalName, which means it's an
+# alias rather than a group of players: "whoever asks for postgres in this
+# squad, send them to postgres.edge-athlete." Like a contact saved under a
+# nickname that dials someone else's number.
+kind: Service
+metadata:
+  name: postgres
+spec:
+  type: ExternalName
+  # The full name of the shared database's Service (see k8s/db/postgres/service.yaml).
+  externalName: postgres.edge-athlete.svc.cluster.local

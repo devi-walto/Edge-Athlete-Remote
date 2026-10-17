@@ -58,6 +58,60 @@ Adding a node later is still possible; nothing here depends on there being one.
 If either fails, the fallback is a tunnel service — see the rejected options below for
 why it is the fallback and not the plan.
 
+### Keeping each visitor's real address
+
+Decided and built on October 16.
+
+**What forced it.** The **sign-in limit** depends on knowing **where each visitor is
+coming from**: online, the app refuses an address after 10 wrong passwords in a minute
+(spec 05, "hosted mode"). A Tailscale-only guard for schools in testing needed it too;
+that guard was later dropped (every school is public, protected by its setup code).
+
+k3s ships with a small built-in helper, **ServiceLB**. A cloud provider normally gives a
+cluster its front door to the internet; a machine at home has no cloud, so ServiceLB
+does the job: it takes the machine's ports 80 and 443 and forwards every visit to
+Traefik, the cluster's front door. But as it forwards a visit, it **writes its own
+address in place of the visitor's.** Every visitor looked identical, so one stranger's
+wrong guesses would have locked everyone out of signing in.
+
+It was measured, not assumed. A small test app that reports the address it sees was
+visited from a laptop on Tailscale (an address starting `100.`); it saw the helper's
+internal address (one starting `10.42.`) instead.
+
+**What we chose.** Take the helper out of the way. **Traefik answers on the machine's
+ports 80 and 443 itself**, so a visit arrives with its address intact:
+
+```text
+before:  visitor ─▶ Dell ports ─▶ helper (rewrites address) ─▶ Traefik
+after:   visitor ─▶ Dell ports ───────────────────────────────▶ Traefik   (address intact)
+```
+
+It is one settings file in the repo (`k8s/cluster/traefik-keep-visitor-address.yaml`),
+applied with the rest of the cluster's add-ons, so every new server gets it. Traefik's
+own Service becomes inside-only, which ServiceLB ignores; anything inside the cluster
+that looks Traefik up by name (the fix that lets the cluster reach its own public
+address) is unaffected. Tested after: the same visit arrived with the laptop's own address, and the
+practice site, its certificate and the in-cluster check that certificates rely on all
+still worked.
+
+**What we rejected.** **ServiceLB's own "keep the address" setting**
+(`externalTrafficPolicy: Local`). It is the documented answer, and it was tried first. It
+removed one rewrite, but the helper rewrites the address again itself as it hands the
+visit on; the test app still saw the helper's address.
+
+**What it cost.**
+
+- **Only one Traefik per machine.** It holds the machine's ports itself, so an update
+  stops the old one before starting the new one: a few seconds offline, instead of
+  none.
+- **Changing it needs care.** k3s installs Traefik from a package, and this changes that
+  package's settings; a mistyped setting is silently ignored. A wrong name for one
+  setting took the practice site down for about four minutes while this was built.
+  Check the package's own settings file for the installed version before changing it.
+- **A cloud does this differently.** There, the cloud's load balancer is the front door
+  and offers its own way to keep the visitor's address. This file is for a machine with
+  no cloud in front of it.
+
 ### HTTPS, with certificates that renew themselves
 
 The project uses **a domain Devin owns, registered with Porkbun.** Each installation

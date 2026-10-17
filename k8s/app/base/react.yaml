@@ -1,0 +1,76 @@
+# react.yaml — one school's screens: the web pages coaches and athletes open.
+#
+# The server never runs React itself. The image already holds the finished
+# pages as plain files (built once, when the release was made), and a tiny web
+# server (nginx) just hands them out. The visitor's browser does the rest. That
+# makes this the cheapest part of a school to run.
+
+apiVersion: apps/v1
+# Deployment: a position group with a set count. One file server, kept running.
+kind: Deployment
+metadata:
+  name: react
+spec:
+  # One copy is plenty for handing out files to one school.
+  replicas: 1
+  # Like django: start the new copy before stopping the old one, so the pages
+  # never stop loading during an update. Two copies handing out files is harmless.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  # The jersey patch: which pods belong to this group.
+  selector:
+    matchLabels:
+      app: react
+  template:
+    metadata:
+      labels:
+        app: react
+    spec:
+      # The key for downloading the private image (see django.yaml).
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: react
+          # Filled in by eactl, the same release as the school's django, so the
+          # pages and the API always come from the same version.
+          image: ghcr.io/devi-walto/edge-athlete-react:set-by-eactl
+          ports:
+            - containerPort: 80
+          # "Ready?" Can it hand out the main page? Until it can, no visitors
+          # are sent here.
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            periodSeconds: 10
+          # "Still alive?" The same question, asked less often.
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          # Handing out files takes almost nothing.
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+
+---
+apiVersion: v1
+# Service: a position name. "react" always reaches the file server, the same
+# name nginx uses on a local install.
+kind: Service
+metadata:
+  name: react
+spec:
+  type: ClusterIP   # inside the server only; visitors come in through the Ingress
+  selector:
+    app: react
+  ports:
+    - port: 80

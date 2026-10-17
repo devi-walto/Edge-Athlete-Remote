@@ -1,0 +1,55 @@
+# letsencrypt-issuers.yaml — where the site's HTTPS certificates come from.
+#
+# a certificate is like a "city inspection" plaque proving the
+# building (website) is really ours; Let's Encrypt is the city office that issues
+# plaques; cert-manager is the guy we hired to apply, prove ownership, hang the
+# plaque and renew it before it expires. This file is his address book: which
+# city office to apply to.
+#
+#   letsencrypt-staging  the practice office: plaques browsers do NOT trust,
+#                        but it lets you apply as often as you like. Use it
+#                        first for any new address.
+#   letsencrypt-prod     the real office: trusted plaques, strict limits.
+#
+# ${ACME_EMAIL} is filled in by `eactl apply-cluster` from eactl.env (never
+# committed). The city office writes to it only when a plaque is near expiry
+# and has not been renewed. (ACME is the name of the application process.)
+#
+# Copied from the Dell's working setup; only the email became a placeholder.
+
+apiVersion: cert-manager.io/v1
+# ClusterIssuer: one city office's address, usable by every squad (namespace),
+# so each school's site can ask it for a plaque.
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: ${ACME_EMAIL}
+    # Our account's key with the office; cert-manager makes it and keeps it here.
+    privateKeySecretRef:
+      name: letsencrypt-staging-key
+    solvers:
+      # How we prove ownership (HTTP-01): the office fetches a token from
+      # http://<address>/.well-known/acme-challenge/..., which Traefik serves
+      # for a moment.
+      - http01:
+          ingress:
+            ingressClassName: traefik
+
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: ${ACME_EMAIL}
+    privateKeySecretRef:
+      name: letsencrypt-prod-key
+    solvers:
+      - http01:
+          ingress:
+            ingressClassName: traefik

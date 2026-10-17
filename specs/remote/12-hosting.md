@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-14
-- Status: Written — not started
+- Status: In progress — Phase 0 done (branch `feature-hosting`)
 - Form items: Definition of Done #1 (k3s, public HTTPS, automatic certificates, CI/CD) and
   #5 (a separate demo installation from the same template). Feeds #7 (end to end) and #8
   (docs on deploying to k3s)
@@ -49,9 +49,11 @@ on my memory.
 - **Build on what is already running** (Devin, 2026-10-14). The Dell's plumbing works:
   Traefik, cert-manager, the two certificate issuers, the DNS updater, the hairpin fix,
   Tailscale. It stays as it is. The work is the app's manifests and the image registry,
-  and then the app drops in on top. The plumbing is **copied into the repo unchanged**
-  so the repo matches the Dell; it is only changed where something is missing (pinning
-  cert-manager to the version already running, one line per new subdomain).
+  and then the app drops in on top. The plumbing is **brought into the repo**, and
+  **working on any new machine without hand edits beats matching the Dell exactly**
+  (Devin, 2026-10-14): a fixed address becomes a name, `latest` becomes a pinned
+  version, one subdomain becomes a list. Every such change is shown and proven before it
+  replaces the Dell's version.
 - **One node: the Dell**, Ubuntu Server LTS. A Mac mini was planned as a second node and
   cut on 2026-10-14; it was never in the Definition of Done. Nothing assumes one node,
   so adding one later stays possible.
@@ -62,8 +64,46 @@ on my memory.
   overlay per installation). The real installation and the demo differ only in their
   overlay: namespace, address, settings. Chosen over Helm because it is plain Kubernetes
   files, which fits "apply the repo".
-- **One namespace per installation**, with one ConfigMap and one Secret each, mirroring
-  today's `.env`.
+- **One server, many schools** (Devin, 2026-10-14). A *server* is one machine running
+  the cluster (today, the Dell). Setting one up happens once (`eactl init`). A new
+  school is a new **installation on an existing server**; it never gets a server of its
+  own. This differs from local on purpose: each gym box is a standalone device, so every
+  local install is its own server.
+- **One shared Postgres, one database per school** (option B, Devin, 2026-10-14).
+  Postgres is the database *server* (one running program); a *database* is one separate,
+  named set of tables inside it. The server runs **one** Postgres, in the shared
+  namespace `edge-athlete`; each school gets **its own database** in it, with its own
+  database login that can open only that database. So a school's app still cannot see
+  another school's data, and one Postgres uses far less of the Dell's memory than one per
+  school, with one backup job. The cost: if that Postgres is down, every school is.
+- **A school is found by a fixed short name, never by its display name** (Devin,
+  2026-10-16). Schools nationwide can share a name, so each one gets:
+
+  | | Example | Rules |
+  |---|---|---|
+  | **Display name** | Demo U | any text; shown to people; can change |
+  | **Short name** | `demo-u-k7m2qx` | the name, lowercased and cut to about 20 characters, plus 6 random letters and digits; **never changes**, even if the school renames; tab-completes in `eactl` |
+  | Namespace | `ea-demo-u-k7m2qx` | from the short name |
+  | Database and its login | `school_demo_u_k7m2qx` | from the short name (`_`, which Postgres prefers) |
+  | Address | `demo-u-k7m2qx.<domain>` | from the short name; clicked, never typed |
+
+  People never type a school's address: they follow a login link, or (after the class)
+  pick their school on a public landing page that sends them to it (spec 13).
+  `eactl find <text>` searches display names.
+- **Everything else a school runs is its own**, in its own namespace `ea-<short name>`:
+  Django, the two workers, the broker, the screens, one ConfigMap and one Secret
+  (mirroring today's `.env`), and a copy of the image pull key.
+- **A directory of schools, from day one.** `eactl new` labels each school's namespace
+  (`ea/school=<short name>`, `ea/version`, `ea/status=active`) and annotates it with
+  what labels can't hold (`ea/display-name`, which may contain spaces, and
+  `ea/address`). `eactl list` reads them; `eactl status <short name>` drills into one. The full
+  directory (a registry database and a web console) is after the class:
+  [spec 13](../later/13-registry-and-console.md).
+- **Server settings are asked once and kept out of the repo.** `eactl init` asks for the
+  domain, the email for certificate warnings and similar server-wide answers, and saves
+  them to `eactl.env` on the laptop, which git ignores. The repo's files use
+  placeholders (`${DOMAIN}`, `${ACME_EMAIL}`) that `eactl` fills in when applying. A new
+  school's display name is given to `eactl new`; everything else is made from it.
 - **Images live in GitHub's container registry** (`ghcr.io`), **private**, even while the
   repo is public. The cluster pulls with a read-only token stored as a Secret.
 - **Tests run on pull requests; deploys run on version tags.** A tag like `v0.4.0` (patch
@@ -79,9 +119,11 @@ on my memory.
   in the repo, not "latest".
 - **Managed from Devin's laptop over Tailscale.** The cluster's control port (6443) and
   SSH (22) are never forwarded. Only 80, 443 and later 8883 are.
-- **Operator commands are a thin wrapper**, `eactl`, run from the laptop. Named apart
-  from the two existing `ea.sh` files, which already mean different things on different
-  devices. Each command takes an installation name and is a few lines over `kubectl`.
+- **Operator commands are a thin wrapper**, `eactl`, a bash script that **runs on the
+  server**: SSH in, then type `eactl` (Devin, 2026-10-14; like the gym box's `ea-*`, and
+  the deploy runner on the server can call the same commands). Named apart from the two
+  existing `ea.sh` files, which already mean different things on different devices.
+  Each command is a few lines over `kubectl` and prints the command before running it.
 - **The public docs describe the setup in general terms.** No domain, home address or
   router details in the repo or on the docs site.
 
@@ -152,85 +194,189 @@ on my memory.
 
 **Done when:**
 
-- [ ] Pushing a test tag produces both images in the registry with that tag, and they
+- [x] Pushing a test tag produces both images in the registry with that tag, and they
       are not visible to a logged-out visitor.
-- [ ] The Dell can pull them with the stored token; a pod without the token cannot.
-- [ ] A container from the image reports the tag at `/api/system/info/`.
+- [x] The Dell can pull them with the stored token; a pod without the token cannot.
+- [x] A container from the image reports the tag at `/api/system/info/`.
+
+**Result, 2026-10-14.** A test tag (`v0.3.1-test.1`, deleted afterwards) ran
+`release.yml` green: both images built, the django image reported its own version, both
+stored in `ghcr.io/devi-walto/`. On the Dell, a pod using the pull secret downloaded the
+image and printed `v0.3.1-test.1`; a pod without it got `ImagePullBackOff`.
+
+- **The images came out public**: GitHub gives a new package its repository's
+  visibility, and the repo is public. Devin set both to private by hand; a logged-out
+  pull is now refused (403).
+- **Two lines were added to `django/Dockerfile`** (`ARG EA_VERSION=dev`, `ENV
+  EA_VERSION=$EA_VERSION`), against "the Dockerfiles do not change". Baking the version
+  in at build time cannot drift from the image's tag, which setting it in a manifest
+  could. A gym box's own build passes nothing and reports `dev`, as before.
+- **The pull key** is a classic token with only `read:packages`, 90 days, stored by
+  Devin on the Dell as Secret `ghcr-pull` in the new namespace `edge-athlete` (the token
+  never passed through Claude). Renewal is by hand: a new token and the same command
+  with `--dry-run=client -o yaml | kubectl apply -f -`. A GitHub App with an
+  auto-refreshing key is the after-November option.
 
 **Stop. Devin reviews.**
 
 ## Phase 1 — The app on the cluster, private
 
-- `k8s/app/base/` (new), one subfolder per Compose service:
-  - **postgres**: one copy, its data on a volume, replaced not doubled on update
-    (the practice cluster's `Recreate` strategy).
-  - **mosquitto**: the repo's own `mosquitto.conf` as a ConfigMap; a volume for its data.
-  - **django**: the image, **with migrations moved from the start command to an init
-    container** (a step Kubernetes runs once before the app starts), so two copies can
-    never migrate at once. `recover_racks` moves with it. The Dockerfile's own start
-    command is left as it is, so the gym box is unchanged.
-  - **mqtt-listener**, **monitoring-publisher**: the django image with their commands.
+- `k8s/db/postgres/` (new): **the one shared Postgres**, in the shared namespace
+  `edge-athlete`, applied by `eactl apply-db`. One copy, its data on a volume, replaced
+  not doubled on update (the practice cluster's `Recreate` strategy). Version 15.18,
+  matching a local install's 15. `max_connections` set to 100 (about 10 to 15 schools).
+  Its administrator password is the Secret `postgres-admin`, made by a written step.
+  The server's layers: cluster add-ons (`apply-cluster`), the database (`apply-db`; the
+  backup job joins it in Phase 5), then each school (`eactl new`).
+- `k8s/app/base/` (new), what **each school** runs, one file per Compose service; the
+  Services keep the Compose names (`mosquitto`, `django`, `react`), so the app's settings
+  need no changes:
+  - **mosquitto**: Mosquitto 2.0.22, the repo's own `mosquitto.conf` as a ConfigMap
+    (generated from the file, so local and remote share one copy); a volume for the
+    messages it holds for an offline screen.
+  - **postgres alias**: an `ExternalName` Service called `postgres` pointing at the
+    shared Postgres, because `settings.py` names its database host `postgres`. No app
+    change.
+  - **django**: one copy, **with migrations moved from the start command to an init
+    container** (a step Kubernetes runs once before the app starts). `recover_racks`
+    moves with it. The Dockerfile's own start command is left as it is, so a local
+    install is unchanged. Ready = `/api/health/` (it checks the database); alive = the
+    port answers (so a database blip doesn't restart every school).
+  - **mqtt-listener**, **monitoring-publisher**: the django image with their commands,
+    one each, `Recreate`.
   - **react**: the image.
   - An **Ingress** that does what `nginx.conf` does: `/api/`, `/admin/` and the two
-    static paths to django, `/` to react. The sign-in rate limit moves to a Traefik
-    middleware.
-  - Health checks from today's `/api/health/`.
-- `k8s/app/overlays/real/` (new): the namespace, its ConfigMap (from `.env.example`'s
-  names), and a reference to its Secret.
+    static paths to django, `/` to react, for the school's own host name. (The sign-in
+    limit and `no-store` are already in the app when remote: spec 05 Phase 3.)
+  - **HTTPS for the school's address** (cert-manager, Let's Encrypt). **Every school is
+    public** (Devin, 2026-10-16). A Tailscale-only guard was built and dropped: a school's
+    address points at the public IP, so even a Tailscale device's browser arrives from the
+    internet and was refused; and a new school is already protected by its one-time
+    setup code. Switching a school off is spec 13's **suspend** (app off, data kept).
+  - Live updates in the browser connect to port 9001 directly, which isn't reachable
+    yet: they arrive in Phase 4 with the `wss` path. Pages, sign-in and data work now.
+- **Traefik keeps each visitor's real address** (found and fixed 2026-10-16,
+  `k8s/cluster/traefik-keep-visitor-address.yaml`): k3s's ServiceLB rewrote every
+  visitor's address, which breaks both the guard and the per-address sign-in limit.
+  Traefik now binds ports 80/443 itself and its Service is `ClusterIP`. See
+  `docs/remote/hosting.md`, "Keeping each visitor's real address".
+- **The first school is made with `eactl new`**, which: creates its namespace with the
+  directory labels; creates its database and database login in the shared Postgres;
+  writes its ConfigMap (from `.env.example`'s names, pointing at its own database);
+  creates its Secret and copies in the pull key; and applies `k8s/app/base` to it.
 - **The app uses the plumbing already on the Dell**: Traefik as the ingress, the
   existing `letsencrypt-staging` / `letsencrypt-prod` issuers through the same
   annotation the practice site uses. Nothing in the cluster's add-ons is reinstalled.
-- `k8s/cluster/` (new): the Dell's working add-on files **copied in as they are** —
-  the two issuers, `coredns-custom`, the DDNS CronJob and its namespace, and cert-manager
-  **pinned to the version already running** (a no-op on the Dell). The DNS provider's
-  keys stay a Secret created by a written step, never a file in the repo.
-- **Private until spec 05 is done:** a Traefik middleware lets in only the Tailscale and
-  home network ranges. No public DNS record yet.
+- `k8s/cluster/` (new): the Dell's working add-ons, brought into the repo with **only the
+  changes a new machine needs**:
+  - **cert-manager** (`k8s/cluster/cert-manager/`): the official v1.21.2 file, referenced
+    by its address (pinned to the version already running), not copied in. Its own
+    folder, applied first: the issuers are a kind cert-manager defines, so on a fresh
+    machine they can only be created once it is running.
+  - **the two certificate issuers** (`letsencrypt-issuers.yaml`): as they are, with the
+    email as `${ACME_EMAIL}`.
+  - **the hairpin fix** (`coredns-hairpin.yaml`): instead of Traefik's internal address
+    on this Dell (`10.43.x.x`, which a new machine would not have), CoreDNS's `rewrite`
+    sends the site's name to Traefik by name. One line per public subdomain.
+  - **the DNS updater** (`ddns-updater.yaml`): curl pinned to an exact version; a list
+    of subdomains (`${SUBDOMAINS}`) instead of one; creates a subdomain's record if it is
+    missing; its namespace included.
+  - The DNS provider's keys stay a Secret created by a written step, never a file.
+- `eactl` starts here with what Phase 1 needs: `init`, `check`, `apply-cluster`, `apply-db`, `new`,
+  `list`. It fills in **only** the named placeholders (`${DOMAIN}`, `${ACME_EMAIL}`,
+  `${SUBDOMAINS}`), so the updater script's own `$IP` and `$SUB` survive.
+- **`eactl update`** brings one school (`"Demo U"` or its short name) or all of them
+  (`--all`) in line with the template, optionally moving them to a release
+  (`--version 0.3.2`). It replaces separate `deploy` and `rollback` commands; Phase 3's
+  automatic deploy runs `eactl update --all --version <tag>`.
 
 **Done when:**
 
-- [ ] `kubectl apply -k k8s/app/overlays/real` brings every part up healthy.
+- [ ] `eactl new <school>` brings every part of the school up healthy, and its database
+      login cannot open any other database.
+- [ ] `eactl list` shows the school with its address, version and status.
 - [ ] *(Browser, over Tailscale)* First-run setup works: `setup_code` run inside the pod
       prints a code, and the code claims the first administrator.
 - [ ] *(Browser)* A coach signs in, creates an athlete, and the athlete is still there
-      after the django and postgres pods are deleted.
-- [ ] Two django copies started together: migrations run once.
-- [ ] From outside Tailscale and the home network, the address answers nothing.
+      after the school's django pod and the shared postgres pod are deleted.
+- [ ] No domain, email or address of Devin's appears in the repo: `eactl.env` is
+      ignored by git, and the committed files hold only placeholders.
+- [ ] During an update, migrations run once, in the new django copy, before the old one
+      stops.
+- [ ] `eactl update "Demo U"` rebuilds Demo U with no differences from what's running.
 - [ ] The rate limit on sign-in still returns `429`.
-- [ ] `kubectl diff -k k8s/cluster` against the Dell shows no difference, and no secret
+- [ ] After `eactl apply-cluster`, its preview shows no difference, and no secret
       value appears anywhere in the repo or its history.
+
+**Result, 2026-10-16.** `eactl new "Name"` makes a school end to end (namespace that
+records the school, database and login, settings and secrets, pull key, the app) and
+`eactl list` reads the namespaces; `eactl update` rebuilds a school with no differences
+from what's running. Tested with two schools side by side: each answers as itself, and
+one school's login gets `permission denied` on the other's database. Found and fixed on
+the way: k3s's ServiceLB rewrote every visitor's address (Traefik now binds 80/443);
+school logins could connect to Postgres's maintenance databases (closed by `apply-db`).
+Every school is public over HTTPS; the Tailscale-only stage was built and dropped.
+
+**Demo go-live, 2026-10-16** (ahead of the full phase, for a demo). Demo U
+(`demo-u-u3fyig`) was created by hand at `test.<domain>` (the practice site's route was
+retired and backed up), with HTTPS, in remote mode, and made public. **`v0.3.1` was tagged
+on `feature-hosting`, not on `main`**, for the setup screen's "Welcome to Demo U" and its
+"ask support" message; `main` catches up at the next merge. Still to fold into the repo:
+`eactl new` doing those steps, the template's HTTPS lines, `apply-db` closing the
+maintenance databases to school logins (`REVOKE CONNECT … FROM PUBLIC` on `postgres` and
+`template1`, done by hand), invented seed names, and Demo U's own address.
 
 **Stop. Devin reviews.**
 
 ## Phase 2 — `eactl`
 
-A small file in the repo (a Makefile or `justfile`; see open decisions), run from the
-laptop over Tailscale. Every command takes an installation name and prints the `kubectl`
-it runs.
+`scripts/remote/eactl.sh`, a bash script run on the server (SSH in first). Every command
+prints the `kubectl` it runs.
 
 | Command | Does |
 |---|---|
-| `status`, `logs <service>`, `shell` | see what is running, read logs, open a shell in django |
-| `setup-code` | print the first-administrator code (spec 01) |
-| `new <name>` | (optional) make a new installation's overlay from the template; Phase 6 decides if it is worth it |
-| `make-admin <username>` | the recovery command from spec 01 |
-| `secrets` | create or update the installation's Secret from a local file that is never committed |
-| `deploy <version>`, `rollback` | the manual version of Phase 3, for when CI is down |
+| `status "Name"`, `logs "Name" <part> [-f]`, `shell "Name"` | a school's health (each part, release, certificate), a part's log, a shell in its django |
+| `setup-code "Name"` | issue the first-administrator code (spec 01), instead of the long `kubectl … setup_code` line |
+| `init` | (from Phase 1) once per server: ask the server-wide settings, save `eactl.env` |
+| `apply-cluster` | (from Phase 1) fill in the placeholders and apply `k8s/cluster` |
+| `apply-db` | (from Phase 1) the shared database |
+| `new ["Name"]` | (from Phase 1) make a school on this server, with its database; public over HTTPS |
+| `list` | (from Phase 1) the directory: every school, its short name, status, release and address |
+| `update "Name" \| --all [--version V]` | (from Phase 1) bring schools up to date, or move them to a release; also the manual deploy and rollback |
+| `make-admin "Name" <username>` | the recovery command from spec 01 |
+| `remove "Name"` | delete a school and its database: you type its short name to confirm, and a safety copy of its database is kept first (`/var/lib/edgeathlete/snapshots/<short name>/`) |
 | `backup`, `restore <file>` | Phase 5 |
 
 **Done when:**
 
-- [ ] Each command works from the laptop over Tailscale, against the real installation.
-- [ ] Each prints the underlying `kubectl` command before running it.
-- [ ] `restore` and anything else that deletes data asks for the installation name to be
+- [x] Each command works on the server, against the real installation.
+- [x] Each prints the underlying `kubectl` command before running it.
+- [x] `restore` and anything else that deletes data asks for the installation name to be
       typed again.
+
+**Result, 2026-10-17.** Commands: `status`, `logs` (including `setup`, django's start-up
+step), `shell`, `setup-code`, `make-admin`, `remove`, `backup`, `restore`, plus tab
+completion (commands, short names, log parts) installed by `init`. `secrets` was dropped:
+`new` makes a school's secrets. Safety copies live in
+`/var/lib/edgeathlete/snapshots/<short name>/`, each with a note of why it was taken.
+Tested by Devin on the Dell: `restore` put a school's database back to a copy taken
+before a setup code was issued, and the code was gone afterwards; the restored tables
+are owned by the school's login. Found and fixed: `remove` hung on deleting the
+namespace (an unfinished certificate request held it; now the app is switched off, the
+database dropped `WITH (FORCE)`, the request cancelled, then the namespace with a
+3-minute limit); `remove` and `restore` waited 2 minutes on cert-manager's helper pod
+(they now wait only for the school's own five parts). Not yet exercised: `make-admin`
+(no school has a claimed administrator to recover); it passes straight through to spec
+01's tested command.
 
 **Stop. Devin reviews.**
 
 ## Phase 3 — Deploy on a version tag (CD)
 
 - A **GitHub runner on the Dell, for deploys only.** It runs one job: after Phase 0's
-  images exist for a tag, set the installation to that tag and wait for it to be healthy.
+  images exist for a tag, run **`eactl update --all --version <tag>`** (no questions
+  asked, since the tag was the decision) and wait for every school to be healthy. The
+  demo school updates first; if it fails its health check, the others aren't touched.
 - **Its cluster access is limited**: a Kubernetes service account that may update the
   app's namespaces and nothing else (no cluster-wide rights, no secrets outside them).
 - **Guarded for a public repo:**
@@ -239,14 +385,40 @@ it runs.
   - GitHub's **"require approval for all outside contributors"** setting is on, so no
     workflow from a stranger's fork runs until Devin approves it;
   - the runner deletes its working files after each job.
-- **The release:** `main` moved forward to match `SprintBranch`, then the tag. By hand
-  for this class; a `release.yml` "release now" button (and later a schedule) does both
-  steps. This is the only way `main` moves.
+- **The release** (Devin, 2026-10-16): **every 3 days, a scheduled GitHub job moves
+  `main` forward to match `SprintBranch`** (a fast-forward only: everything on
+  `SprintBranch` already passed CI in a pull request). Devin **tags the commits on `main`**
+  he wants released. This is the only way `main` moves.
+- **A tag must be on `main`.** The release workflow checks it and refuses otherwise.
+  (`v0.3.1` was tagged on `feature-hosting` for the Oct 16 demo, before this check
+  existed.)
+- **Rolling back checks the database first** (Devin, 2026-10-16). Before moving a school
+  to an **older** release, `eactl update`:
+  1. asks the school's database which migrations it has applied (`django_migrations`);
+  2. asks the target release's image which migrations it knows (a throwaway pod that only
+     lists its migration files, and never touches a database);
+  3. compares them. **No difference:** it says so ("no database changes, safe to
+     switch") and carries on. **Applied but unknown to the older release:** it lists
+     them and warns that undoing them deletes the data they hold, then offers to **undo
+     them first, with the newer release still running** (Django undoes migrations itself,
+     `migrate <app> <last one the older release knows>`), **then switch**. Before undoing,
+     it saves a **safety copy of that school's database** (`pg_dump`) and asks `(y/N)`.
+     Safety copies live on the server, **one folder per school**:
+     `/var/lib/edgeathlete/snapshots/<short name>/<date>-<time>.sql` (root-only).
+     **Kept: the last 5 per school, and none older than 30 days**: they're for undoing a
+     rollback soon after, not long-term (that's Phase 5).
+  4. If a migration can't be undone (a data step without its undo written), it stops
+     before switching, and points at the safety copy.
 
 **Done when:**
 
 - [ ] Tagging a version deploys it; `/api/system/info/` then reports that version.
 - [ ] Deploying the previous tag rolls back, and the data is untouched.
+- [ ] Rolling back across a migration warns and lists it; choosing to undo saves a
+      safety copy first, undoes it with the newer release, then switches. Rolling back
+      with no migration in between says it's safe and just switches.
+- [ ] `main` moves forward to `SprintBranch` on its 3-day schedule; a tag on any other
+      branch is refused.
 - [ ] A deploy that fails its health check leaves the previous version serving.
 - [ ] The runner's credentials are refused when used to read another namespace's
       Secrets or to change the cluster's add-ons.
@@ -260,8 +432,14 @@ it runs.
 **Starts only when spec 05 is done** (the open routes require a login when hosted,
 `DEBUG` is refused, hosts are checked).
 
-- A public subdomain for the real installation: its DNS record, its line in the DDNS
-  job, its line in `coredns-custom`, its certificate.
+- **One wildcard for every school, instead of one setup per school** (to decide here;
+  proposed 2026-10-16). Since nobody types a school's address, each could live under one
+  wildcard: a DNS record `*.<domain>`, a **wildcard certificate** (Let's Encrypt issues
+  those only through the DNS check, via the DNS provider's API that the DNS updater
+  already uses, instead of HTTP), and one hairpin rule for the whole domain. Then
+  `eactl new` needs no DNS or certificate work at all. The alternative is the old way:
+  per school, a DNS record, a line in the DDNS job, a line in `coredns-custom` and a
+  certificate.
 - The real overlay sets `EA_DEPLOYMENT=remote` and its allowed hosts and trusted origins.
 - The Tailscale-only middleware comes off the site.
 - **The broker goes online through the site's own address.** Traefik routes a path on
@@ -295,8 +473,14 @@ it runs.
 
 ## Phase 5 — Backups, and a restore that has been done
 
-- A CronJob per installation: a nightly database dump, kept for a set number of days,
-  **copied off the Dell** (see open decisions for where).
+- A CronJob per installation: a nightly database dump, **copied off the Dell**, so a dead
+  disk, a stolen machine or a house problem doesn't take the backups with it.
+  - **Where (recommended, 2026-10-16):** a cloud storage bucket (e.g. Backblaze B2 or AWS
+    S3; well under $1 a month at this size). The laptop over Tailscale is the free
+    fallback, but only while it's on, and it's in the same house.
+  - **Kept: 7 daily, 4 weekly, 6 monthly**, in **one folder per school**.
+  - **Encrypted before leaving the Dell**: they hold athletes' data. The key is kept like
+    any other secret, never in the repo.
 - `eactl backup` and `eactl restore` (Phase 2) use the same format.
 
 **Done when:**
@@ -312,16 +496,16 @@ it runs.
 
 Decided 2026-10-14. The demo is **set up the way a new school's installation would be,
 from start to finish, by hand**, so it doubles as the rehearsal of onboarding a real
-customer. Devin then hands Dr. Prather invented login details as if he were that
-school's administrator, and demos the whole app from there.
+customer. Devin then hands the faculty reviewer invented login details as if they were
+that school's administrator, and demos the whole app from there.
 
-- **A new installation is a new overlay** made from the same base: its own namespace,
-  subdomain (with its two lines, in `coredns-custom` and the DDNS job), Secret and
-  database. Making one is a written step in the hosting guide (and `eactl new <name>`
-  if it earns its place), not a hand-edited copy of the real installation's files.
+- **The demo is Demo U** (`eactl new --name "Demo U"`, Devin, 2026-10-16), made in
+  Phase 1, from the same base as any school: its own namespace, address, Secret, and its
+  own database in the shared Postgres. The walkthrough below is rehearsed on it. Never a hand-edited copy of another
+  school's files, and never a new server.
 - **It starts empty, like a real new school.** First-run setup with a setup code from
   `eactl setup-code`, exactly as spec 01 built it. Devin claims it, creates **an
-  administrator login for Dr. Prather** with an invented username and a real (not
+  administrator login for the faculty reviewer** with an invented username and a real (not
   well-known) password, and hands those over. No `coach` / `coachpass`; spec 01's rule
   against well-known logins holds here too.
 - Any data in it is **invented**: entered through the app during the walkthrough, or
@@ -334,7 +518,7 @@ school's administrator, and demos the whole app from there.
 
 - [ ] *(By hand)* The demo was set up from nothing by following the hosting guide, and
       the guide now has every step that was needed.
-- [ ] *(Browser)* Signed in with the login details handed to Dr. Prather, the demo shows
+- [ ] *(Browser)* Signed in with the login details handed to the faculty reviewer, the demo shows
       the administrator's view: Coaches page, adding a coach, the whole workspace.
 - [ ] The demo runs at its own address with its own database; nothing in it can read the
       real installation (separate namespaces, separate Secrets, separate databases).
@@ -349,13 +533,35 @@ The rule this spec is judged by, tested end to end. Last on purpose: the app is 
 existing cluster by Phase 1, and this phase proves the same result can be had without
 the Dell.
 
-- `infra/bootstrap.sh` (new): run once on a bare Ubuntu Server machine. Installs the
-  **same pinned** k3s version as the Dell and Tailscale, turns off SSH passwords, and
-  copies the cluster credentials to the operator's user. Safe to run twice. Opens with a
-  plain-language comment on why it exists. Written from what was done by hand on the
-  Dell, not invented.
-- `docs/guides/hosting.md` (new): bootstrap, `kubectl apply -k k8s/cluster`, the written
-  secret steps, deploy the current tag, restore last night's backup.
+- **The machine itself is prepared by hand, from a written checklist, not a script**
+  (Devin, 2026-10-14): Linux installed with the operator's user; Tailscale joined; the
+  operator's laptop key added (`ssh-copy-id`) and SSH passwords turned off. Clouds
+  (AWS, Azure) ask for the key when the machine is made. Scripts start from a machine
+  that already works and is reachable.
+- `infra/bootstrap.sh` (new): run once on that prepared machine. Installs the **same
+  pinned** k3s version as the Dell. Safe to run twice. On a cloud machine, installs k3s
+  with `--disable=servicelb` and uses the cloud's load balancer instead (see Phase 1's
+  visitor-address fix). Opens with a plain-language
+  comment on why it exists. Written from what was done by hand on the Dell, not invented.
+- **A release bundle** (Devin, 2026-10-14): `release.yml` also attaches
+  `eactl-<version>.tar.gz` (`scripts/remote/` and `k8s/`, nothing else) to each version
+  tag. A new server downloads the bundle for the version it will run, so its playbook
+  always matches its images; no git needed. Until then (Phases 1–6), the server holds a
+  clone, because the files change constantly.
+- **Secrets encrypted on disk from the start** (decided 2026-10-14). Before installing
+  k3s, the bootstrap writes `secrets-encryption: true` into `/etc/rancher/k3s/config.yaml`,
+  so the new cluster encrypts every Secret it ever stores. By default a Secret is only
+  base64-encoded, and anyone with a copy of the cluster's database file could read it.
+  This is what managed clouds (AKS, EKS, GKE) do by default. It protects copies of that
+  file (a stolen disk, a leaked backup), not someone holding cluster credentials. The
+  key lives in `/var/lib/rancher/k3s/server/cred/`: a backup of the cluster's own
+  database is useless without it.
+- **The Dell gets the same setting by hand**, walked through step by step with Devin:
+  add the line, restart k3s, re-encrypt the Secrets already stored
+  (`k3s secrets-encrypt reencrypt`), and check one is unreadable in the database file.
+- `docs/guides/hosting.md` (new): the machine checklist, bootstrap, the release bundle,
+  `eactl init` and `eactl apply-cluster`, the written secret steps, deploy the current
+  tag, restore last night's backup.
 
 **Done when:**
 
@@ -363,6 +569,9 @@ the Dell.
       the real installation back with all its data. The time taken is written in the
       guide.
 - [ ] Running `bootstrap.sh` a second time changes nothing and reports so.
+- [ ] On the throwaway machine and on the Dell, `k3s secrets-encrypt status` reports
+      encryption enabled, and a known Secret's value does not appear in plain text in the
+      cluster's database file.
 - [ ] Nothing in that run needed a step that is not in the guide.
 
 ---
@@ -378,9 +587,9 @@ athlete login. Would become `eactl copy-db`.
 
 ## Deferred, with a home
 
-- **An installation's name** on the sign-in card (reads "Coach workspace"): needs the
-  parent registry, which needs more than one real installation. After November 11.
-- **The parent registry** (the operator's list of installations): same.
+- **The registry database and the operator's web console**, an installation's name on
+  the sign-in card, and account standing: [spec 13](../later/13-registry-and-console.md),
+  after the class. Phase 1's namespace labels are its starting point.
 - **Moving CI onto the Dell** once the repo is private; ephemeral runners with Actions
   Runner Controller as a stretch.
 - **Ansible** in place of `bootstrap.sh`, for machine configuration.
@@ -390,8 +599,7 @@ athlete login. Would become `eactl copy-db`.
 | Decision | Recommendation |
 |---|---|
 | Where Phase 7's throwaway machine runs | A free-tier cloud VM (amd64, like the Dell, and the closest thing to the AWS/Azure goal). A local VM on an Apple-chip Mac would be ARM and need ARM images |
-| Where backups are copied to | Off the house entirely (a cloud storage bucket) is the professional answer; the laptop over Tailscale is the cheap one |
-| `eactl` as a Makefile or a `justfile` | `justfile`: reads like a list of commands, takes arguments cleanly |
+| Where backups are copied to | A cloud storage bucket (recommended 2026-10-16, see Phase 5); the laptop over Tailscale is the free fallback |
 | Secrets beyond a local file | A local, never-committed file per installation applied by `eactl secrets` now; Sealed Secrets or SOPS (encrypted secrets in the repo) as a later step |
 
 ## Acceptance criteria
@@ -413,6 +621,7 @@ athlete login. Would become `eactl copy-db`.
 | A fork's pull request runs code on the Dell | Tests and builds run on GitHub's machines; the Dell runner deploys only, on tags only Devin can create; fork approval required |
 | The home connection or the Dell goes down before a live demo | Backups off the Dell; the rebuild rehearsal is timed; record the end-to-end demo on video early (Definition of Done #7 allows video) |
 | A new subdomain silently fails its certificate | The two-line rule (coredns-custom + DDNS) is in the hosting guide and in Phase 4's and 6's checklists |
+| A deploy during a training session ends that school's open sets (`recover_racks` runs in django's start-up step) | Deploy outside training hours; later, a setting that skips it online |
 | Time: this spec is large for four weeks | Phases 0–1 put the app on the cluster quickly by reusing the plumbing; 5 and 7 can shrink to a documented restore if time runs out; the database move is optional |
 
 ## Docs to update when done

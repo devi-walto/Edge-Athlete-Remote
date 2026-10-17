@@ -37,8 +37,12 @@ def system_info(request):
     Open on purpose: the sign-in screen needs it before anyone has signed in.
     It says nothing else about the installation. The build label comes from
     EA_VERSION, which the release process sets; an unlabelled build says "dev".
+    The name ("Demo U") comes from EA_INSTALLATION_NAME, set per school online so
+    the setup screen can say whose installation it is; a local install leaves it
+    unset and gets null.
     """
     return Response({
         'deployment': deployment(),
         'version': os.environ.get('EA_VERSION', '').strip() or 'dev',
+        'name': os.environ.get('EA_INSTALLATION_NAME', '').strip() or None,
     })

@@ -9,6 +9,7 @@ import FirstRun from './FirstRun.jsx'
 import FirstRunGate from './FirstRunGate.jsx'
 import SignIn from './SignIn.jsx'
 import { archiveAthlete } from './archiveAthlete.js'
+import { forgetDeploymentForTests } from '../useDeployment.js'
 import {
   changePassword, coachFetch, coachLogin, createCoach, listCoaches,
   resetCoachPassword, setCoachToken, updateCoach,
@@ -121,6 +122,40 @@ it('says how to get a setup code when none has been issued, and lets the operato
   expect(recheck).toHaveBeenCalledTimes(1)
   await render(<FirstRun codePending onRecheck={recheck} onClaimed={vi.fn()} onAlreadyClaimed={vi.fn()} />)
   expect(container.querySelector('[role=note]')).toBeNull()
+})
+
+it('online, names the installation being claimed and sends people to support, not to a command', async () => {
+  forgetDeploymentForTests()
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+    ok: true, json: async () => ({ deployment: 'remote', version: 'v1', name: 'Demo U' }),
+  }))
+  try {
+    await render(<FirstRun codePending={false} onRecheck={vi.fn()} onClaimed={vi.fn()} onAlreadyClaimed={vi.fn()} />)
+    await act(async () => {})
+    expect(container.querySelector('h1').textContent).toBe('Welcome to Demo U')
+    const note = container.querySelector('[role=note]').textContent
+    expect(note).toContain('Ask Edge Athlete support')
+    expect(note).not.toContain('docker compose')
+  } finally {
+    vi.unstubAllGlobals()
+    forgetDeploymentForTests()
+  }
+})
+
+it('on a local install with no name, keeps the plain heading and the command', async () => {
+  forgetDeploymentForTests()
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+    ok: true, json: async () => ({ deployment: 'local', version: 'dev', name: null }),
+  }))
+  try {
+    await render(<FirstRun codePending={false} onRecheck={vi.fn()} onClaimed={vi.fn()} onAlreadyClaimed={vi.fn()} />)
+    await act(async () => {})
+    expect(container.querySelector('h1').textContent).toBe('Set up this installation')
+    expect(container.querySelector('[role=note]').textContent).toContain('docker compose exec django python manage.py setup_code')
+  } finally {
+    vi.unstubAllGlobals()
+    forgetDeploymentForTests()
+  }
 })
 
 it('steps aside when another browser finishes setup first', async () => {

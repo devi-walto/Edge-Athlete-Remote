@@ -1,0 +1,37 @@
+# kustomization.yaml — everything ONE school runs, as one template.
+#
+# Every school uses this same base. `eactl new <school>` applies it once per
+# school, filling in that school's name, address, release and settings. Nothing
+# in this folder names a school.
+#
+# The placeholder ${SCHOOL_HOST} is filled in by eactl, which also sets the
+# school's namespace and release. Never apply this folder with plain
+# `kubectl apply -k`.
+
+# Kustomization: a list of files to apply together, plus any edits to them.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - mosquitto.yaml
+  - postgres-alias.yaml
+  - django.yaml
+  - workers.yaml
+  - react.yaml
+  - ingress.yaml
+  - deployer-access.yaml
+
+# The broker's settings, made from the repo's own mosquitto/mosquitto.conf, the
+# file a local install uses. One copy for local and remote, so they can't drift.
+#
+# Kustomize adds a short code to the ConfigMap's name made from the file's
+# contents (mosquitto-config-abc123), and updates mosquitto.yaml to match. So
+# when the settings file changes, the name changes, and Kubernetes restarts the
+# broker with the new settings by itself.
+#
+# The file sits outside this folder, which kustomize normally refuses for
+# safety; eactl builds this folder with --load-restrictor=LoadRestrictionsNone.
+configMapGenerator:
+  - name: mosquitto-config
+    files:
+      - mosquitto.conf=../../../mosquitto/mosquitto.conf

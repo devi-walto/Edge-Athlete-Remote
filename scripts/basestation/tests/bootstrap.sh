@@ -214,11 +214,14 @@ check "says it is restarting what it already had" "restarting the code already o
 check "still brings the stack back up" "compose up -d" "$(cat /tmp/docker-calls)"
 
 echo
-echo "=== the two bootstraps share ONE access block ==="
-check "repo-access block is identical in bootstrap.sh and rack-bootstrap.sh" "identical" \
-      "$(diff <(sed -n '/^# >>> repo access/,/^# <<< repo access/p' /src/scripts/basestation/bootstrap.sh) \
-              <(sed -n '/^# >>> repo access/,/^# <<< repo access/p' /src/scripts/rack-screen/rack-bootstrap.sh) \
-         >/dev/null && echo identical || echo DIFFERENT)"
+echo "=== the three bootstraps share ONE access block ==="
+access_block() { sed -n '/^# >>> repo access/,/^# <<< repo access/p' "$1"; }
+for other in rack-screen/rack-bootstrap.sh remote/bootstrap.sh; do
+    check "repo-access block is identical in basestation/bootstrap.sh and $other" "identical" \
+          "$(diff <(access_block /src/scripts/basestation/bootstrap.sh) \
+                  <(access_block "/src/scripts/$other") \
+             >/dev/null && echo identical || echo DIFFERENT)"
+done
 
 echo
 echo "=== rack screen: the same private-repo clone, end to end ==="

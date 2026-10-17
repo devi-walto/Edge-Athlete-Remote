@@ -1,0 +1,104 @@
+# deployer.yaml — the cluster login the automatic deploy uses, and what it may do.
+#
+# Why: when a release is tagged, a GitHub runner on this server runs
+# `eactl update --all --version <tag> --yes`. It shouldn't use your own login,
+# which can do anything. This login can update schools' apps and nothing else:
+# it can't read any Secret, can't touch the shared database or the cluster's
+# add-ons, and can't change a school's settings.
+#
+# Each school's namespace grants it access through a RoleBinding in the school
+# template (k8s/app/base/deployer-access.yaml), so a new school is covered
+# automatically.
+
+apiVersion: v1
+# Namespace: the shared one (also listed in k8s/db/postgres); applying it twice
+# is harmless.
+kind: Namespace
+metadata:
+  name: edge-athlete
+
+---
+apiVersion: v1
+# ServiceAccount: a login for a program, not a person.
+kind: ServiceAccount
+metadata:
+  name: ea-deployer
+  namespace: edge-athlete
+
+---
+apiVersion: v1
+# Secret (of the service-account-token kind): a long-lived key for that login,
+# which Kubernetes fills in itself. The runner's kubeconfig is made from it (see
+# scripts/remote/README.md, "The deploy runner"). Never copied into the repo.
+kind: Secret
+metadata:
+  name: ea-deployer-token
+  namespace: edge-athlete
+  annotations:
+    kubernetes.io/service-account.name: ea-deployer
+type: kubernetes.io/service-account-token
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+# ClusterRole: a list of permissions. This one covers what isn't inside any one
+# school: finding the schools (their namespaces) and updating the release written
+# on them.
+kind: ClusterRole
+metadata:
+  name: ea-deployer-namespaces
+rules:
+  - apiGroups: [""]
+    resources: [namespaces]
+    verbs: [get, list, patch]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+# ClusterRoleBinding: gives that list to the deploy login, everywhere.
+kind: ClusterRoleBinding
+metadata:
+  name: ea-deployer-namespaces
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ea-deployer-namespaces
+subjects:
+  - kind: ServiceAccount
+    name: ea-deployer
+    namespace: edge-athlete
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+# ClusterRole: what the deploy login may do INSIDE a school. Only granted in a
+# namespace whose RoleBinding hands it over (every school's, via the template).
+# No Secrets anywhere in this list: it can't read a school's passwords.
+kind: ClusterRole
+metadata:
+  name: ea-deployer-school
+rules:
+  # The school's app: put the new version in place, and wait for it.
+  - apiGroups: [apps]
+    resources: [deployments, replicasets]
+    verbs: [get, list, watch, create, update, patch]
+  - apiGroups: [""]
+    resources: [services, configmaps, persistentvolumeclaims]
+    verbs: [get, list, watch, create, update, patch]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses]
+    verbs: [get, list, watch, create, update, patch]
+  # Before changing release: ask the school's django which database changes it
+  # has, and start a short-lived pod of the new release to list what it knows.
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list, watch, create, delete]
+  - apiGroups: [""]
+    resources: [pods/exec, pods/attach]
+    verbs: [create]
+  - apiGroups: [""]
+    resources: [pods/log]
+    verbs: [get]
+  # Keep its own access in place when the template is applied again (only this
+  # one binding, by name).
+  - apiGroups: [rbac.authorization.k8s.io]
+    resources: [rolebindings]
+    resourceNames: [ea-deployer]
+    verbs: [get, update, patch]

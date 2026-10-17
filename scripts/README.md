@@ -1,5 +1,13 @@
 # scripts/
 
+| Where it runs | Folder |
+|---|---|
+| **Local**: a gym's own devices, no internet needed | `basestation/`, `rack-screen/` (below), `hardware/` (rack sensor readers), `netmon.sh` |
+| **Remote**: the hosted server | [`remote/`](remote/README.md) |
+| Your laptop, while developing | `hooks/`, `install-hooks.sh` |
+
+The rest of this page is the local side.
+
 Provisioning + boot scripts, split by device role. There are two completely
 different kinds of device on the gym network.
 

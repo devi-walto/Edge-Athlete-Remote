@@ -163,6 +163,43 @@ in firmware: the same work, on the noisiest part of the three.
   (`pulse`, `motion` and `rep` under `edgeathlete/node/{node_id}/`) do not change, so
   nothing on the server does.
 
+### Getting every rep through: the first hop is the weak one
+
+Found 2026-10-15, while planning the remote broker. To be done in the firmware rewrite.
+
+**What forced it.** A rep makes four hops, and only the first is unprotected:
+
+| Hop | How the rep is protected today |
+|---|---|
+| Sensor → broker | **Not at all.** The firmware sends at MQTT QoS 0 ("once, and hope") and keeps no copy. If the connection is down when a rep ends, the rep is dropped (`MQTT offline; dropped rep event`) |
+| Broker → rack screen | QoS 1 with a stable client ID and a kept session: the broker holds reps for a screen that is briefly offline, and keeps them on disk across a broker restart |
+| On the rack screen | each rep is written to the browser's own database (`react/src/db/repBuffer.js`) before anything else; it survives reloads and Wi-Fi drops |
+| Rack screen → server | the whole set is sent once at the end, and the screen's copy is cleared only after the server confirms |
+
+The firmware is stuck at QoS 0 by its library: **PubSubClient can only send at QoS 0**,
+and its own README now says it is no longer maintained. (The Bluetooth sensor agent in
+`scripts/hardware/` already sends reps at QoS 1; only the ESP32 firmware does not.)
+
+**What we chose.** Three changes, all in the firmware rewrite:
+
+1. **Switch to ESP-MQTT**, Espressif's own MQTT client, built into the ESP32's SDK and
+   maintained by the chip maker, and **send reps at QoS 1**. It keeps every unconfirmed
+   message in an *outbox* and resends it until the broker confirms, including messages
+   published while disconnected. The outbox is the sensor-side buffer; nothing extra to
+   write. *Check first:* how cleanly it can be used from the Arduino setup.
+   `espMqttClient` (an Arduino MQTT library for the ESP32) is the fallback.
+2. **Keep an unconfirmed rep long enough to outlast a Wi-Fi drop.** ESP-MQTT deletes
+   outbox messages after a set time; choose it to cover a realistic drop, or also keep
+   the last few reps in memory.
+3. **Make the rack screen ignore a repeated rep.** QoS 1 means *at least* once, so a rep
+   can occasionally arrive twice, and today the screen counts every rep it receives.
+   Skip one whose sensor rep number and time are already stored.
+
+Pulses and motion stay at QoS 0: a lost one is replaced by the next a moment later.
+
+**What it cost.** A little more memory on the sensor for the outbox, and a new library to
+learn. The messages themselves do not change, so nothing on the server does.
+
 ## What we rejected, and why
 
 **Setting up Wi-Fi over Bluetooth from a web page.** Web Bluetooth does not work on

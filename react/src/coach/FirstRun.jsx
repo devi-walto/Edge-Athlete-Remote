@@ -12,11 +12,19 @@
 import { useState } from 'react'
 import { coachFetch, setCoachToken } from './api.js'
 import { Mark } from './SignIn.jsx'
+import useDeployment, { useInstallationName } from '../useDeployment.js'
 import './account.css'
 
+// Only shown on a local install: there, whoever installed it can run this on the
+// box. Online, nobody claiming a school has access to the server, so the screen
+// tells them to ask Edge Athlete support instead.
 const COMMAND = 'docker compose exec django python manage.py setup_code'
 
 export default function FirstRun({ codePending, onRecheck, onClaimed, onAlreadyClaimed }) {
+  const remote = useDeployment() === 'remote'
+  // "Welcome to Demo U": which installation is being claimed, when the server
+  // knows its name (set per school online; a local install has none).
+  const installationName = useInstallationName()
   const [code, setCode] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -53,7 +61,7 @@ export default function FirstRun({ codePending, onRecheck, onClaimed, onAlreadyC
   return <main className="acct-screen"><div className="acct-setup">
     <div className="acct-setup-why">
       <Mark large />
-      <h1>Set up this installation</h1>
+      <h1>{installationName ? `Welcome to ${installationName}` : 'Set up this installation'}</h1>
       <p>Nobody has claimed this installation yet. Enter its one-time setup code to create the first administrator.</p>
       <div className="acct-steps">
         <span className="acct-label">Where the code comes from</span>
@@ -64,7 +72,9 @@ export default function FirstRun({ codePending, onRecheck, onClaimed, onAlreadyC
     </div>
     <form className="acct-card" onSubmit={submit}>
       {!codePending && <p className="acct-hint" role="note">
-        No setup code has been issued yet. On the machine, run:<br /><code>{COMMAND}</code><br />
+        {remote
+          ? <>No setup code has been issued yet. Ask Edge Athlete support to issue one.<br /></>
+          : <>No setup code has been issued yet. On the machine, run:<br /><code>{COMMAND}</code><br /></>}
         <button type="button" className="acct-quiet is-strong" style={{ paddingLeft: 0 }} disabled={busy} onClick={onRecheck}>I&rsquo;ve run it — check again</button>
       </p>}
       {error && <p className="acct-error" role="alert">{error}</p>}

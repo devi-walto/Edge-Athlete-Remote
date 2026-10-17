@@ -34,9 +34,11 @@ must stay one codebase ({doc}`deployments`).
 
 - Every installation — gym box or hosted — has the same schema, created by the same
   migrations.
-- On the hosted service, each installation is its own copy of the stack, deployed from
+- On the hosted service, each installation is its own copy of the app, deployed from
   **one template**: its own database, its own message broker, its own address
-  ({doc}`hosting`).
+  ({doc}`hosting`). Many installations share **one server**, and on it **one database
+  server** (Postgres): each installation has its own database inside it, with a login
+  that can open only that one. A gym box, by contrast, is a server of its own.
 - **The fence between programs is structural.** Program B's rows are not in program
   A's database, so there is no query that can leak them.
 
@@ -128,9 +130,9 @@ owner.
 - **Anything that spans programs needs its own layer.** An athlete who trains with two
   programs has two athlete records in two databases. Linking them is a separate sign-in
   service, not a column — see {doc}`access`.
-- **Each hosted installation costs a full stack** in memory, not a few rows. Sharing
-  one database server between installations (still one database each) is a tuning
-  option for later.
+- **Each hosted installation costs its own copy of the app** in memory, not a few rows.
+  Sharing one database server between them (still one database each) keeps that down;
+  the price is that if that one database server is down, every installation is.
 - **"Hosted wins" can discard a roster edit made on an offline box** when the same
   record was also edited online. Rare, and the reason the hand-off — sync before
   switching sides — stays the normal path.

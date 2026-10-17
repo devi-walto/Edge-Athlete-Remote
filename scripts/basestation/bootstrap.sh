@@ -70,7 +70,7 @@ if ! command -v git >/dev/null 2>&1 || ! command -v ssh-keygen >/dev/null 2>&1; 
     apt-get install -y -qq git ca-certificates openssh-client
 fi
 
-# >>> repo access — keep IDENTICAL in bootstrap.sh and rack-bootstrap.sh (a test checks)
+# >>> repo access — keep IDENTICAL in all three bootstraps: basestation/, rack-screen/, remote/ (a test checks)
 #
 # Only for SSH remotes. A file:// or https:// URL (the tests, or a public fork) needs
 # no key, and generating one there would just be clutter a human later wonders about.
@@ -130,7 +130,9 @@ EOF
                 echo "    This machine's key, for when you can reach GitHub:"
                 echo "      $key.pub"
                 echo
+                echo "   ▼▼▼ copy the WHOLE next line, starting with ssh-ed25519 ▼▼▼"
                 cat "$key.pub"
+                echo "   ▲▲▲ to the line above ▲▲▲"
                 echo
                 echo "    Add it under the repo's Settings -> Deploy keys (write access OFF)."
                 echo "    Then give this machine internet and run this again."
@@ -143,10 +145,12 @@ EOF
         echo
         echo " On GitHub: the repo → Settings → Deploy keys → Add deploy key"
         echo "   Title:  $(hostname)"
-        echo "   Key:    the line below"
+        echo "   Key:    the WHOLE line between the arrows, starting with ssh-ed25519"
         echo "   Leave 'Allow write access' UNCHECKED — this machine only reads."
         echo
+        echo "   ▼▼▼ copy from the next line ▼▼▼"
         cat "$key.pub"
+        echo "   ▲▲▲ to the line above ▲▲▲"
         echo "=================================================================="
         if [ -t 0 ]; then
             read -r -p "Press Enter once the key is added (Ctrl+C to stop)... " _

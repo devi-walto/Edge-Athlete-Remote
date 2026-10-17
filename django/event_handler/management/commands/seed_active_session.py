@@ -12,7 +12,7 @@
 # template) is deployed as a TrainingProgram for a TrainingGroup, and that group
 # is scheduled into the session. Prescriptions are PERCENTAGES, so the pounds
 # each athlete sees come from their own reference max — which is why Riley
-# Prather's missing bench max shows up as a real "no target" case rather than a
+# Brooks's missing bench max shows up as a real "no target" case rather than a
 # made-up number.
 #
 # Re-runnable: pass --reset to wipe just the rows this command creates (matched

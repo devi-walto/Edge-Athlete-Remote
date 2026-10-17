@@ -57,7 +57,13 @@ class SystemInfoRouteTests(APITestCase):
                 self.assertEqual(res.data['deployment'], mode)
 
     def test_it_says_nothing_else_about_the_installation(self):
-        self.assertEqual(set(self.client.get('/api/system/info/').data), {'deployment', 'version'})
+        self.assertEqual(set(self.client.get('/api/system/info/').data), {'deployment', 'version', 'name'})
+
+    def test_the_name_comes_from_the_school_setting_and_is_null_without_one(self):
+        with mock.patch.dict(os.environ, {'EA_INSTALLATION_NAME': '  Demo U '}):
+            self.assertEqual(self.client.get('/api/system/info/').data['name'], 'Demo U')
+        with mock.patch.dict(os.environ, {'EA_INSTALLATION_NAME': ''}):
+            self.assertIsNone(self.client.get('/api/system/info/').data['name'])
 
     def test_the_build_label_comes_from_the_release_and_defaults_to_dev(self):
         with mock.patch.dict(os.environ, {'EA_VERSION': 'v0.4.0'}):

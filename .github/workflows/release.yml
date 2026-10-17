@@ -1,0 +1,96 @@
+# release.yml — turn a version tag on main into the app's images, then deploy them.
+#
+# Why this file exists: Kubernetes never builds images; it runs images that already
+# exist in a registry. When Devin tags a release on main (v0.4.0, v0.4.1, ...):
+#   1. images  (GitHub's machines): build the django and react images from the SAME
+#      Dockerfiles a local install uses, name them with the tag, and store them
+#      privately in GitHub's container registry (ghcr.io).
+#   2. deploy  (the runner on the server): move every school to that release with
+#      eactl, the demo school first (spec 12, Phase 3).
+#
+# This is a GitHub Actions file: GitHub reads it, not Docker or k3s. Only a tag
+# starts it, and a tag that isn't on main is refused.
+
+name: Release images
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+  packages: write   # lets this run store images in the registry, and nothing more
+
+jobs:
+  images:
+    name: build and store the images
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      REGISTRY: ghcr.io/devi-walto
+      VERSION: ${{ github.ref_name }}   # the tag that started this run, e.g. v0.4.0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the whole history, to check where the tag is
+
+      # Releases come from main only. main holds work that already passed CI in a
+      # pull request (promote-main.yml moves it forward); a tag anywhere else would
+      # release something that never went through that. So refuse it.
+      - name: Check the tag is on main
+        run: |
+          git fetch origin main
+          if git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "$VERSION is on main."
+          else
+            echo "::error::$VERSION is not on main. Tag a commit on main instead."
+            exit 1
+          fi
+
+      # Sign in to the registry as this workflow run. GitHub makes the token for this
+      # run only and it expires when the run ends; nothing is stored in the repo.
+      - name: Sign in to the registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      # --build-arg stamps the version inside the image, so the running app can say
+      # which release it is at /api/system/info/.
+      - name: Build the django image
+        run: docker build --build-arg EA_VERSION="$VERSION" -t "$REGISTRY/edge-athlete-django:$VERSION" ./django
+
+      - name: Build the react image
+        run: docker build -t "$REGISTRY/edge-athlete-react:$VERSION" ./react
+
+      - name: Check the django image reports its own version
+        run: test "$(docker run --rm "$REGISTRY/edge-athlete-django:$VERSION" printenv EA_VERSION)" = "$VERSION"
+
+      - name: Store both images in the registry
+        run: |
+          docker push "$REGISTRY/edge-athlete-django:$VERSION"
+          docker push "$REGISTRY/edge-athlete-react:$VERSION"
+
+  deploy:
+    name: move every school to this release
+    needs: images            # only once both images are stored
+    # The runner on the server, which only does deploys (its label, given when it
+    # was registered). It reaches out to GitHub for this job; nothing is opened
+    # inward. Its cluster login can update schools and nothing else
+    # (k8s/cluster/deployer.yaml).
+    runs-on: [self-hosted, ea-deploy]
+    timeout-minutes: 30
+    env:
+      VERSION: ${{ github.ref_name }}
+    steps:
+      # This release's own eactl and templates, so a release deploys exactly what
+      # it contains.
+      - uses: actions/checkout@v4
+
+      # The demo school (labelled ea/canary=true) goes first; if it fails, no other
+      # school is touched. --yes: no questions; a release that would need database
+      # changes undone stops here and waits for a person.
+      - name: Update every school
+        run: ./scripts/remote/eactl.sh update --all --version "$VERSION" --yes
+
+      # Leave nothing from this repo on the server between deploys.
+      - name: Clean up
+        if: always()
+        run: find "$GITHUB_WORKSPACE" -mindepth 1 -delete
