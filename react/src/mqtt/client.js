@@ -12,12 +12,13 @@
 
 import mqtt from 'mqtt'
 import { getDeviceId, getTabId } from '../device.js'
+import { brokerUrl } from './brokerUrl.js'
 
 let client = null
 
 export function getClient() {
   if (!client) {
-    // location.hostname so it works from whatever device is pointed at the Pi.
+    // brokerUrl() works from whatever device is pointed at the box, local or remote.
     //
     // clientId + clean:false: without a stable name, every reconnect looks like
     // a brand-new stranger to the broker, so it has nothing saved for us and a
@@ -26,14 +27,14 @@ export function getClient() {
     // QoS 1 messages sent during a drop get queued and delivered the moment we
     // reconnect, instead of vanishing.
     //
-    // ⚠️ The id is device + TAB, not the device alone. MQTT client ids must be
+    // ** The id is device + TAB, not the device alone. MQTT client ids must be
     // unique, and a collision does not fail politely — the broker kicks the
     // existing connection off. Two tabs of the same screen share one device id
     // (localStorage is per profile+origin), so device-only ids make those two
     // tabs evict each other in a loop. The tab half comes from sessionStorage,
     // so it is unique per tab AND survives that tab reloading — which keeps the
     // queued session that clean:false asked for. See getTabId() in device.js.
-    client = mqtt.connect(`ws://${window.location.hostname}:9001`, {
+    client = mqtt.connect(brokerUrl(), {
       clientId: `${getDeviceId()}-${getTabId()}`,
       clean: false,
     })
