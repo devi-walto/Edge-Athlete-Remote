@@ -484,8 +484,10 @@ health check fails (Django and React update side by side, so the old copy keeps 
   address in `react/src/mqtt/brokerUrl.js` (https means remote; an https page cannot
   open a plain `ws://` connection anyway), so it is one codebase, not two builds, and
   needs no wait for `useDeployment()`.
-- **The domain part waits for the new domain** (wildcard above, Demo U's real address).
-  The `wss` part ships on the current address.
+- **The domain part waits until after the class** (Devin, 2026-10-17): the wildcard
+  above, Cloudflare DNS for the new domain, and Demo U's real address. Done then as a
+  test of the whole setup from scratch (new accounts, certificates, DNS), alongside
+  Phase 7. Until then schools stay on the current domain. The `wss` part ships now.
 - **The plain-HTTP workarounds stay for the gym and go unused online.** A gym box serves
   plain HTTP, so the app carries two patches: `polyfills.js` fills in browser features
   that plain HTTP switches off, and the rack screen's kiosk script launches Chromium
