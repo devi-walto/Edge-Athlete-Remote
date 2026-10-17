@@ -1,0 +1,53 @@
+# promote-main.yml — every 3 days, move main forward to match SprintBranch.
+#
+# Why: SprintBranch only ever gets work through pull requests that passed CI, so
+# it's always in a releasable state. main is where releases are tagged. Moving it
+# on a schedule keeps it close behind without anyone having to remember.
+#
+# A FAST-FORWARD only: main simply jumps ahead to where SprintBranch is. If main
+# has something SprintBranch doesn't (it never should), this stops and fails
+# loudly instead of merging or overwriting anything.
+#
+# Tagging stays by hand: a tag on main is what releases and deploys a version
+# (release.yml).
+
+name: Move main forward
+
+on:
+  schedule:
+    # 06:00 UTC on every third day of the month (1st, 4th, 7th, …).
+    - cron: "0 6 */3 * *"
+  # A "Run workflow" button on the Actions page, for doing it now.
+  workflow_dispatch:
+
+permissions:
+  contents: write   # to push main, and nothing else
+
+jobs:
+  promote:
+    name: fast-forward main to SprintBranch
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the whole history, to compare the two branches
+
+      - name: Check main can simply move forward
+        run: |
+          git fetch origin main SprintBranch
+          if git merge-base --is-ancestor origin/main origin/SprintBranch; then
+            echo "main is behind SprintBranch: it can move forward."
+          else
+            echo "::error::main has commits SprintBranch doesn't. Not moving it; sort it out by hand."
+            exit 1
+          fi
+
+      - name: Move main forward
+        run: |
+          if [ "$(git rev-parse origin/main)" = "$(git rev-parse origin/SprintBranch)" ]; then
+            echo "main already matches SprintBranch. Nothing to do."
+            exit 0
+          fi
+          git push origin origin/SprintBranch:refs/heads/main
+          echo "main moved to $(git rev-parse --short origin/SprintBranch)."

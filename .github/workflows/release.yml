@@ -30,6 +30,21 @@ jobs:
       VERSION: ${{ github.ref_name }}   # the tag that started this run, e.g. v0.4.0
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the whole history, to check where the tag is
+
+      # Releases come from main only. main holds work that already passed CI in a
+      # pull request (promote-main.yml moves it forward); a tag anywhere else would
+      # release something that never went through that. So refuse it.
+      - name: Check the tag is on main
+        run: |
+          git fetch origin main
+          if git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "$VERSION is on main."
+          else
+            echo "::error::$VERSION is not on main. Tag a commit on main instead."
+            exit 1
+          fi
 
       # Sign in to the registry as this workflow run. GitHub makes the token for this
       # run only and it expires when the run ends; nothing is stored in the repo.
