@@ -37,7 +37,7 @@ jobs:
       matrix:
         mode: [local, remote]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # The same image a gym box runs. Building it is itself a check.
       - name: Build the django image
@@ -76,9 +76,9 @@ jobs:
       run:
         working-directory: react
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # The same Node major version the react Dockerfile builds with.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -97,8 +97,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Build the docs (warnings are errors)

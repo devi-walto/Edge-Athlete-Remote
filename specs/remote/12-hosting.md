@@ -409,21 +409,47 @@ database dropped `WITH (FORCE)`, the request cancelled, then the namespace with 
      rollback soon after, not long-term (that's Phase 5).
   4. If a migration can't be undone (a data step without its undo written), it stops
      before switching, and points at the safety copy.
+- **A school can be held at its release** (Devin, 2026-10-17): `eactl hold "Name"` labels
+  it `ea/hold=true`, and `update --all` (so every automatic deploy) skips it and says so;
+  `eactl unhold` lets it follow again. **Moving one school back to an older release holds
+  it automatically**, so a deliberate rollback isn't undone by the next deploy. A held
+  canary is skipped too; the other schools still update. Updating a held school by name
+  still works. `eactl list` shows which schools are held.
+- **A deploy only happens on a tag.** The 3-day job only moves `main`; it never deploys.
+  A school already on the tagged release isn't restarted (`already on vX`).
 
 **Done when:**
 
-- [ ] Tagging a version deploys it; `/api/system/info/` then reports that version.
-- [ ] Deploying the previous tag rolls back, and the data is untouched.
+- [x] Tagging a version deploys it; `/api/system/info/` then reports that version.
+- [x] Deploying the previous tag rolls back, and the data is untouched.
 - [ ] Rolling back across a migration warns and lists it; choosing to undo saves a
       safety copy first, undoes it with the newer release, then switches. Rolling back
       with no migration in between says it's safe and just switches.
 - [ ] `main` moves forward to `SprintBranch` on its 3-day schedule; a tag on any other
       branch is refused.
 - [ ] A deploy that fails its health check leaves the previous version serving.
-- [ ] The runner's credentials are refused when used to read another namespace's
+- [x] The runner's credentials are refused when used to read another namespace's
       Secrets or to change the cluster's add-ons.
-- [ ] *(By hand)* The fork-approval setting and the tag rule are on, and recorded in the
+- [x] *(By hand)* The fork-approval setting and the tag rule are on, and recorded in the
       hosting guide.
+
+**Result, 2026-10-17.** `v0.4.0` was the first release built this way: the tag was on
+`main` (the check passed), both images were built and stored, and the runner on the Dell
+(`basestation-deploy`, running as its own user with the limited deploy login) moved Demo U,
+the canary, to `v0.4.0`; the public site then reported it. The run then stopped at the
+second school, Restore Test, which had been made before the template granted the deploy
+login access: the login was refused, the comparison came back empty and **nothing was
+changed**. Fixed by updating that school once by hand, and `eactl update` now **checks it
+can update every school before touching any** (and names the fix). The re-run went green.
+A rollback by hand (Demo U to `v0.3.1`, then back to `v0.4.0`) reported "no database
+changes, safe to switch" both ways, with the site up. The deploy login was refused on
+Secrets, the shared database and the add-ons. `main` was moved forward once by hand (the
+3-day job only runs from `main`); the workflows moved to the Node 24 versions of GitHub's
+actions after a deprecation warning.
+
+Not yet exercised, by design: a rollback across a database change (no release has added a
+migration since `v0.3.1`; it will be tested on the first one that does), and a deploy whose
+health check fails (Django and React update side by side, so the old copy keeps serving).
 
 **Stop. Devin reviews.**
 
