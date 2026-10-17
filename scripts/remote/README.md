@@ -172,14 +172,20 @@ update schools and nothing else (`k8s/cluster/deployer.yaml`, applied by
    ```bash
    sudo -u ea-deploy bash -c 'mkdir -p ~/actions-runner && cd ~/actions-runner \
      && curl -fsSLo runner.tar.gz https://github.com/actions/runner/releases/download/v2.337.0/actions-runner-linux-x64-2.337.0.tar.gz \
+     && echo "70920811a4f8ad4328818682bca5c6469c1c942fab52448868071d0063816613  runner.tar.gz" | sha256sum -c \
      && tar xzf runner.tar.gz && rm runner.tar.gz'
    sudo -u ea-deploy bash -c 'cd ~/actions-runner && ./config.sh --unattended \
      --url https://github.com/devi-walto/Edge-Athlete-Remote \
      --token <the registration token> --name "$(hostname)-deploy" --labels ea-deploy'
-   cd /home/ea-deploy/actions-runner && sudo ./svc.sh install ea-deploy && sudo ./svc.sh start
+   sudo bash -c 'cd /home/ea-deploy/actions-runner && ./svc.sh install ea-deploy && ./svc.sh start'
    ```
 
-   On GitHub, the runner then shows as **Idle** with the label `ea-deploy`.
+   (Run as root: the runner user's home folder is private, so your own user can't
+   go into it. The checksum line refuses a download that isn't the real file; the
+   number is the one GitHub publishes for that version.)
+
+   On GitHub, the runner then shows as **Idle** with the label `ea-deploy`. It
+   runs as a service: it survives logouts and starts again after a reboot.
 
 4. **Mark the demo school to go first** on every deploy (a new one can use
    `eactl new "Name" --canary` instead):
