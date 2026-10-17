@@ -55,7 +55,7 @@ only if there is time before November 11.
 ## What exists (after specs 03, 04 and 05)
 
 - An athlete login is a Django user linked to one `Athlete` (`Athlete.user`).
-- `/athlete` (sign in) and `/login-link/<link>` (spec 03 Phase 4), currently ending on
+- `/athlete` (sign in) and `/login-link#<link>` (spec 03 Phase 4), currently ending on
   a placeholder page.
 - `POST /api/sessions/{id}/join/` and its membership rule (spec 04 Phase 1).
 - `ScheduledSession`: `training_program`, `training_program_workout`, `date`, and

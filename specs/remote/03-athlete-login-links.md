@@ -129,8 +129,14 @@ The athlete list (`GET /api/athletes/`) adds, for coaches only: `login_status`
 (`none` · `link_sent` · `linked`), `login_username`, `link_expires_at`.
 
 The full link is built from the request's own address
-(`https://<this installation>/login-link/<lookup>.<token>`), so it is right on every
+(`https://<this installation>/login-link#<lookup>.<token>`), so it is right on every
 installation without configuration.
+
+**The link goes after a `#`, not a `/`** (Devin, 2026-10-17). A browser never sends
+the part after `#` to the server: it stays on the athlete's phone, and the page reads
+it and sends it inside the request body (Phase 2). So the secret never appears in
+Traefik's or nginx's request logs, and is never passed on to another site in the
+page's address.
 
 **Done when:**
 
@@ -198,7 +204,7 @@ existing roster in PLANNING → Groups), **only when `useDeployment()` says host
 Mockups `F_Ath_R1` (login link), `F_Ath_R1b` (a link that no longer works) and
 `F_Ath_R2` (sign in), on the canvas's Final designs page, REMOTE flow.
 
-- `/login-link/<link>`: calls `lookup`; shows "Hi <name>"; username, password, password
+- `/login-link#<link>`: reads the link from after the `#`, calls `lookup`; shows "Hi <name>"; username, password, password
   again; **Create my login**. An invalid link shows one message for every cause: "This
   link doesn't work any more. Ask your coach for a new one."
 - `/athlete`: username and password; a line under it — "Forgot it? Ask your coach for a
