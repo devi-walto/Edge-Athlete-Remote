@@ -409,6 +409,14 @@ database dropped `WITH (FORCE)`, the request cancelled, then the namespace with 
      rollback soon after, not long-term (that's Phase 5).
   4. If a migration can't be undone (a data step without its undo written), it stops
      before switching, and points at the safety copy.
+- **A school can be held at its release** (Devin, 2026-10-17): `eactl hold "Name"` labels
+  it `ea/hold=true`, and `update --all` (so every automatic deploy) skips it and says so;
+  `eactl unhold` lets it follow again. **Moving one school back to an older release holds
+  it automatically**, so a deliberate rollback isn't undone by the next deploy. A held
+  canary is skipped too; the other schools still update. Updating a held school by name
+  still works. `eactl list` shows which schools are held.
+- **A deploy only happens on a tag.** The 3-day job only moves `main`; it never deploys.
+  A school already on the tagged release isn't restarted (`already on vX`).
 
 **Done when:**
 
