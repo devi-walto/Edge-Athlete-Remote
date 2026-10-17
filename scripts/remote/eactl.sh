@@ -922,6 +922,24 @@ update)
     else
         schools="$(find_school "$target")" || exit 1
     fi
+    # Before touching ANY school, make sure every one of them can be updated by
+    # whoever is running this. The automatic deploy's login only works in schools
+    # whose namespace grants it (k8s/app/base/deployer-access.yaml); a school made
+    # before that existed doesn't, and finding out halfway through a deploy would
+    # leave schools on different releases.
+    blocked=""
+    for short in $schools; do
+        kubectl auth can-i patch deployments -n "ea-$short" --quiet 2>/dev/null \
+            && kubectl auth can-i create pods -n "ea-$short" --quiet 2>/dev/null \
+            || blocked="$blocked $short"
+    done
+    if [ -n "$blocked" ]; then
+        echo "[!] this login can't update:$blocked"
+        echo "    Nothing was changed. Give each one the deploy access by updating it once"
+        echo "    with your own login:  eactl update <short name>"
+        exit 1
+    fi
+
     for short in $schools; do
         old="$(school_info "$short" version)"
         if [ -n "$version" ] && [ "$old" != "$version" ]; then

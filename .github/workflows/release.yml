@@ -30,7 +30,7 @@ jobs:
       REGISTRY: ghcr.io/devi-walto
       VERSION: ${{ github.ref_name }}   # the tag that started this run, e.g. v0.4.0
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0   # the whole history, to check where the tag is
 
@@ -82,7 +82,7 @@ jobs:
     steps:
       # This release's own eactl and templates, so a release deploys exactly what
       # it contains.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # The demo school (labelled ea/canary=true) goes first; if it fails, no other
       # school is touched. --yes: no questions; a release that would need database
