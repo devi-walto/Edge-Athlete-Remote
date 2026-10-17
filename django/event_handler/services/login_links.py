@@ -33,9 +33,10 @@ LINK_LIFETIME = timedelta(days=3)
 
 
 def issue(athlete, coach):
-    """Make a new link for this athlete and return it, in full, this one time.
+    """Make a new link for this athlete. Returns (link, expires_at).
 
-    Any unused link the athlete already had stops working.
+    The full link is returned this one time and stored nowhere. Any unused link
+    the athlete already had stops working.
     """
     now = timezone.now()
     secret = secrets.token_urlsafe(24)
@@ -49,7 +50,12 @@ def issue(athlete, coach):
             created_at=now,
             expires_at=now + LINK_LIFETIME,
         )
-    return f"{link.lookup}.{secret}"
+    return f"{link.lookup}.{secret}", link.expires_at
+
+
+def cancel(athlete):
+    """Cancel the athlete's unused link, if any. Their login, if they have one, stays."""
+    _cancel_unused(athlete, timezone.now())
 
 
 def find(link_text):

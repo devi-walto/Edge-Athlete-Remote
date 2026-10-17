@@ -25,6 +25,11 @@ User = get_user_model()
 PASSWORD = 'Unique-links-2026!safe'
 
 
+def new_link(athlete, coach):
+    link, _expires_at = login_links.issue(athlete, coach)
+    return link
+
+
 class LoginLinkTestCase(TestCase):
     def setUp(self):
         self.coach = User.objects.create_user('coach', password=PASSWORD)
@@ -34,8 +39,8 @@ class LoginLinkTestCase(TestCase):
 
 class IssueTests(LoginLinkTestCase):
     def test_issuing_twice_leaves_exactly_one_usable_link(self):
-        first = login_links.issue(self.athlete, self.coach)
-        second = login_links.issue(self.athlete, self.coach)
+        first = new_link(self.athlete, self.coach)
+        second = new_link(self.athlete, self.coach)
 
         self.assertIsNone(login_links.find(first))
         self.assertIsNotNone(login_links.find(second))
@@ -43,7 +48,7 @@ class IssueTests(LoginLinkTestCase):
         self.assertEqual(len(usable), 1)
 
     def test_the_plain_link_is_stored_nowhere(self):
-        link = login_links.issue(self.athlete, self.coach)
+        link = new_link(self.athlete, self.coach)
         secret = link.split('.', 1)[1]
 
         with connection.cursor() as cursor:
@@ -53,9 +58,20 @@ class IssueTests(LoginLinkTestCase):
         self.assertNotIn(link, stored)
 
     def test_a_link_runs_out_after_three_days(self):
-        login_links.issue(self.athlete, self.coach)
+        _link, expires_at = login_links.issue(self.athlete, self.coach)
         row = AthleteLoginLink.objects.get()
         self.assertEqual(row.expires_at - row.created_at, timedelta(days=3))
+        self.assertEqual(expires_at, row.expires_at)
+
+    def test_cancel_stops_the_link_and_keeps_the_login(self):
+        login = login_links.redeem(new_link(self.athlete, self.coach), 'riley', PASSWORD)
+        pending = new_link(self.athlete, self.coach)
+
+        login_links.cancel(self.athlete)
+
+        login.refresh_from_db()
+        self.assertIsNone(login_links.find(pending))
+        self.assertTrue(login.is_active)
 
 
 class FindTests(LoginLinkTestCase):
@@ -63,7 +79,7 @@ class FindTests(LoginLinkTestCase):
 
     def setUp(self):
         super().setUp()
-        self.link = login_links.issue(self.athlete, self.coach)
+        self.link = new_link(self.athlete, self.coach)
         self.row = AthleteLoginLink.objects.get()
 
     def test_a_good_link_is_found(self):
@@ -99,7 +115,7 @@ class FindTests(LoginLinkTestCase):
 
 class RedeemTests(LoginLinkTestCase):
     def test_a_first_login_is_an_athlete_login_with_no_coach_profile(self):
-        login = login_links.redeem(login_links.issue(self.athlete, self.coach), 'riley', PASSWORD)
+        login = login_links.redeem(new_link(self.athlete, self.coach), 'riley', PASSWORD)
 
         self.athlete.refresh_from_db()
         self.assertEqual(self.athlete.user, login)
@@ -108,13 +124,13 @@ class RedeemTests(LoginLinkTestCase):
         self.assertTrue(login.check_password(PASSWORD))
 
     def test_a_link_works_only_once(self):
-        link = login_links.issue(self.athlete, self.coach)
+        link = new_link(self.athlete, self.coach)
         login_links.redeem(link, 'riley', PASSWORD)
         with self.assertRaises(LinkDoesNotWork):
             login_links.redeem(link, 'riley2', PASSWORD)
 
     def test_a_new_link_replaces_the_login_and_keeps_every_set_and_rep(self):
-        old = login_links.redeem(login_links.issue(self.athlete, self.coach), 'riley', PASSWORD)
+        old = login_links.redeem(new_link(self.athlete, self.coach), 'riley', PASSWORD)
         lifted = Set.objects.create(
             session=TrainingSession.objects.create(), athlete=self.athlete,
             exercise=Exercise.objects.get_or_create(name='Back Squat')[0], set_number=1)
@@ -130,7 +146,7 @@ class RedeemTests(LoginLinkTestCase):
 
         # Forgot the password: the coach sends a new link, and the athlete keeps
         # the same username.
-        new = login_links.redeem(login_links.issue(self.athlete, self.coach), 'riley', PASSWORD)
+        new = login_links.redeem(new_link(self.athlete, self.coach), 'riley', PASSWORD)
 
         old.refresh_from_db()
         self.athlete.refresh_from_db()
@@ -142,8 +158,8 @@ class RedeemTests(LoginLinkTestCase):
         self.assertEqual(list(Rep.objects.filter(set__athlete=self.athlete).values()), reps_before)
 
     def test_a_weak_password_changes_nothing(self):
-        old = login_links.redeem(login_links.issue(self.athlete, self.coach), 'riley', PASSWORD)
-        link = login_links.issue(self.athlete, self.coach)
+        old = login_links.redeem(new_link(self.athlete, self.coach), 'riley', PASSWORD)
+        link = new_link(self.athlete, self.coach)
 
         with self.assertRaises(ValidationError):
             login_links.redeem(link, 'riley-new', 'password')
@@ -151,8 +167,8 @@ class RedeemTests(LoginLinkTestCase):
         self._assert_nothing_changed(old, link)
 
     def test_a_taken_username_changes_nothing(self):
-        old = login_links.redeem(login_links.issue(self.athlete, self.coach), 'riley', PASSWORD)
-        link = login_links.issue(self.athlete, self.coach)
+        old = login_links.redeem(new_link(self.athlete, self.coach), 'riley', PASSWORD)
+        link = new_link(self.athlete, self.coach)
 
         with self.assertRaises(ValidationError):
             login_links.redeem(link, 'coach', PASSWORD)
@@ -161,8 +177,8 @@ class RedeemTests(LoginLinkTestCase):
 
     def test_a_failure_after_the_old_login_is_switched_off_changes_nothing(self):
         # The very last step fails: everything before it must be undone too.
-        old = login_links.redeem(login_links.issue(self.athlete, self.coach), 'riley', PASSWORD)
-        link = login_links.issue(self.athlete, self.coach)
+        old = login_links.redeem(new_link(self.athlete, self.coach), 'riley', PASSWORD)
+        link = new_link(self.athlete, self.coach)
 
         with mock.patch.object(AthleteLoginLink, 'save', side_effect=RuntimeError('disk full')):
             with self.assertRaises(RuntimeError):
@@ -181,8 +197,8 @@ class RedeemTests(LoginLinkTestCase):
 
 class UnlinkTests(LoginLinkTestCase):
     def test_unlink_switches_the_login_off_and_cancels_the_link(self):
-        login = login_links.redeem(login_links.issue(self.athlete, self.coach), 'riley', PASSWORD)
-        pending = login_links.issue(self.athlete, self.coach)
+        login = login_links.redeem(new_link(self.athlete, self.coach), 'riley', PASSWORD)
+        pending = new_link(self.athlete, self.coach)
 
         login_links.unlink(self.athlete)
 
