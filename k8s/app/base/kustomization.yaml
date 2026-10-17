@@ -21,17 +21,16 @@ resources:
   - ingress.yaml
   - deployer-access.yaml
 
-# The broker's settings, made from the repo's own mosquitto/mosquitto.conf, the
-# file a local install uses. One copy for local and remote, so they can't drift.
+# The broker's settings: mosquitto-remote.conf and its rules file browser.acl.
+# A local install keeps mosquitto/mosquitto.conf; see mosquitto-remote.conf for
+# why online is different.
 #
 # Kustomize adds a short code to the ConfigMap's name made from the file's
 # contents (mosquitto-config-abc123), and updates mosquitto.yaml to match. So
 # when the settings file changes, the name changes, and Kubernetes restarts the
 # broker with the new settings by itself.
-#
-# The file sits outside this folder, which kustomize normally refuses for
-# safety; eactl builds this folder with --load-restrictor=LoadRestrictionsNone.
 configMapGenerator:
   - name: mosquitto-config
     files:
-      - mosquitto.conf=../../../mosquitto/mosquitto.conf
+      - mosquitto.conf=mosquitto-remote.conf
+      - browser.acl

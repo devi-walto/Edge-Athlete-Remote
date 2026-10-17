@@ -5,8 +5,8 @@
 # is listening (the rack screen, django's listener). Every school gets its own
 # broker, so one school's messages can never reach another school.
 #
-# Same broker and same settings file as a local install: the repo's
-# mosquitto/mosquitto.conf, loaded in by kustomization.yaml.
+# Same broker as a local install. Its settings are mosquitto-remote.conf, the
+# local settings with the screens' door made listen-only.
 
 apiVersion: v1
 # PersistentVolumeClaim: a locker ticket. Why the broker needs a locker: when a
@@ -65,6 +65,10 @@ spec:
             - name: config
               mountPath: /mosquitto/config/mosquitto.conf
               subPath: mosquitto.conf
+            # The rules for the screens' door (listen-only), next to it.
+            - name: config
+              mountPath: /mosquitto/config/browser.acl
+              subPath: browser.acl
             # The locker, where mosquitto.conf says to keep held messages.
             - name: data
               mountPath: /mosquitto/data
@@ -92,7 +96,10 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: mosquitto-config   # made by kustomization.yaml from the repo's file
+            name: mosquitto-config   # made by kustomization.yaml
+            # Readable by its owner only. The broker warns about a rules file
+            # anyone can read, and says future versions will refuse it.
+            defaultMode: 0400
         - name: data
           persistentVolumeClaim:
             claimName: mosquitto-data

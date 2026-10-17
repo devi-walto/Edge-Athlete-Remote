@@ -1,0 +1,3 @@
+# browser.acl — what screens may do on the remote broker: listen to the app's
+# messages, nothing else. There is no line allowing sending, so sending is refused.
+topic read edgeathlete/#

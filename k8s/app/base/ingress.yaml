@@ -74,6 +74,16 @@ spec:
                 name: django
                 port:
                   number: 8000
+          # Live updates. Not a page and not part of the API: screens open one
+          # lasting connection here, and Traefik passes it on to the broker's
+          # screens port. Listen-only online (mosquitto-remote.conf).
+          - path: /mqtt
+            pathType: Prefix
+            backend:
+              service:
+                name: mosquitto
+                port:
+                  number: 9001
           # Everything else: the screens themselves.
           - path: /
             pathType: Prefix
