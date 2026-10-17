@@ -12,6 +12,9 @@
 #   eactl update "Name"    bring a school up to date; --all for every school (the
 #                          demo first); --version 0.3.2 to move to a release (or back
 #                          to one, after checking its database changes)
+#   eactl hold "Name"      keep a school at its release: automatic deploys skip it
+#                          (moving one school back to an older release holds it too)
+#   eactl unhold "Name"    let it follow releases again
 #   eactl status "Name"    a school's health: each part, its release, its certificate
 #   eactl logs "Name" P    what part P has been printing (django, react, mosquitto,
 #                          mqtt-listener, monitoring-publisher, setup); add -f to follow
@@ -106,6 +109,7 @@ render() {
 # namespace is ea-<short name>, and the namespace itself remembers everything
 # else about it:
 #   labels       ea/school=<short name>  ea/version=v0.3.1  ea/status=active
+#                ea/canary=true (updated first)  ea/hold=true (left out of --all)
 #   annotations  ea/display-name="Demo U"  ea/address=<its web address>
 # (Labels can't hold spaces, so the display name is an annotation.) Every school
 # is public over HTTPS; "suspended" (switched off, data kept) comes in spec 13.
@@ -118,7 +122,7 @@ APP_PARTS_SELECTOR="app in (mosquitto,django,react,mqtt-listener,monitoring-publ
 school_info() {
     local ns="ea-$1"
     case "$2" in
-        version|status) kubectl get namespace "$ns" -o "jsonpath={.metadata.labels.ea/$2}" ;;
+        version|status|hold) kubectl get namespace "$ns" -o "jsonpath={.metadata.labels.ea/$2}" ;;
         address|display-name)
             kubectl get namespace "$ns" -o "jsonpath={.metadata.annotations.ea/$2}" ;;
     esac
@@ -614,7 +618,7 @@ name made from it can't."
     echo
     echo "==> its namespace, which also records everything about it"
     kube create namespace "$ns" || exit 1
-    kube label namespace "$ns" ea/school="$short" ea/version="$version" ea/status=active ea/canary="$canary"
+    kube label namespace "$ns" ea/school="$short" ea/version="$version" ea/status=active ea/canary="$canary" ea/hold=false
     kube annotate namespace "$ns" ea/display-name="$name" ea/address="$address"
 
     echo "==> its database and login in the shared Postgres"
@@ -663,10 +667,11 @@ name made from it can't."
 list)
     # Every school on this server, from what each namespace remembers.
     require_cluster
-    printf '%-24s %-26s %-10s %-10s %s\n' "NAME" "SHORT NAME" "STATUS" "RELEASE" "ADDRESS"
-    kubectl get namespaces -l ea/school -o go-template='{{range .items}}{{index .metadata.annotations "ea/display-name"}}	{{index .metadata.labels "ea/school"}}	{{index .metadata.labels "ea/status"}}	{{index .metadata.labels "ea/version"}}	{{index .metadata.annotations "ea/address"}}
-{{end}}' | while IFS=$'\t' read -r dn sn st ve ad; do
-        printf '%-24s %-26s %-10s %-10s %s\n' "$dn" "$sn" "$st" "$ve" "$ad"
+    printf '%-24s %-26s %-10s %-10s %-6s %s\n' "NAME" "SHORT NAME" "STATUS" "RELEASE" "HELD" "ADDRESS"
+    kubectl get namespaces -l ea/school -o go-template='{{range .items}}{{index .metadata.annotations "ea/display-name"}}	{{index .metadata.labels "ea/school"}}	{{index .metadata.labels "ea/status"}}	{{index .metadata.labels "ea/version"}}	{{index .metadata.labels "ea/hold"}}	{{index .metadata.annotations "ea/address"}}
+{{end}}' | while IFS=$'\t' read -r dn sn st ve ho ad; do
+        [ "$ho" = true ] && ho=yes || ho=-
+        printf '%-24s %-26s %-10s %-10s %-6s %s\n' "$dn" "$sn" "$st" "$ve" "$ho" "$ad"
     done
     ;;
 
@@ -916,9 +921,14 @@ update)
     [ -n "$version" ] && version="v${version#v}"
 
     if [ "$all" = yes ]; then
-        # Canaries first, then everyone else.
-        schools="$(kubectl get namespaces -l 'ea/school,ea/canary=true' -o jsonpath='{range .items[*]}{.metadata.labels.ea/school}{" "}{end}')"
-        schools="$schools $(kubectl get namespaces -l 'ea/school,ea/canary!=true' -o jsonpath='{range .items[*]}{.metadata.labels.ea/school}{" "}{end}')"
+        # Canaries first, then everyone else. Held schools are left out (and said
+        # so): someone decided to keep them where they are. That includes a held
+        # canary; the others still go ahead.
+        list_by() { kubectl get namespaces -l "$1" -o jsonpath='{range .items[*]}{.metadata.labels.ea/school}{" "}{end}'; }
+        schools="$(list_by 'ea/school,ea/canary=true,ea/hold!=true') $(list_by 'ea/school,ea/canary!=true,ea/hold!=true')"
+        for held in $(list_by 'ea/school,ea/hold=true'); do
+            echo "==> $held: held at $(school_info "$held" version), skipped  (eactl unhold $held to let it follow)"
+        done
     else
         schools="$(find_school "$target")" || exit 1
     fi
@@ -942,6 +952,9 @@ update)
 
     for short in $schools; do
         old="$(school_info "$short" version)"
+        if [ -n "$version" ] && [ "$old" = "$version" ]; then
+            echo "==> $short: already on $version"
+        fi
         if [ -n "$version" ] && [ "$old" != "$version" ]; then
             check_release_change "$short" "$version" "$yes" || exit 1
             echo "==> $short: release $old -> $version"
@@ -954,8 +967,30 @@ update)
             echo "[!] stopped at $short; schools after it were not touched"
             exit 1
         fi
+        # Moving ONE school back to an older release is a deliberate choice, so hold
+        # it there; otherwise the next deploy would quietly move it forward again.
+        if [ "$all" = no ] && [ -n "$version" ] && [ "$old" != "$version" ] \
+            && [ "$(printf '%s\n%s\n' "$version" "$old" | sort -V | head -1)" = "$version" ]; then
+            kube label namespace "ea-$short" ea/hold=true --overwrite >/dev/null
+            echo "==> $short is now HELD at $version: automatic deploys will skip it."
+            echo "    To let it follow releases again:  eactl unhold $short"
+        fi
         echo
     done
+    ;;
+
+hold|unhold)
+    # Hold a school at its release (automatic deploys and `update --all` skip it),
+    # or let it follow releases again. Updating it by name still works when held.
+    short="$(find_school "${1:-}")" || exit 1
+    require_cluster
+    if [ "$CMD" = hold ]; then
+        kube label namespace "ea-$short" ea/hold=true --overwrite >/dev/null
+        echo "✓ $short is held at $(school_info "$short" version): automatic deploys will skip it."
+    else
+        kube label namespace "ea-$short" ea/hold=false --overwrite >/dev/null
+        echo "✓ $short follows releases again: the next deploy brings it up to date."
+    fi
     ;;
 
 apply-db)
