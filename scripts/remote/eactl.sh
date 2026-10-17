@@ -2,29 +2,53 @@
 # eactl.sh — run the remote Edge Athlete server. Runs ON the server: SSH in
 # first, then type eactl.
 #
-#   eactl help             this list
-#   eactl init             once per server: ask its settings, save eactl.env
-#   eactl check            is this server's cluster answering?
-#   eactl apply-cluster    put the server-wide add-ons (k8s/cluster) on the cluster
-#   eactl apply-db         put the shared database (k8s/db) on the cluster
-#   eactl new "Name"       make a new school (public, HTTPS)
-#   eactl list             every school: name, short name, status, release, address
-#   eactl update "Name"    bring a school up to date; --all for every school (the
-#                          demo first); --version 0.3.2 to move to a release (or back
-#                          to one, after checking its database changes)
-#   eactl hold "Name"      keep a school at its release: automatic deploys skip it
-#                          (moving one school back to an older release holds it too)
-#   eactl unhold "Name"    let it follow releases again
-#   eactl status "Name"    a school's health: each part, its release, its certificate
-#   eactl logs "Name" P    what part P has been printing (django, react, mosquitto,
-#                          mqtt-listener, monitoring-publisher, setup); add -f to follow
-#   eactl shell "Name"     a command line inside the school's django
-#   eactl setup-code "Name"   issue the code that claims a new school's first administrator
-#   eactl make-admin "Name" USER   make an existing login an administrator again
-#   eactl remove "Name"    delete a school and its database (asks you to type its short
-#                          name, and keeps a safety copy of the database first)
-#   eactl backup "Name"    take a safety copy of the school's database now
-#   eactl restore "Name"   put back one of the school's safety copies (lists them)
+#   ======================================================================
+#     eactl  —  command list
+#   ======================================================================
+#
+#   SET UP THE SERVER  (once per server)
+#     eactl init                  ask this server's settings, save eactl.env
+#     eactl check                 is this server's cluster answering?
+#     eactl apply-cluster         put the server-wide add-ons (k8s/cluster) on it
+#     eactl apply-db              put the shared database (k8s/db) on it
+#
+#   SCHOOLS
+#     eactl new "Name"            make a new school (public, HTTPS)
+#     eactl list                  every school: name, short name, status,
+#                                 release, address
+#     eactl status "Name"         a school's health: each part, its release,
+#                                 its certificate
+#     eactl remove "Name"         delete a school and its database (asks you to
+#                                 type its short name; keeps a safety copy first)
+#
+#   RELEASES
+#     eactl update "Name"         bring a school up to date; --all for every
+#                                 school (the demo first); --version 0.3.2 to move
+#                                 to a release (or back to one, after checking
+#                                 its database changes)
+#     eactl hold "Name"           keep a school at its release: automatic deploys
+#                                 skip it (moving a school back holds it too)
+#     eactl unhold "Name"         let it follow releases again
+#
+#   LOGINS
+#     eactl setup-code "Name"     issue the code that claims a new school's
+#                                 first administrator
+#     eactl make-admin "Name" USER
+#                                 make an existing login an administrator again
+#
+#   SAFETY COPIES  (of a school's database)
+#     eactl backup "Name"         take a safety copy now
+#     eactl restore "Name"        put one back (lists them)
+#
+#   LOOKING INSIDE A SCHOOL
+#     eactl logs "Name" PART      what PART has been printing (django, react,
+#                                 mosquitto, mqtt-listener, monitoring-publisher,
+#                                 setup); add -f to keep following
+#     eactl shell "Name"          a command line inside the school's django
+#
+#   eactl help                    this list
+#
+# -- end of command list
 #
 # Why it exists: the remote service is many schools on one server. Every chore
 # (make a school, list them, apply the add-ons) is a few kubectl commands that
@@ -49,9 +73,10 @@ REPO_DIR="$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)"
 # EACTL_CONFIG points at a different file (for a test).
 CONFIG="${EACTL_CONFIG:-/etc/edgeathlete/eactl.env}"
 
-# The command list is the one at the top of this file: every "#   eactl ..." line.
+# The command list is the one at the top of this file, from its ==== header down
+# to "-- end of command list". Blank comment lines stay as blank lines, for spacing.
 usage() {
-    sed -n '/^#   eactl help/,/^#$/p' "$0" | sed 's/^#   //; /^#$/d'
+    sed -n '/^#   =====/,/^# -- end of command list/p' "$0" | sed '$d; s/^#   //; s/^#$//'
 }
 
 load_config() {
@@ -486,8 +511,7 @@ and each needs its first A record made by hand (scripts/remote/README.md)."
     echo
     echo "✓ eactl init finished: this server is ready."
     echo
-    echo "Commands:"
-    usage | sed 's/^/  /'
+    usage
     ;;
 
 apply-cluster)
