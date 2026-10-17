@@ -46,6 +46,14 @@ spec:
       labels:
         app: mosquitto
     spec:
+      # Files Kubernetes puts in for this pod (the settings below) belong to
+      # group 1883, the broker's own group in its image. The broker reads its
+      # rules file AFTER switching from root to its own user, so the file must
+      # be readable by that group (see defaultMode below).
+      securityContext:
+        fsGroup: 1883
+        # Only change the locker's group if it's wrong, instead of on every start.
+        fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: mosquitto
           # Pinned, so a rebuild months from now gets exactly this broker.
@@ -97,9 +105,12 @@ spec:
         - name: config
           configMap:
             name: mosquitto-config   # made by kustomization.yaml
-            # Readable by its owner only. The broker warns about a rules file
-            # anyone can read, and says future versions will refuse it.
-            defaultMode: 0400
+            # Readable by root and the broker's group, nobody else. Readable by
+            # root only (0400) stops the broker: it can't open its rules file.
+            # Readable by everyone (0444) works, but the broker warns future
+            # versions will refuse it. Checked against Mosquitto 2.0.22 with
+            # real file permissions (not a Mac shared folder, which ignores them).
+            defaultMode: 0440
         - name: data
           persistentVolumeClaim:
             claimName: mosquitto-data
