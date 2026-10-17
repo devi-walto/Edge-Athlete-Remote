@@ -1314,7 +1314,7 @@ Per-coach account state that is not part of Django's User table. Only `must_chan
 
 A one-time link a coach sends an athlete, to make (or remake) their login. Treated like a password: the link itself is never stored, only a one-way hash of its secret part, the same way Django stores passwords. It works once, expires after 3 days, and a newer link cancels it. All of that is checked in services/login_links.py; this table only records what happened.
 
-:::::{dropdown} Schema
+:::::{dropdown} Schema and decisions
 
 <!-- schema:AthleteLoginLink:start -->
 | Column | Type | Notes |
@@ -1329,13 +1329,20 @@ A one-time link a coach sends an athlete, to make (or remake) their login. Treat
 | `cancelled_at` | date + time | optional |
 <!-- schema:AthleteLoginLink:end -->
 
-<!-- TO FILL IN: move these two lines out of this comment, then retitle
-     the dropdown above from 'Schema' to 'Schema and decisions'.
+**Why it exists.** Athletes never create their own logins. A coach sends a personal
+link, and using it makes the athlete's login. This table records each link (spec 03).
 
-**Why it exists.** (what this table is for, in one or two sentences)
-
-**Decisions.** (what was chosen here, and what was rejected)
--->
+**Decisions.**
+- The link is `<lookup>.<secret>`. `lookup` finds the row directly; the secret is
+  stored only as a hash, so a copy of the database can't be used to claim a login.
+- Every failure (wrong, expired, used, cancelled, unknown) gives the same answer, so
+  nobody can learn which.
+- Using a link switches the old login off and renames it (`<name>~replaced-<id>`), so
+  the athlete can keep their username. The old login row is kept, not deleted.
+- An archived athlete's link stops working, so a link can't switch an archived
+  athlete's login back on.
+- Rejected: storing the link itself; a separate "forgot password" path (a new link
+  does both).
 
 :::::
 <!-- SCHEMA SECTION END -->
