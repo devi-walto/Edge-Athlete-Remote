@@ -110,6 +110,8 @@ render() {
 # is public over HTTPS; "suspended" (switched off, data kept) comes in spec 13.
 
 APP_IMAGES="ghcr.io/devi-walto/edge-athlete-django ghcr.io/devi-walto/edge-athlete-react"
+# The school's own parts, by the jersey patch (app: …) every one of them wears.
+APP_PARTS_SELECTOR="app in (mosquitto,django,react,mqtt-listener,monitoring-publisher)"
 
 # school_info <short name> <field> — read one thing the namespace remembers.
 school_info() {
@@ -691,7 +693,9 @@ remove)
     # namespace, giving up with a clear message after 3 minutes.
     echo "==> switching its app off"
     kube -n "$ns" scale deployment --all --replicas=0 >/dev/null
-    kube -n "$ns" wait --for=delete pod --all --timeout=120s >/dev/null 2>&1 || true
+    # Only the school's own parts: other pods (cert-manager's helper while a
+    # certificate is pending) aren't switched off by this and would hold the wait.
+    kube -n "$ns" wait --for=delete pod -l "$APP_PARTS_SELECTOR" --timeout=120s >/dev/null 2>&1 || true
 
     echo "==> its database and login"
     echo "+ (psql) DROP DATABASE $db WITH (FORCE); DROP ROLE $db" >&2
@@ -788,7 +792,9 @@ for app, name in sorted(MigrationLoader(None, ignore_no_migrations=True).disk_mi
 
     echo "==> switching its app off, so nothing writes during the restore"
     kube -n "$ns" scale deployment --all --replicas=0 >/dev/null
-    kube -n "$ns" wait --for=delete pod --all --timeout=120s >/dev/null 2>&1 || true
+    # Only the school's own parts: other pods (cert-manager's helper while a
+    # certificate is pending) aren't switched off by this and would hold the wait.
+    kube -n "$ns" wait --for=delete pod -l "$APP_PARTS_SELECTOR" --timeout=120s >/dev/null 2>&1 || true
 
     echo "==> emptying the database and loading the copy"
     echo "+ (psql) DROP DATABASE $db WITH (FORCE); CREATE DATABASE $db OWNER $db; then the copy, as $db" >&2
