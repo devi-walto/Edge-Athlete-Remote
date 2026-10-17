@@ -27,6 +27,7 @@
 import { useEffect, useRef, useState } from "react";
 import mqtt from "mqtt";
 import { parseMonitoringEvent, ROOM_STATE_TOPIC, shouldReconcile } from "./roomMonitor.js";
+import { brokerUrl } from "./mqtt/brokerUrl.js";
 
 const STALE_AFTER_MS = 15_000;
 
@@ -132,8 +133,7 @@ export default function useLiveRoomState({ mode, accessToken, onAuthRequired }) 
     }
 
     refresh();
-    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    const client = mqtt.connect(`${protocol}://${window.location.hostname}:9001`, {
+    const client = mqtt.connect(brokerUrl(), {
       reconnectPeriod: 2_000,
       connectTimeout: 5_000,
       clean: true,

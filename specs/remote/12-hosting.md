@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-14
-- Status: In progress — Phase 0 done (branch `feature-hosting`)
+- Status: In progress — Phases 0–3 done and merged (PR #4); Phase 4 on `feature-live-updates`; Phases 5–7 tabled
 - Form items: Definition of Done #1 (k3s, public HTTPS, automatic certificates, CI/CD) and
   #5 (a separate demo installation from the same template). Feeds #7 (end to end) and #8
   (docs on deploying to k3s)
@@ -468,12 +468,24 @@ health check fails (Django and React update side by side, so the old copy keeps 
   certificate.
 - The real overlay sets `EA_DEPLOYMENT=remote` and its allowed hosts and trusted origins.
 - The Tailscale-only middleware comes off the site.
-- **The broker goes online through the site's own address.** Traefik routes a path on
-  the HTTPS site to the broker's WebSockets listener, so live updates travel as `wss`
-  on 443 like everything else. No new port.
+- **The broker goes online through the site's own address.** Traefik routes the path
+  `/mqtt` on the HTTPS site to the broker's WebSockets listener (`ingress.yaml`), so
+  live updates travel as `wss` on 443 like everything else. No new port. `/mqtt` is
+  not a page or an API route, only where the screens' connection is passed on.
+- **Online, the screens' door is listen-only** (decided 2026-10-17). Screens never send
+  on the broker; sets and changes go to django over HTTPS. So a remote school's broker
+  uses `k8s/app/base/mosquitto-remote.conf`: anyone may listen to `edgeathlete/#` on
+  9001 (`browser.acl`), nobody may send there. Django's door (1883) is unchanged and
+  never routed from outside. A local install keeps `mosquitto/mosquitto.conf` as is, so
+  its connection test page can still send. Checked against a real Mosquitto 2.0.22:
+  a server message reaches the screen, a screen's message reaches nobody.
 - **The screens connect to it the right way for where they run.** A gym box keeps
-  `ws://<host>:9001`; a hosted page uses `wss://<site>/<path>`. Chosen by spec 05's
-  `useDeployment()`, so it is one codebase, not two builds.
+  `ws://<host>:9001`; a hosted page uses `wss://<site>/mqtt`. Chosen by the page's own
+  address in `react/src/mqtt/brokerUrl.js` (https means remote; an https page cannot
+  open a plain `ws://` connection anyway), so it is one codebase, not two builds, and
+  needs no wait for `useDeployment()`.
+- **The domain part waits for the new domain** (wildcard above, Demo U's real address).
+  The `wss` part ships on the current address.
 - **The plain-HTTP workarounds stay for the gym and go unused online.** A gym box serves
   plain HTTP, so the app carries two patches: `polyfills.js` fills in browser features
   that plain HTTP switches off, and the rack screen's kiosk script launches Chromium

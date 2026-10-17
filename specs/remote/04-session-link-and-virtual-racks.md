@@ -2,7 +2,8 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: Written — not started. No decisions open (who may join: decided 2026-10-14)
+- Status: Written — not started. No decisions open (who may join: decided 2026-10-14;
+  where a browser lands online: decided 2026-10-17)
 - Form items: Definition of Done #3 and #4
 - Depends on: [02 Roles](02-roles.md), [05 Hosted mode](05-hosted-mode.md), [03 Login links](03-athlete-login-links.md)
 - Mockup: coach side `F_Remote_Session` on the canvas's Final designs page. Athlete side:
@@ -51,6 +52,10 @@ already connected.
   recently". That guess was considered and rejected: in the gym the first athlete to
   check in would trip it, it depends on a timer, and it would still let a remote
   athlete reach a list of names.
+- **Online, nobody lands on "Set up this device"** (Devin, 2026-10-17). The
+  local/remote switch decides what `/` shows: a coach or an athlete, by login. A local
+  install keeps the picker exactly as it is. A coach can still open the display view
+  online from a button during a live session; athletes cannot. See 3f.
 
 ### Decided 2026-10-14 — who may join
 
@@ -89,6 +94,7 @@ lock everyone out of a quick one.
 - Releasing virtual racks when a session ends.
 - The rack screen on a rack that has an owner (Phase 3), plus two changes to the rack
   screen in both versions: rep bars in, the WT901 card out.
+- What `/` shows on a remote installation (3f).
 - The ownership half of spec 05's rules for rack endpoints.
 - The coach's live room: virtual racks, sensor status, **Not joined yet**, **Copy
   session link**.
@@ -277,6 +283,38 @@ with a sensor that was on but missed the set.
   History, the daily report) it reads "not measured", never 0.00. The summary shows
   the reps and "— m/s", as it already does for a missing value.
 
+**3f. Where a browser lands, remote only** (Devin, 2026-10-17). Today `/` shows "Set up
+this device" (Rack Tablet, Base Station Display, Coach Admin) to any browser with no
+saved role (`Picker` and `Home` in `react/src/App.jsx`). That is right for a gym, where
+someone sets up each tablet once. Online, a person is a coach or an athlete, known from
+their login.
+
+- **The switch decides; the gym code is left alone.** `Home` asks `useDeployment()`.
+  When it says `local`, `Home` and `Picker` run exactly as today, picker included.
+  When it says `remote`:
+  - an athlete whose login is still valid goes to `/athlete`, their overview page
+    (spec 10; until it exists, spec 03 Phase 4's placeholder);
+  - everyone else goes to `/coach`, where the coach sign-in already links to the
+    athlete one ("Athlete? …", spec 03 Phase 4).
+- **A session link goes straight to the session.** `/session/<id>` with a valid login
+  skips sign-in and the overview and joins at once (3a). Sign-in appears only when the
+  login is missing or has expired, and it returns to the session afterwards.
+- **Where an athlete can go online:** their overview and their session. Never the
+  coach screens, the display view (dashboard), or the room's state (coach only, spec 05).
+- **The display view, coaches only, by choice.** During a live session the coach's
+  screen shows a button that opens the existing display view (`/dashboard`) for that
+  session, for a TV or a second device signed in as that coach. It is not shown when no
+  session is live. Normally nobody needs it; the default is the coach screens.
+  - **Decided 2026-10-17: no display for athletes.** The display reads the room's state
+    (`useLiveRoomState` → `room_state`), which stays coach only. Opening it to athletes
+    would be a server change for a nice-to-have that may not be wanted.
+- **A saved `device_role` is ignored online**, so an old setting in the browser cannot
+  land someone on a rack screen.
+- **While the switch has not answered yet** (the first moment of the page), `/` shows
+  nothing rather than flashing the picker.
+- **Only `/` and that button change.** What `/rack/setup` and `/dashboard` may do
+  online is already decided by the server (spec 05).
+
 **Done when:**
 
 - [ ] *(Frontend test)* Rendered with an owner: no check-in list, no "Not here?", no
@@ -304,6 +342,13 @@ with a sensor that was on but missed the set.
       connection returns.
 - [ ] *(Browser)* The gym rack screen (`/rack/...`) still offers the check-in list and
       rotates lifters.
+- [ ] *(Frontend test)* Local, no saved role: `/` shows the picker, as today.
+- [ ] *(Frontend test)* Remote: `/` never shows the picker, even with a saved
+      `device_role`; a signed-in athlete goes to `/athlete`, anyone else to `/coach`.
+- [ ] *(Browser)* Remote, athlete still signed in: the session link opens the rack
+      screen with no sign-in step.
+- [ ] *(Frontend test)* The display button shows for a coach only, and only while a
+      session is live; an athlete's screens never show it.
 
 **Stop. Devin reviews.**
 
