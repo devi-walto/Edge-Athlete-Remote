@@ -36,6 +36,11 @@ import {
   FILTER_ALL, FILTER_UNASSIGNED, filterRoster, indexMembership, isMember, unassignedCount,
 } from './roster.js'
 import { archiveAthlete } from './archiveAthlete.js'
+import {
+  cancelLoginLink, hasLoginOrLink, loginStatus, sendLoginLink, unlinkLogin,
+} from './loginLinks.js'
+import LoginLinkDialog from './LoginLinkDialog.jsx'
+import useDeployment from '../useDeployment.js'
 import './GroupsView.css'
 
 const TRAINING_GROUPS_URL = '/api/training-groups/'
@@ -146,6 +151,13 @@ export default function GroupsView({ accessToken, onLogout }) {
   const [newName, setNewName] = useState('')
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
+  // Remote only: athletes sign in on their own phones, so the roster shows each
+  // one's login and offers a login link (spec 03). A local install never does.
+  const remote = useDeployment() === 'remote'
+  // The dialog that shows a fresh login link: { athlete, link, expiresAt }. The
+  // link exists only here, and is dropped when the dialog closes.
+  const [linkDialog, setLinkDialog] = useState(null)
+  const [dialogError, setDialogError] = useState('')
 
   const headers = { Accept: 'application/json', Authorization: `Bearer ${accessToken}` }
 
@@ -217,6 +229,42 @@ export default function GroupsView({ accessToken, onLogout }) {
     }))
   }
 
+  // Login links (remote). Each action then reloads the roster, so the row's Login
+  // column always shows what the server now says.
+  async function sendLink(athlete) {
+    setBusy(`l-${athlete.id}`)
+    setError('')
+    const result = await sendLoginLink(athlete, accessToken)
+    setBusy('')
+    if (result.status === 'signed-out') { onLogout(); return }
+    if (result.status === 'refused') { setError(result.message); return }
+    setDialogError('')
+    setLinkDialog({ athlete, link: result.link, expiresAt: result.expiresAt })
+    load()
+  }
+
+  async function cancelLink() {
+    const { athlete } = linkDialog
+    setBusy('cancel-link')
+    setDialogError('')
+    const result = await cancelLoginLink(athlete, accessToken)
+    setBusy('')
+    if (result.status === 'signed-out') { onLogout(); return }
+    if (result.status === 'refused') { setDialogError(result.message); return }
+    setLinkDialog(null)
+    load()
+  }
+
+  async function unlink(athlete) {
+    setBusy(`u-${athlete.id}`)
+    setError('')
+    const result = await unlinkLogin(athlete, accessToken)
+    setBusy('')
+    if (result.status === 'signed-out') { onLogout(); return }
+    if (result.status === 'refused') { setError(result.message); return }
+    if (result.status === 'unlinked') load()
+  }
+
   // Add or remove one athlete. Both are the same route with a different method
   // and the same {athletes:[id]} body — membership is current-state only, so
   // taking someone out never rewrites what they already trained.
@@ -255,6 +303,7 @@ export default function GroupsView({ accessToken, onLogout }) {
   const rows = filterRoster(athletes, index, filter)
   const stranded = unassignedCount(athletes, index)
   const filterGroup = groups.find((group) => group.id === filter) || null
+  const withLogin = athletes.filter((athlete) => athlete.login_status === 'linked').length
 
   return (
     <div className="groups-view context-tab-content">
@@ -264,7 +313,8 @@ export default function GroupsView({ accessToken, onLogout }) {
           <h2>Training groups</h2>
           <p>Blocks are deployed to a group, and the calendar shows a group’s days. An athlete can be in more than one.</p>
         </div>
-        <b>{groups.length} group{groups.length === 1 ? '' : 's'} · {athletes.length} athlete{athletes.length === 1 ? '' : 's'}</b>
+        <b>{groups.length} group{groups.length === 1 ? '' : 's'} · {athletes.length} athlete{athletes.length === 1 ? '' : 's'}
+          {remote && ` · ${withLogin} with a login`}</b>
       </header>
 
       {state === 'loading' && <p className="monitor-empty" role="status">Loading groups and roster…</p>}
@@ -344,17 +394,23 @@ export default function GroupsView({ accessToken, onLogout }) {
                 <caption>Athletes, filtered</caption>
                 <thead><tr>
                   <th scope="col">Athlete</th><th scope="col">Groups</th>
+                  {remote && <th scope="col">Login</th>}
                   <th scope="col">{filterGroup ? filterGroup.name : ''}</th>
+                  {remote && <th scope="col"><span className="groups-visually-hidden">Login link</span></th>}
                   <th scope="col"><span className="groups-visually-hidden">Archive</span></th>
                 </tr></thead>
                 <tbody>{rows.map((athlete) => {
                   const memberOf = index.get(athlete.id) || []
                   const inFilterGroup = filterGroup && isMember(index, athlete.id, filterGroup.id)
+                  const login = remote ? loginStatus(athlete) : null
                   return <tr key={athlete.id} className={inFilterGroup ? 'is-member' : ''}>
                     <td><b>{athlete.name}</b></td>
                     <td>{memberOf.length === 0
                       ? <span className="groups-none">No group</span>
                       : memberOf.map((group) => <span className="groups-chip" key={group.id}>{group.name}</span>)}</td>
+                    {remote && <td className={`groups-login is-${login.tone}`}>
+                      <b>{login.label}</b>{login.detail && <span>{login.detail}</span>}
+                    </td>}
                     <td>
                       {/* Only when a real group is selected — "add to All" is
                           not a thing, and neither is "add to No group". */}
@@ -364,6 +420,19 @@ export default function GroupsView({ accessToken, onLogout }) {
                         {busy === `m-${athlete.id}` ? '…' : inFilterGroup ? 'Remove' : 'Add'}
                       </button>}
                     </td>
+                    {remote && <td className="groups-login-actions">
+                      {/* Loud only when the athlete has nothing yet: that is the
+                          one row that needs the coach to act. */}
+                      <button type="button"
+                        className={hasLoginOrLink(athlete) ? 'groups-login-quiet' : 'groups-login-send'}
+                        disabled={busy === `l-${athlete.id}`} onClick={() => sendLink(athlete)}>
+                        {busy === `l-${athlete.id}` ? '…' : hasLoginOrLink(athlete) ? 'Send new link' : 'Send login link'}
+                      </button>
+                      {athlete.login_status === 'linked' && <button type="button" className="groups-login-quiet"
+                        disabled={busy === `u-${athlete.id}`} onClick={() => unlink(athlete)}>
+                        {busy === `u-${athlete.id}` ? '…' : 'Unlink'}
+                      </button>}
+                    </td>}
                     <td>
                       {/* Leaves the roster, keeps the history. Quiet on purpose: it
                           is rare, and it asks before doing anything. */}
@@ -376,6 +445,11 @@ export default function GroupsView({ accessToken, onLogout }) {
                 })}</tbody>
               </table></div>}
 
+          {remote && <p className="history-table-note">
+            A login link is personal: send it to that athlete directly. The session link is the one
+            that is safe to post in a group chat.
+          </p>}
+
           {/* A gap, said out loud. */}
           <p className="history-table-note">
             Renaming and deleting groups are not here — the API has no group detail route, only the list
@@ -383,6 +457,10 @@ export default function GroupsView({ accessToken, onLogout }) {
           </p>
         </section>
       </>}
+
+      {linkDialog && <LoginLinkDialog athlete={linkDialog.athlete} link={linkDialog.link}
+        expiresAt={linkDialog.expiresAt} busy={busy === 'cancel-link'} error={dialogError}
+        onCancelLink={cancelLink} onDone={() => setLinkDialog(null)} />}
     </div>
   )
 }
