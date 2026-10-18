@@ -87,14 +87,14 @@ The Django suite had 447 tests on 2026-10-06 and **491 after spec 01** (2026-10-
 | 02 | [Roles: administrator, coach, athlete](remote/02-roles.md) | 3 | 01 | **Done 2026-10-07**, merged into `SprintBranch` |
 | 05 | [Hosted mode](remote/05-hosted-mode.md) | 3 | 02 | **Done 2026-10-14**, merged into `SprintBranch`. Includes CI (Phase 1) |
 | 12 | [Hosting on k3s, with CD](remote/12-hosting.md) | 1, 5 | 05 | **Phases 0–3 done** (merged): schools on the Dell, deploy on a version tag. Phase 4 (`wss`, then the domain) in progress; Phases 5–7 tabled |
-| 03 | [Athlete login links, and coach login codes](remote/03-athlete-login-links.md) | 4, 2 | 02, 05 | Written. Phase 5 replaces temporary coach passwords with one-time login codes |
+| 03 | [Athlete login links](remote/03-athlete-login-links.md) | 4 | 02, 05 | **Built 2026-10-18** on `feature-login_links` (Phases 0–4). Coach login codes moved to spec 11, Phase 4 |
 | 04 | [Session link and virtual racks](remote/04-session-link-and-virtual-racks.md) | 3, 4 | 02, 03, 05 | Written |
 | 10 | [The athlete's home page](remote/10-athlete-pages.md) | 4 | 03, 04, 05 | Written. Phase 4 (opening a past session) is built last, if time |
 | 06 | [Design rules for the coach interface](ui/06-design-rules.md) | 11 | — | Written |
 | 07 | [Planning](ui/07-planning.md) | 11 | 06, 01 | Written |
 | 08 | [Session](ui/08-session.md) | 11 | 06 | Written |
 | 09 | [Analytics](ui/09-analytics.md) | 11 | 06 | Written |
-| 11 | [Mine first](ui/11-mine-first.md) | 11 | 02, 06 | Written. A coach's own groups, programs, sessions and athletes come first; coaches on a group can be edited; coaches shown by name |
+| 11 | [Mine first](ui/11-mine-first.md) | 11, 2 | 02, 06 | Written. A coach's own groups, programs, sessions and athletes come first; coaches on a group can be edited; coaches shown by name. Phase 4 (last of the redesign): coach login codes, moved from spec 03 |
 
 **Build 05 before 03 and 04, and 10 after 04. Spec 12 (hosting) starts after 05 and runs alongside 03 and 04.** It is numbered 05 because it was listed fifth, but 03
 and 04 both need its "is this installation hosted?" switch.
