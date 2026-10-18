@@ -409,19 +409,25 @@ a set running. Neither can be run on a remote school today.
     athlete differently, so they show and lift like anyone else);
   - its group and plan have names no real school would use ("Demo Squad", "Demo Strength
     Block");
-  - its sensors are recognized by **belonging to a seeded athlete** (and a `sim-` id).
-    They are **not** marked `is_simulated`: a simulated sensor's sets are marked
-    simulated and left out of the live room, reports and max updates, and a simulated
-    sensor can't be attached to a rack;
+  - its sensors are marked `is_simulated` too, and owned by a seeded athlete;
   - `--reset` deletes only those rows;
   - if a real (not simulated) athlete already has one of the seeded names, it refuses.
 - **It never makes a login.** With no coach in the school it stops: "Claim this school
   first (setup code), then seed it." The plan belongs to the first administrator.
 - **It never ends a session it didn't make.** Another session open → it stops: "A
   session is running. End it first." Its own earlier seeded session may be replaced.
-- **One owned simulated sensor per seeded athlete** (`sim-alex-rivera`, …), made by the
-  seeder with `Node.owner` set (Phase 0). Like any owned sensor, it only ever attaches
+- **One owned simulated sensor per seeded athlete** (`sim-alex-rivera`, …; the id is
+  for people to read, the seeder finds them by the label), made by the seeder with
+  `Node.owner` set (Phase 0). Like any owned sensor, it only ever attaches
   to its owner's rack. (The gym-style `rack_1` sensor stays for a local install.)
+- **`is_simulated` is a label only** (Devin, 2026-10-17; done on this branch). It
+  used to bar a simulated sensor from racks and hide simulated sets from the live room
+  and from max updates, a "simulation mode" from before the redesign that nothing ever
+  switched on. Now a simulated sensor is linked, used and counted exactly like a real
+  one, and sets it records are still labelled simulated; the label only lets the seeder
+  find and wipe its own rows. No change on a local install in practice: nothing there
+  is marked simulated. (The whole-day "Simulation active" label on the coach's session
+  strip is untouched; nothing turns it on either.)
 - **No flag for demo schools.** Seeding only adds fake rows that a coach can archive in
   the app, and `eactl sim` only wakes sensors owned by seeded athletes, so a school that
   was never seeded has nothing to wake. `eactl seed` still asks you to type the
@@ -459,7 +465,9 @@ a set running. Neither can be run on a remote school today.
 - [ ] `--reset` on a school that also has a real "Varsity" group and a real athlete
       leaves both untouched.
 - [ ] With a real athlete named like a seeded one, the seeder refuses and writes nothing.
-- [ ] Each seeded athlete owns exactly one `sim-` sensor; none is marked `is_simulated`.
+- [ ] Each seeded athlete owns exactly one sensor, marked `is_simulated`.
+- [ ] *(done)* A simulated sensor can be linked to a rack and is usable; its sets count
+      in the live room and feed max updates (`test_simulated_label.py`).
 - [ ] The simulator runs several sensors at once; each sends reps only while its own
       athlete's set runs, on that athlete's rack.
 - [ ] With `--stop-after`, the simulator exits by itself and its sensors are unlinked

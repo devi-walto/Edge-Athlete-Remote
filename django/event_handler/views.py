@@ -697,8 +697,6 @@ def _assign_node_to_rack(device_id, node_id):
         return Response({"code": "node_not_found", "detail": "node not found"}, status=404)
     if not selected.is_active:
         return Response({"code": "node_inactive", "detail": "inactive nodes cannot be assigned"}, status=409)
-    if selected.is_simulated:
-        return Response({"code": "simulated_node", "detail": "simulated nodes cannot be assigned to a physical rack"}, status=409)
     if selected.acquisition_kind == Node.ACQUISITION_WT901_BLE and selected.rack_number is None:
         return Response({
             "code": "wt901_verification_required",
@@ -930,7 +928,7 @@ def _apply_ble_binding(rack_number, device_id, node_id, expected_node_id):
         return Response({
             "code": "node_identity_conflict", "detail": "logical node identity is already in use",
         }, status=409)
-    if selected is not None and (not selected.is_active or selected.is_simulated):
+    if selected is not None and not selected.is_active:
         return Response({"code": "node_unavailable", "detail": "sensor node is unavailable"}, status=409)
     if selected is not None and selected.rack_number not in (None, rack_number):
         return Response({

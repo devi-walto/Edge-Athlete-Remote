@@ -1897,16 +1897,20 @@ class RackNodeAssignmentTests(APITestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.data["code"], "node_not_found")
 
-    def test_assignment_rejects_inactive_and_simulated_nodes(self):
+    def test_assignment_rejects_inactive_nodes(self):
         self._authenticate_staff()
         self.node.is_active = False
         self.node.save(update_fields=["is_active"])
         self.assertEqual(self._assign().data["code"], "node_inactive")
 
-        self.node.is_active = True
+    def test_a_simulated_node_is_assigned_like_a_real_one(self):
+        # is_simulated is a demo-data label only (spec 04, Phase 5): the seeded
+        # athletes' stand-in sensors must drive racks like real ones.
+        self._authenticate_staff()
         self.node.is_simulated = True
-        self.node.save(update_fields=["is_active", "is_simulated"])
-        self.assertEqual(self._assign().data["code"], "simulated_node")
+        self.node.save(update_fields=["is_simulated"])
+        self.assertNotEqual(self._assign().data.get("code"), "simulated_node")
+        self.assertEqual(self._assign().status_code, 200)
 
     def test_node_list_exposes_simulation_provenance_to_the_rack_gate(self):
         self.node.is_simulated = True

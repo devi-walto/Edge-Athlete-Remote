@@ -50,10 +50,17 @@ describe('central BLE rack setup', () => {
     expect(bleSetupError({ code: 'ble_reconciliation_required' })).toContain('reconcile this rack')
   })
 
-  it('retains only an active physical node for downstream MQTT routing', () => {
+  it('retains only an active node for downstream MQTT routing', () => {
     expect(assignedNodeForRack([
+      { node_id: 'switched-off', rack_number: 2, is_active: false, is_simulated: false },
       { node_id: 'generated-node', rack_number: 2, is_active: true, is_simulated: false },
-      { node_id: 'simulation', rack_number: 2, is_active: true, is_simulated: true },
     ], 2)?.node_id).toBe('generated-node')
+  })
+
+  it('uses a simulated (demo) node like a real one', () => {
+    // is_simulated only labels demo data now (spec 04, Phase 5).
+    expect(assignedNodeForRack([
+      { node_id: 'sim-alex-rivera', rack_number: 2, is_active: true, is_simulated: true },
+    ], 2)?.node_id).toBe('sim-alex-rivera')
   })
 })

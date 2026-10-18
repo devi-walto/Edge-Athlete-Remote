@@ -1,6 +1,6 @@
 export function assignedNodeForRack(nodes, rackNumber) {
   return (Array.isArray(nodes) ? nodes : []).find((node) =>
-    node.rack_number === rackNumber && node.is_active && !node.is_simulated
+    node.rack_number === rackNumber && node.is_active
   ) || null
 }
 

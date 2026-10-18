@@ -192,10 +192,10 @@ class Command(BaseCommand):
         # coach to link. The only thing that had ever created an MQTT node was the
         # seeder, which makes exactly one.
         #
-        # Deliberately NOT marked simulated. is_simulated exists so demo rows are
-        # easy to wipe, but it also bars a node from being assigned to a rack at
-        # all — and driving a rack is the entire point of this command. A fake
-        # sensor that cannot be linked to anything can only be watched, not demoed.
+        # Not marked simulated here. is_simulated is now a label only (it no
+        # longer bars a sensor from racks or hides its sets; spec 04, Phase 5),
+        # and the seeder is what marks its own sensors. This command just drives
+        # whichever sensor it is given.
         from ...models import Node
         node, created = Node.objects.get_or_create(node_id=node_id)
         self.stdout.write(

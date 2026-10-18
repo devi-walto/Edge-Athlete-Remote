@@ -137,7 +137,7 @@ def _recalculate_reference_maxes(session):
     """
     best = {}
     for a_set in Set.objects.filter(session=session, ended_at__isnull=False,
-                                    is_false_set=False, is_simulated=False,
+                                    is_false_set=False,
                                     is_coach_adjustment=False):
         estimate = estimated_one_rep_max(a_set.weight_lbs, a_set.reps_completed)
         if estimate is None:

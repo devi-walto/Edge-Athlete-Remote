@@ -72,7 +72,11 @@ class Node(models.Model):
     signal_strength = models.IntegerField(null=True, blank=True)
     last_seen = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
-    is_simulated = models.BooleanField(default=False)  # stamped by the simulator so demo data is easy to wipe
+    # Demo data: made by the seeder or the simulator. A LABEL only, so demo rows
+    # are easy to find and wipe (spec 04, Phase 5); a simulated sensor is linked,
+    # used and counted exactly like a real one. (It used to also bar the sensor
+    # from racks and hide its sets, which left demo data invisible in demos.)
+    is_simulated = models.BooleanField(default=False)
     # A hardware fact, not a schedule: what this sensor's rack is physically able to
     # run (e.g. a power rack can't be a high-jump pit). Empty = unrestricted, so this
     # costs nothing for a normal rack. Filtered into athlete_progress, never enforced
