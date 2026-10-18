@@ -29,8 +29,11 @@ PASSWORD = 'Unique-online-2026!safe'
 # Fully open in both kinds of installation, on purpose. Add to this only deliberately.
 #   health: the container's health check cannot sign in;
 #   system_info: the sign-in screen asks which kind of installation this is;
-#   coach_setup: claiming a brand-new installation, before any login exists.
-OPEN_EVERYWHERE = {'health', 'system_info', 'coach_setup'}
+#   coach_setup: claiming a brand-new installation, before any login exists;
+#   login_link_lookup, login_link_redeem: an athlete using the link their coach sent,
+#     before they have a login (spec 03). The link is the proof.
+OPEN_EVERYWHERE = {'health', 'system_info', 'coach_setup',
+                   'login_link_lookup', 'login_link_redeem'}
 # Signing in and renewing a sign-in have no permission classes at all.
 SIGN_IN = {'token_obtain_pair', 'token_refresh'}
 

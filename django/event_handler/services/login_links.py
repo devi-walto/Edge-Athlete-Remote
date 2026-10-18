@@ -24,6 +24,7 @@ from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
@@ -91,6 +92,11 @@ def redeem(link_text, username, password):
 
         _retire_login(athlete)
 
+        # Usernames ignore capital letters, as coach logins already do: "Riley"
+        # and "riley" are one name. (Checked after the old login is renamed out
+        # of the way, so an athlete can pick their own old name again.)
+        if User.objects.filter(username__iexact=username).exists():
+            raise ValidationError({'username': ['That username is already taken.']})
         new_login = User(username=username)
         validate_password(password, user=new_login)
         new_login.set_password(password)

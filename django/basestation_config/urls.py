@@ -37,12 +37,17 @@ from event_handler.coach_auth import (
     SetupView)
 from event_handler.coach_accounts import (
     CoachDetailView, CoachListView, CoachResetPasswordView)
+from event_handler.athlete_logins import LoginLinkLookupView, LoginLinkRedeemView
 
 
 urlpatterns = [
     path('api/auth/setup/', SetupView.as_view(), name='coach_setup'),
     path('api/auth/me/', CoachSessionView.as_view(), name='coach_session'),
     path('api/auth/password/', PasswordChangeView.as_view(), name='coach_password_change'),
+    # Open: an athlete using the login link their coach sent (spec 03). The link
+    # is the proof; both slow down repeated wrong tries.
+    path('api/auth/login-link/lookup/', LoginLinkLookupView.as_view(), name='login_link_lookup'),
+    path('api/auth/login-link/redeem/', LoginLinkRedeemView.as_view(), name='login_link_redeem'),
 
     # Administrator-only coach management (create, deactivate, reset).
     path('api/coaches/', CoachListView.as_view(), name='coach_list'),

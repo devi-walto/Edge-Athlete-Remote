@@ -92,6 +92,21 @@ def setup_is_required() -> bool:
 # do this: its nginx front door already limits sign-in, and only the gym's Wi-Fi can
 # reach it. The count lives in each server process's memory, so with three workers
 # the true limit is up to three times this; good enough to stop guessing at speed.
+# How long an athlete stays signed in on a device before typing their password
+# again (spec 03). Longer than a coach's 7 days (settings.SIMPLE_JWT): an athlete
+# signs in on their own phone, and a forgotten password needs the coach to send a
+# new link.
+ATHLETE_SIGN_IN_LIFETIME = timedelta(days=30)
+
+
+def refresh_token_for(user):
+    """A sign-in for this login: 30 days for an athlete, the usual 7 for a coach."""
+    token = RefreshToken.for_user(user)
+    if role_of(user) == ATHLETE:
+        token.set_exp(lifetime=ATHLETE_SIGN_IN_LIFETIME)
+    return token
+
+
 FAILED_ATTEMPT_LIMIT = 10
 FAILED_ATTEMPT_WINDOW_SECONDS = 60
 TOO_MANY_ATTEMPTS = 'Too many wrong attempts. Wait a minute, then try again.'
@@ -118,6 +133,10 @@ class LimitWrongAttempts:
     class); this class's `post` wraps it with the count.
     """
     attempt_scope = None
+    # Which answers count as a wrong attempt. A login link that doesn't work
+    # answers 404, so those views add it; otherwise links could be guessed
+    # without ever being slowed down.
+    counted_statuses = (400, 401)
 
     def attempt(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
@@ -131,10 +150,10 @@ class LimitWrongAttempts:
         try:
             response = self.attempt(request, *args, **kwargs)
         except APIException as refused:
-            if refused.status_code in (400, 401):  # a wrong password, code or username
+            if refused.status_code in self.counted_statuses:  # a wrong password, code or username
                 self._count(key)
             raise
-        if response.status_code in (400, 401):
+        if response.status_code in self.counted_statuses:
             self._count(key)
         return response
 
@@ -243,6 +262,8 @@ class CoachTokenObtainPairSerializer(TokenObtainPairSerializer):
     def get_token(cls, user):
         token = super().get_token(user)
         token['must_change_password'] = must_change_password(user)
+        if role_of(user) == ATHLETE:
+            token.set_exp(lifetime=ATHLETE_SIGN_IN_LIFETIME)
         return token
 
     def validate(self, attrs):
@@ -277,7 +298,14 @@ class CheckedTokenRefreshSerializer(TokenRefreshSerializer):
         user = get_user_model().objects.filter(**{jwt_settings.USER_ID_FIELD: claim}).first()
         if role_of(user) is None:
             raise AuthenticationFailed('This login can no longer sign in.', code='user_inactive')
-        return super().validate(attrs)
+        data = super().validate(attrs)
+        # Renewing hands out a new renewal token (ROTATE_REFRESH_TOKENS), which
+        # would get the usual 7 days; an athlete keeps 30.
+        if role_of(user) == ATHLETE and 'refresh' in data:
+            renewed = RefreshToken(data['refresh'])
+            renewed.set_exp(lifetime=ATHLETE_SIGN_IN_LIFETIME)
+            data['refresh'] = str(renewed)
+        return data
 
 
 class CheckedTokenRefreshView(TokenRefreshView):
