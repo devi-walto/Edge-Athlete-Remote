@@ -99,6 +99,8 @@ lock everyone out of a quick one.
 - The coach's live room: virtual racks, sensor status, **Not joined yet**, **Copy
   session link**.
 - Assigning a sensor to an athlete from the roster.
+- Demo data (Phase 5): the seeder safe online, seeded athletes with their own simulated
+  sensors, `eactl seed` and `eactl sim`.
 
 ## Non-goals
 
@@ -377,12 +379,106 @@ Only when hosted:
 
 **Stop. Devin reviews.**
 
-## Phase 5 — Rehearsal
+## Phase 5 — Demo data: seeded athletes with their own simulated sensors
 
-By hand, hosted mode, two browsers:
+Folded in from a separate seeder spec (Devin, 2026-10-17), so it is built once, after
+sensors can belong to athletes. It is what the rehearsal (Phase 6) runs on, and what
+fills the demo school for demos and screenshots.
+
+**What exists.** The seeder (`seed_active_session`) builds one live session with a
+roster, a plan, a few finished sets and recorded maxes; a local install runs it with
+`docker compose run --rm seed`. The simulator (`simulate_node`) pretends to be a sensor:
+it registers, sends a heartbeat every 5 seconds, and sends reps only while its rack has
+a set running. Neither can be run on a remote school today.
+
+**Why the seeder can't simply be run online as it is:**
+
+1. It can make a well-known login: on a database with no users it creates `coach` /
+   `coach`, which spec 01 forbids.
+2. It ends every open session (only one may be open), which on a real school would end
+   a real workout.
+3. `--reset` deletes by name, and the names aren't unique to the demo: a real school
+   very likely has a group called "Varsity", and could have an athlete called Jordan Lee.
+
+**Decisions (Devin, 2026-10-17):**
+
+- **Invented names, in both local and remote** (done: Alex Rivera, Jordan Lee, Casey
+  Morgan, Riley Brooks; the local wristband tag moved to Jordan Lee).
+- **The seeder only adds, and recognizes its own rows** instead of guessing by name:
+  - its athletes are marked `is_simulated` (nothing in the app treats a simulated
+    athlete differently, so they show and lift like anyone else);
+  - its group and plan have names no real school would use ("Demo Squad", "Demo Strength
+    Block");
+  - its sensors are recognized by **belonging to a seeded athlete** (and a `sim-` id).
+    They are **not** marked `is_simulated`: a simulated sensor's sets are marked
+    simulated and left out of the live room, reports and max updates, and a simulated
+    sensor can't be attached to a rack;
+  - `--reset` deletes only those rows;
+  - if a real (not simulated) athlete already has one of the seeded names, it refuses.
+- **It never makes a login.** With no coach in the school it stops: "Claim this school
+  first (setup code), then seed it." The plan belongs to the first administrator.
+- **It never ends a session it didn't make.** Another session open → it stops: "A
+  session is running. End it first." Its own earlier seeded session may be replaced.
+- **One owned simulated sensor per seeded athlete** (`sim-alex-rivera`, …), made by the
+  seeder with `Node.owner` set (Phase 0). Like any owned sensor, it only ever attaches
+  to its owner's rack. (The gym-style `rack_1` sensor stays for a local install.)
+- **No flag for demo schools.** Seeding only adds fake rows that a coach can archive in
+  the app, and `eactl sim` only wakes sensors owned by seeded athletes, so a school that
+  was never seeded has nothing to wake. `eactl seed` still asks you to type the
+  school's short name.
+- **The local `seed` step runs `ensure_demo_coach` first, then the seeder**, because the
+  seeder no longer makes a login. One line in `docker-compose.yml`; the local result is
+  the same as before.
+- **The simulator responds; people drive** (option A). The sensors send reps while
+  their athlete's set runs; a person opens the session link as that athlete and starts
+  the set. Fake athletes that lift by themselves (signing in, starting and ending sets)
+  are left for after the class.
+
+**Commands (`eactl`, remote):**
+
+- `eactl seed "School Name" [--reset]`: asks for the short name, then runs the seeder
+  inside the school's django (only the seeder, never `ensure_demo_coach`).
+- `eactl sim "School Name" [--hours 2] [--stop]`: wakes the seeded athletes' sensors.
+  It runs the simulator as a one-off Kubernetes Job in the school, using the school's
+  own django image, for all of those sensors at once.
+  - **It stops itself after 2 hours, twice over:** the simulator gets a `--stop-after`
+    setting and exits cleanly, and the Job has a hard limit (`activeDeadlineSeconds`)
+    in case the simulator hangs. `--stop` ends it early.
+  - **On stopping, its sensors are unregistered: unlinked from any rack and marked
+    inactive.** Not deleted: each finished set remembers the sensor that measured it.
+    The next `eactl sim` makes them active again.
+  - A second `eactl sim` while one is running says so and starts nothing.
+- Tab completion, `eactl help` and `scripts/remote/README.md` list both.
+
+**Done when:**
+
+- [ ] No real person's name is left in the seeder or its comments. *(done)*
+- [ ] On a database with no users, the seeder writes nothing and creates no login.
+- [ ] With a non-seeded session open, the seeder writes nothing and that session is
+      still open; with only its own seeded session open, a re-run replaces it.
+- [ ] `--reset` on a school that also has a real "Varsity" group and a real athlete
+      leaves both untouched.
+- [ ] With a real athlete named like a seeded one, the seeder refuses and writes nothing.
+- [ ] Each seeded athlete owns exactly one `sim-` sensor; none is marked `is_simulated`.
+- [ ] The simulator runs several sensors at once; each sends reps only while its own
+      athlete's set runs, on that athlete's rack.
+- [ ] With `--stop-after`, the simulator exits by itself and its sensors are unlinked
+      and inactive (a test with a short time); deleting the Job early does the same.
+- [ ] A fresh local box: `docker compose run --rm seed` still ends with the demo coach
+      and the seeded session.
+- [ ] Full suite passes in both modes.
+
+**Stop. Devin reviews.**
+
+## Phase 6 — Rehearsal
+
+By hand, hosted mode, two browsers, on the demo school after `eactl seed` and with
+`eactl sim` running:
 
 - [ ] A coach starts a session; two athletes in the group open the link and each land
       on their own rack; an athlete outside the group is turned away.
+- [ ] Two seeded athletes join from two browsers, and each one's simulated sensor feeds
+      only their own rack.
 - [ ] Two simulators stand in for two sensors **on the same bar** (both publish every
       rep). Each athlete's set records only while it is running; neither rack records
       the other's set. *(This is the siblings case.)*
@@ -409,10 +505,12 @@ By hand, hosted mode, two browsers:
 | Risk | What reduces it |
 |---|---|
 | Two joins race for one rack number | A row lock in Phase 1, and the fifty-at-once test |
-| A remote athlete is stranded as a read-only observer after a reload — the bug that already happened in the gym | Phase 2 ties the lease to the login on virtual racks; Phase 5 rehearses it |
+| A remote athlete is stranded as a read-only observer after a reload — the bug that already happened in the gym | Phase 2 ties the lease to the login on virtual racks; Phase 6 rehearses it |
 | Virtual racks leak when a session is never ended | Release also runs when a stale session is ended late; rows carry `session`, so a cleanup command can find orphans |
 | The rack screen is forked and the two copies drift | Phase 3 uses the one `RackScreen.jsx`, switched by a fact in the rack's state; a test renders it with and without an owner |
 | Adding `owner_athlete` to rack state breaks the frozen rack contract | It is additive; Phase 3b checks the canon first and stops if it is not allowed |
+| Demo data reaching a real school | The seeder only adds, recognizes its own rows, refuses on a name clash, never makes a login or ends another session; `eactl seed` asks for the short name |
+| A simulator left running | It stops itself after 2 hours, and Kubernetes ends the Job at the same limit if it doesn't |
 
 ## Docs to update when done
 
