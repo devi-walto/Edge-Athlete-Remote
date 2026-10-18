@@ -11,6 +11,8 @@
 //   /coach/setup     → coach admin Room Layout (JWT gate + dropdown assign)
 //   /dashboard       → base-station wall display
 //   /connection-test → the API/architecture demo kept from the scaffold
+//   /login-link      → an athlete opening their login link (#link after it)
+//   /athlete         → athlete sign in
 //
 // localStorage still remembers this device's identity (its role, its generated
 // device id, its assigned rack number) so a cold reboot at "/" can redirect back
@@ -28,6 +30,8 @@ import { useRackController } from './rack/controller.js'
 import CoachTablet from './coach/CoachTablet.jsx'
 import { setCoachToken } from './coach/api.js'
 import Dashboard from './Dashboard.jsx'
+import AthleteSignIn from './athlete/AthleteSignIn.jsx'
+import LoginLinkPage from './athlete/LoginLinkPage.jsx'
 import WifiChangeOverlay from './WifiChangeOverlay.jsx'
 import { getActiveSession } from './api/client.js'
 import { subscribeRackCommand } from './mqtt/client.js'
@@ -259,6 +263,10 @@ function RackCommandListener() {
 
 function route(pathname) {
   if (pathname === '/connection-test') return <ConnectionTest />
+  // An athlete's own pages (spec 03): opening the login link a coach sent, and
+  // signing in after that.
+  if (pathname === '/login-link') return <LoginLinkPage />
+  if (pathname === '/athlete') return <AthleteSignIn />
   if (pathname === '/rack/setup') return <RackSetup />
   if (pathname === '/coach/setup') return <CoachTablet />
 

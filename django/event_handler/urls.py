@@ -13,6 +13,7 @@ first or they'd get swallowed.
 from django.urls import path
 
 from . import views
+from . import athlete_logins
 from . import deployment
 from . import health
 from . import system_status
@@ -81,6 +82,10 @@ urlpatterns = [
     # athletes
     path('athletes/', views.athletes_view, name='athletes'),
     path('athletes/<int:athlete_id>/', views.athlete_detail, name='athlete_detail'),
+    # Coach-only: an athlete's login link and login (spec 03; athlete_logins.py).
+    path('athletes/<int:athlete_id>/login-link/', athlete_logins.athlete_login_link,
+         name='athlete_login_link'),
+    path('athletes/<int:athlete_id>/login/', athlete_logins.athlete_login, name='athlete_login'),
 
     # exercise catalog
     path('exercises/', views.exercises_list, name='exercises_list'),

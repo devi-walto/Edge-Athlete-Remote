@@ -5,6 +5,10 @@
 
 const TOKEN_KEY = 'coach_access_token'
 const ROLE_KEY = 'coach_signed_in_role'
+// The renewal token, kept for athletes only (spec 03): an athlete stays signed in on
+// their own phone for 30 days by renewing the short sign-in token with this. Coaches
+// don't keep one yet, so their sign-in works exactly as before.
+const REFRESH_KEY = 'signed_in_refresh_token'
 
 function responseError(data, status) {
   if (typeof data === 'string') return `HTTP ${status}`
@@ -25,7 +29,17 @@ export function setCoachToken(token) {
   else {
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(ROLE_KEY)
+    localStorage.removeItem(REFRESH_KEY)
   }
+}
+
+export function getRefreshToken() {
+  return localStorage.getItem(REFRESH_KEY)
+}
+
+export function setRefreshToken(token) {
+  if (token) localStorage.setItem(REFRESH_KEY, token)
+  else localStorage.removeItem(REFRESH_KEY)
 }
 
 /** The role the server reported at sign-in: 'administrator', 'coach' or 'athlete'.

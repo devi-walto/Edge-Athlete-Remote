@@ -10,6 +10,8 @@
 // coach-accounts work; the layout follows the Final design board `F_SignIn`.
 import { useState } from 'react'
 import { coachLogin } from './api.js'
+import useDeployment from '../useDeployment.js'
+import { navigate } from '../router.js'
 import './account.css'
 
 export function Mark({ large = false }) {
@@ -17,6 +19,9 @@ export function Mark({ large = false }) {
 }
 
 export default function SignIn({ onSignedIn, embedded = false }) {
+  // Online, athletes have logins too, and this is the page a remote school opens
+  // on; point them at their own sign-in (spec 03). A local install has none.
+  const remote = useDeployment() === 'remote'
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
@@ -51,5 +56,9 @@ export default function SignIn({ onSignedIn, embedded = false }) {
     <button className="acct-primary" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
     <p className="acct-note">Forgot your password? Ask an administrator to reset it. They will give you a temporary one to change when you sign in.</p>
   </form>
-  return embedded ? card : <main className="acct-screen">{card}</main>
+  const athleteLink = remote && <button type="button" className="acct-quiet acct-switch"
+    onClick={() => navigate('/athlete')}>Athlete? Athlete sign in</button>
+  return embedded
+    ? <>{card}{athleteLink}</>
+    : <main className="acct-screen acct-screen-stack">{card}{athleteLink}</main>
 }

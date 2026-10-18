@@ -126,4 +126,4 @@ landing page ─ search or scroll "Demo U" ─▶ remembered in this browser ─
 - Whether the console is part of the same Django codebase (a separate settings mode) or
   its own small app.
 - Where operator logins live, and whether they use the same one-time login codes as
-  coaches (spec 03 Phase 5).
+  coaches (spec 11 Phase 4).

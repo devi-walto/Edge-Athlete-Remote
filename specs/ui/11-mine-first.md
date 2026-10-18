@@ -136,8 +136,8 @@ Backend, plus three small forms.
 - `GET /api/auth/me/` gains `first_name`, `last_name`, `name`.
   `PATCH /api/auth/me/` `{first_name, last_name}` lets a coach set their own.
 - **Where a name is asked for:** first-run setup (the first administrator), and where a
-  coach's login is made (spec 01's Add coach today; the login-code page once spec 03
-  Phase 5 lands). The account menu gains **Your name**.
+  coach's login is made (spec 01's Add coach today; the login-code page once Phase 4
+  lands). The account menu gains **Your name**.
 - `GET /api/coaches/directory/` — any coach. Active coach logins only, as
   `[{id, name}]`, sorted by name. No usernames beyond the fallback, no status, no flags.
 - **Guard on the group-coaches route:** the `coach` it is given must be an active login
@@ -271,6 +271,157 @@ Frontend. One switch, the same two-option control as the calendar's List | Month
 - [ ] *(Browser)* A link to another coach's group, program or athlete opens normally
       while Mine is chosen.
 - [ ] *(Browser)* SESSION shows every rack whatever the switch says.
+
+**Stop. Devin reviews.**
+
+## Phase 4 — Coach login codes (replaces temporary passwords)
+
+Moved here from spec 03 (where it was Phase 5) on 2026-10-18 by Devin: it is built
+last in the coach interface redesign, because it changes the Coaches page and coach
+sign-in, which the redesign rebuilds. Mockups: `F_Coaches`, `F_SignIn`,
+`F_CodeNewCoach`, `F_CodeReset` (approved 2026-10-07). "The dialog the athlete login link
+uses" below is `react/src/coach/LoginLinkDialog.jsx` (spec 03, Phase 3); "the rules
+`services/login_links.py` already has" are spec 03, Phase 0.
+
+**Still to decide before building** (the Done-when list asks for it): what happens to a
+login still on a temporary password. Recommended (2026-10-18): the migration switches
+that temporary password off (the login, its groups and blocks are kept) and the Coaches
+page shows "Needs a reset", so an administrator gives them a code. Refusing to migrate
+would stop automatic deploys; printing codes would put them in deploy logs.
+
+
+Added 2026-10-06 by Devin's decision. **This phase is for both deployments**, `local`
+and `remote`; unlike the athlete phases above it does not depend on spec 05.
+
+**Why.** Spec 01 brought in Braydon's way of adding a coach: the administrator types a
+username, the system makes a temporary password, the administrator hands both over, and
+the coach is forced to change the password at first sign-in. It works, and it has three
+weaknesses:
+
+- the administrator chooses the coach's username and, briefly, knows their password;
+- **a temporary password never expires**, so a login that was made and never used sits
+  there with a password someone else knows;
+- it is a third way of getting somebody in, beside the setup code (first
+  administrator) and the login link (athletes).
+
+A coach login code makes it the same idea as the other two: **a one-time, expiring code
+that lets the person choose their own username and password.** It is a typed code and
+not a link, so it works on a gym box with no internet: the administrator reads it out.
+
+| | Today (spec 01) | After this phase |
+|---|---|---|
+| New coach | Administrator picks the username; temporary password; forced change | Administrator gets a **login code**; the coach enters it and picks their own username and password |
+| Forgotten password | Reset → temporary password → forced change | Reset → **login code** tied to that coach → they pick a new password. Same username, same login |
+| Expires | Never | 3 days, and works once |
+| Server lock while a change is due | `403 password_change_required` on every coach route | Not needed: there is no half-finished login |
+
+**What the code is.** Eight characters from the setup code's alphabet (no `0`, `O`,
+`1`, `I`, `L`), typed however the person likes: case, spaces and dashes are ignored.
+Reuse `normalize_setup_code` and the alphabet from `coach_auth.py`.
+
+**Data.** `CoachLoginCode`:
+
+| Field | Notes |
+|---|---|
+| `user` | FK to the login, nullable. **Set for a reset. Empty for a new coach**, whose login does not exist until the code is used |
+| `label` | Who a new-coach code is for ("Maria Reyes"). Shown on the Coaches page until the code is used. Empty for a reset |
+| `code_hash` | `make_password` of the code. The code itself is never stored |
+| `created_by` | the administrator, `SET_NULL` |
+| `created_at`, `expires_at` | expiry = created + 3 days |
+| `used_at`, `cancelled_at` | null until it happens |
+
+The hashing, expiry, single-use and "one answer for every failure" rules are the ones
+`services/login_links.py` already has from Phase 0. Put the shared part in one place
+and use it for both; do not write it twice. A typed code has no public lookup id, so
+`find` checks the code against the unused, unexpired rows; keep that set small by
+cancelling a coach's older reset code when a new one is issued and by refusing more
+than twenty outstanding new-coach codes.
+
+**Coaches already live in the database, and their links must survive.** A coach login
+is a row in the same PostgreSQL database as everything else (Django's own `auth_user`
+table), with a `CoachProfile` beside it. Two things point at that row:
+
+- `TrainingGroupCoach` — which coaches run which training group, as head or assistant.
+  A label, never a permission.
+- `TrainingBlock.coach` — who made a training block.
+
+Both refuse to let the login be deleted. So:
+
+- **A reset never creates a new login.** It sets a new password on the same row; every
+  group and block still points at the same coach.
+- **A new coach has no row until they use their code.** They cannot be put on a
+  training group before that. The Coaches page shows them as "Invited", by label.
+- **Deactivating is still never deleting.** Unchanged from spec 01.
+
+**Routes.**
+
+- `POST /api/coaches/invite/` `{label}` — administrator only. Returns the code **once**.
+- `POST /api/coaches/{id}/reset/` — administrator only. Now returns a code tied to that
+  coach, not a temporary password. Their current password keeps working until the code
+  is used, so a reset pressed on the wrong row locks nobody out.
+- `DELETE /api/coaches/codes/{id}/` — administrator only. Cancels an unused code.
+- `GET /api/coaches/` — also lists unused new-coach codes: label, when they expire.
+- `POST /api/auth/code/check/` `{code}` — open. `{kind: "new"}` or
+  `{kind: "reset", username}`, or one `400` for every kind of bad code.
+- `POST /api/auth/code/` `{code, username?, password}` — open. New: creates the login
+  with a coach profile, not an administrator. Reset: sets the password on that login.
+  Either way the code is spent and the reply is the same tokens signing in gives.
+- Add both open routes to the sign-in rate limit in `nginx.conf`.
+
+**Screens** (built in the look of the sign-in card; no new board is needed for the
+card, but draw the Coaches page's "Invited" rows on the Final designs page first):
+
+- **Coaches:** **Add coach** asks for a name, then shows the code **in the same dialog
+  the athlete login link uses** (Devin, 2026-10-07): the title "For <name>", the code,
+  a **Copy code** button with the link icon, the three facts (works once, expires, makes
+  them a coach), the amber "Don't post this in a group chat" warning, **Cancel this
+  code** and **Done**. One dialog component serves both. Its text includes "Pass it on now. It cannot be shown
+  again. It works once and expires in 3 days." Unused codes show as rows: the label,
+  "Invited · expires Oct 9", and **Cancel**. **Reset password** shows a code the same way.
+- **Sign in:** one quiet line under the form, "Have a login code?", opening a card that
+  asks for the code. A new coach is then asked for a username and a password twice; a
+  coach resetting sees their username and is asked only for the password.
+
+**Removed in this phase:** temporary passwords and everything that existed only for
+them — `CoachProfile.must_change_password` (a migration drops it),
+`refuse_while_password_change_due` and its three call sites in `permissions.py`, the
+`must_change_password` field in the sign-in and "who am I" replies, and the forced mode
+of `ChangePassword.jsx`. **Changing your own password from the account menu stays.**
+
+**The one case nobody on the website can fix** is a sole administrator who forgets
+their own password. That is deliberate, the same rule as `setup_code` and `make_admin`:
+it takes the machine. Django's own command does it, and the docs must say so:
+`docker compose exec django python manage.py changepassword <username>`.
+
+**Done when:**
+
+- [ ] A new-coach code creates one login with the username and password the coach
+      chose, a coach profile, and no administrator flag.
+- [ ] A reset code changes the password of the coach it was issued for and nobody
+      else's; their username, their id, their training groups and their training
+      blocks are unchanged.
+- [ ] A coach's old password works until their reset code is used, and stops then.
+- [ ] A wrong code, an expired code, a used code and a cancelled code get the same
+      answer from both open routes.
+- [ ] A code cannot be used twice; two requests racing to use one create one login.
+- [ ] Issuing a second reset code for a coach makes the first stop working.
+- [ ] The code is nowhere in the database or the logs after it is issued.
+- [ ] A regular coach gets `403` from invite, reset and cancel.
+- [ ] A new-coach code can never produce an administrator, and cannot take a username
+      that exists.
+- [ ] After the migration no login is on a temporary password: every login that had
+      `must_change_password` set is given a reset code instead (printed by the
+      migration's management command, not stored), or the migration refuses to run
+      until none are left. **Decide which before building.**
+- [ ] `must_change_password` appears nowhere in the code base, and the spec 01 tests
+      for the temporary-password lock are replaced, not just deleted.
+- [ ] *(Browser)* Add a coach → read the code → "Have a login code?" → choose a
+      username and password → the workspace opens. On a gym box with no internet.
+- [ ] *(Browser)* Reset a coach → they use the code → same username, new password,
+      still listed on their training groups.
+- [ ] `changepassword` is documented beside `setup_code` and `make_admin`.
+
+**Stop. Devin reviews.**
 
 **Stop. Devin reviews.**
 

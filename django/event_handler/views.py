@@ -58,6 +58,7 @@ from .permissions import (
     ONLINE_COACH_OR_SAME_ATHLETE, ONLINE_REFUSE, IsCoach, open_on_local,
     refuse_while_password_change_due)
 from .roles import role_of
+from . import athlete_logins
 from .serializers import (SetSerializer, SetCompleteSerializer, RackScreenSerializer,
                           AthleteSerializer, TrainingSessionSerializer,
                           NodeSerializer, ExerciseSerializer, TrainingGroupSerializer,
@@ -1586,7 +1587,15 @@ def athletes_view(request):
         athletes = Athlete.objects.all().order_by('name', 'id')
         if request.query_params.get('include_archived') != 'true':
             athletes = athletes.filter(is_active=True)
-        return Response(AthleteSerializer(athletes, many=True).data)
+        if not athlete_logins.is_coach(request):
+            return Response(AthleteSerializer(athletes, many=True).data)
+        # A coach also sees each athlete's login status (spec 03): the roster's
+        # login column. Nobody else does.
+        athletes = list(athlete_logins.with_login_facts(athletes))
+        rows = AthleteSerializer(athletes, many=True).data
+        for row, athlete in zip(rows, athletes):
+            row.update(athlete_logins.login_facts(athlete))
+        return Response(rows)
     if not _require_coach(request):
         return Response({"detail": "coach login required"}, status=401)
     form = AthleteSerializer(data=request.data)

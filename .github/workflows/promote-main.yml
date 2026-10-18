@@ -10,6 +10,18 @@
 #
 # Tagging stays by hand: a tag on main is what releases and deploys a version
 # (release.yml).
+#
+# Both branches are named explicitly below, so it doesn't matter which branch is
+# the repo's default (SprintBranch, since 2026-10-18). The one thing the default
+# decides: GitHub runs the SCHEDULED run from the default branch's copy of this
+# file, so this file must be the same on SprintBranch and main (it is: main only
+# ever moves forward to SprintBranch).
+#
+# Who may move main: the "protect main" ruleset lets only a deploy key update it
+# (Restrict updates, bypass: deploy keys), so a pull request can never be merged
+# into main by mistake. This job pushes with that key, kept as the Actions secret
+# PROMOTE_MAIN_KEY. Until the secret exists it falls back to the run's own login,
+# which works only while that ruleset rule is off. See scripts/remote/README.md.
 
 name: Move main forward
 
@@ -32,6 +44,9 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0   # the whole history, to compare the two branches
+          # The deploy key that may move main (see the top of this file). Empty
+          # means "use the run's own login", today's behaviour.
+          ssh-key: ${{ secrets.PROMOTE_MAIN_KEY }}
 
       - name: Check main can simply move forward
         run: |

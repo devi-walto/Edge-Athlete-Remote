@@ -2,8 +2,8 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-05
-- Status: **Done 2026-10-07. All five phases complete; merged into `SprintBranch`.** Two things were handed on by Devin's decisions: an archived athlete's page in Analytics (spec 09) and opening Room Layout to every coach (spec 02). Temporary passwords are replaced by login codes in spec 03 Phase 5
-- Mockup: `F_FirstRun`, `F_AccountMenu` on the canvas's **Final designs** page, and `R3_SignIn`, `R3_Coaches` on its Remote coach view page. (On 2026-10-07 the Final page's `F_SignIn` and `F_Coaches` were replaced by the login-code versions that [spec 03 Phase 5](03-athlete-login-links.md) builds; what this spec built matches the `R3_` boards.) Earlier wording: `F_SignIn`, `F_FirstRun`, `F_Coaches`, `F_AccountMenu` on the **Final designs** page ("The same in both: accounts and access"), also in [`specs/ui/mockups/coach-ui-final.html`](../ui/mockups/coach-ui-final.html). Look: [spec 06](../ui/06-design-rules.md) rule 9
+- Status: **Done 2026-10-07. All five phases complete; merged into `SprintBranch`.** Two things were handed on by Devin's decisions: an archived athlete's page in Analytics (spec 09) and opening Room Layout to every coach (spec 02). Temporary passwords are replaced by login codes in spec 11 Phase 4 (moved from spec 03 on 2026-10-18)
+- Mockup: `F_FirstRun`, `F_AccountMenu` on the canvas's **Final designs** page, and `R3_SignIn`, `R3_Coaches` on its Remote coach view page. (On 2026-10-07 the Final page's `F_SignIn` and `F_Coaches` were replaced by the login-code versions that [spec 11 Phase 4](../ui/11-mine-first.md) builds; what this spec built matches the `R3_` boards.) Earlier wording: `F_SignIn`, `F_FirstRun`, `F_Coaches`, `F_AccountMenu` on the **Final designs** page ("The same in both: accounts and access"), also in [`specs/ui/mockups/coach-ui-final.html`](../ui/mockups/coach-ui-final.html). Look: [spec 06](../ui/06-design-rules.md) rule 9
 - Index and shared decisions: [specs/README.md](../README.md)
 - Form item: Definition of Done #2 ("Coach accounts are secured")
 - Next spec: 02 — roles (coach, athlete, everyone else refused)
@@ -86,7 +86,8 @@ cleanly; the screens have to be re-homed. That is Phase 2.
 ## Non-goals
 
 - **Coach login codes.** Decided 2026-10-06: the temporary password this spec uses is
-  replaced by a one-time login code in [spec 03, Phase 5](03-athlete-login-links.md).
+  replaced by a one-time login code in [spec 11, Phase 4](../ui/11-mine-first.md) (moved
+  there from spec 03 on 2026-10-18).
   This spec ships the temporary-password flow as it is.
 
 - **Athlete logins, and tightening "coach" to mean "has a coach profile"** — Spec 02.

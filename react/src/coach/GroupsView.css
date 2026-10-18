@@ -159,3 +159,20 @@
 .groups-archive:hover { color: var(--ink); }
 .groups-archive:disabled { cursor: default; opacity: .55; }
 .groups-visually-hidden { border: 0; clip: rect(0 0 0 0); height: 1px; margin: -1px; overflow: hidden; padding: 0; position: absolute; width: 1px; }
+
+/* ── login links (remote only, spec 03) ── */
+
+.groups-login b { display: block; font-weight: 800; }
+.groups-login span { color: #89969d; font-size: 12px; }
+.groups-login.is-sent b { color: #ffb63e; }   /* waiting on the athlete */
+.groups-login.is-none b { color: #89969d; }
+
+.groups-login-actions { white-space: nowrap; }
+.groups-login-actions button {
+  background: transparent; border: 0; cursor: pointer; font: inherit;
+  font-size: 13px; font-weight: 800; padding: 6px 8px;
+}
+.groups-login-send { color: #f5f7f2; }
+.groups-login-send:hover { color: #a9f04d; }
+.groups-login-quiet { color: #89969d; }
+.groups-login-quiet:hover { color: #f5f7f2; }

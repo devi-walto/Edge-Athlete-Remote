@@ -1,0 +1,11 @@
+/*
+ * athlete.css — the few additions the athlete's sign-in pages need on top of the
+ * coach account cards (coach/account.css), which they share: same card, same
+ * mark, same fields. Sized for a phone first (boards F_Ath_R1, R1b, R2).
+ */
+
+.athlete-screen { flex-direction: column; gap: 22px; }
+.athlete-lead { font-size: 15px; }
+.athlete-center { text-align: center; }
+.athlete-field-error { color: #ff9aa0; font-size: 12px; font-weight: 400; }
+.athlete-switch { font-size: 14px; font-weight: 800; }

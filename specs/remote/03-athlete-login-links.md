@@ -1,12 +1,13 @@
-# Feature Spec 3: Athlete login links, and coach login codes
+# Feature Spec 3: Athlete login links
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: Written — not started. Phase 5 (coach login codes) added 2026-10-06
+- Status: **Done 2026-10-18** (Phases 0–4) on `feature-login_links`, browser checks
+  passed by Devin on a remote-mode copy of the app on his Mac. Coach login codes (once Phase 5 here) moved to spec 11, Phase 4
 - Form item: Definition of Done #4
 - Depends on: [02 Roles](02-roles.md) (must be merged first), [05 Hosted mode](05-hosted-mode.md)
 - Mockup: `F_Remote_Roster`, `F_Remote_LoginLink` and the REMOTE flow on the canvas's Final
-  designs page. Phase 5 (coach login codes): **approved 2026-10-07**, on the Final designs page
+  designs page. Coach login codes (now spec 11, Phase 4): **approved 2026-10-07**, on the Final designs page
   ("The same in both: accounts and access"): `F_Coaches` (the code in the same dialog an
   athlete login link uses, with the link icon on **Copy code**; Invited and Reset rows),
   `F_SignIn` ("I have a login code"), `F_CodeNewCoach`, `F_CodeReset`
@@ -129,8 +130,14 @@ The athlete list (`GET /api/athletes/`) adds, for coaches only: `login_status`
 (`none` · `link_sent` · `linked`), `login_username`, `link_expires_at`.
 
 The full link is built from the request's own address
-(`https://<this installation>/login-link/<lookup>.<token>`), so it is right on every
+(`https://<this installation>/login-link#<lookup>.<token>`), so it is right on every
 installation without configuration.
+
+**The link goes after a `#`, not a `/`** (Devin, 2026-10-17). A browser never sends
+the part after `#` to the server: it stays on the athlete's phone, and the page reads
+it and sends it inside the request body (Phase 2). So the secret never appears in
+Traefik's or nginx's request logs, and is never passed on to another site in the
+page's address.
 
 **Done when:**
 
@@ -189,7 +196,7 @@ existing roster in PLANNING → Groups), **only when `useDeployment()` says host
 
 - [ ] *(Frontend test)* The column and buttons are absent on a gym box and present when hosted.
 - [ ] *(Frontend test)* The link is rendered once and is not kept in state after the dialog closes.
-- [ ] *(Browser)* Send, copy, cancel and unlink each update the row's status without a reload.
+- [x] *(Browser)* Send, copy, cancel and unlink each update the row's status without a reload.
 
 **Stop. Devin reviews.**
 
@@ -198,7 +205,7 @@ existing roster in PLANNING → Groups), **only when `useDeployment()` says host
 Mockups `F_Ath_R1` (login link), `F_Ath_R1b` (a link that no longer works) and
 `F_Ath_R2` (sign in), on the canvas's Final designs page, REMOTE flow.
 
-- `/login-link/<link>`: calls `lookup`; shows "Hi <name>"; username, password, password
+- `/login-link#<link>`: reads the link from after the `#`, calls `lookup`; shows "Hi <name>"; username, password, password
   again; **Create my login**. An invalid link shows one message for every cause: "This
   link doesn't work any more. Ask your coach for a new one."
 - `/athlete`: username and password; a line under it — "Forgot it? Ask your coach for a
@@ -209,148 +216,47 @@ Mockups `F_Ath_R1` (login link), `F_Ath_R1b` (a link that no longer works) and
 
 **Done when:**
 
-- [ ] *(Browser)* The whole path works: coach sends a link → athlete opens it in a
+- [x] *(Browser)* The whole path works: coach sends a link → athlete opens it in a
       private window → sets a login → signs out → signs in again.
 - [ ] *(Browser)* Sending a second link after that, and using it, makes the first login
       stop working and keeps the athlete's history.
 - [ ] *(Browser)* Neither page shows any name but the athlete's own.
 
+### Built (Phases 0–4, 2026-10-17/18)
+
+- **Phase 0:** `AthleteLoginLink` (migration `0027`), `services/login_links.py`. A link is
+  `<lookup>.<secret>`: the lookup finds the row, the secret is stored only as a hash.
+  Using a link switches the old login off **and renames it** (`<name>~replaced-<id>`) so
+  the athlete can keep their username; an archived athlete's link stops working.
+- **Phase 1:** the coach routes, in `athlete_logins.py`; the link is built from the
+  request's own address, after a `#`.
+- **Phase 2:** the athlete routes. A bad link answers `404`, which also counts toward
+  the wrong-attempt limit (`LimitWrongAttempts.counted_statuses`), so links can't be
+  guessed freely. Usernames ignore capitals. An athlete's sign-in lasts 30 days on
+  sign-in, link and renewal (`ATHLETE_SIGN_IN_LIFETIME`); a coach keeps 7.
+- **Phase 3:** the roster has no Roster tab yet (spec 07 builds it), so the Login
+  column, Send login link / Send new link / Unlink and the dialog went on the existing
+  roster table in PLANNING → Groups (Devin, 2026-10-18: build with what exists; the
+  server side is already what the redesign needs). Remote only.
+- **Phase 4:** `/login-link#…` (read, then wiped from the address bar) and `/athlete`.
+  **The screens had never renewed a sign-in**, so the 30 days would have been 8 hours
+  in practice: an athlete's renewal token is now kept and used
+  (`athlete/athleteAuth.js`, `freshAthleteToken()`). Coaches are unchanged. The coach
+  sign-in page links to the athlete one on a remote school.
+- **Browser checks passed** (Devin, 2026-10-18, a remote-mode copy on his Mac): send,
+  copy, cancel and unlink update the row without a reload; link → choose a login →
+  signed in → sign out → sign in again; a used link shows the dead-link page.
+- **Not yet:** the "Send login link" shortcut on SESSION's "Not joined yet" list (that list is
+  spec 04, Phase 4).
+
 ---
 
-## Phase 5 — Coach login codes (replaces temporary passwords)
+## Coach login codes: moved to spec 11
 
-Added 2026-10-06 by Devin's decision. **This phase is for both deployments**, `local`
-and `remote`; unlike the athlete phases above it does not depend on spec 05.
-
-**Why.** Spec 01 brought in Braydon's way of adding a coach: the administrator types a
-username, the system makes a temporary password, the administrator hands both over, and
-the coach is forced to change the password at first sign-in. It works, and it has three
-weaknesses:
-
-- the administrator chooses the coach's username and, briefly, knows their password;
-- **a temporary password never expires**, so a login that was made and never used sits
-  there with a password someone else knows;
-- it is a third way of getting somebody in, beside the setup code (first
-  administrator) and the login link (athletes).
-
-A coach login code makes it the same idea as the other two: **a one-time, expiring code
-that lets the person choose their own username and password.** It is a typed code and
-not a link, so it works on a gym box with no internet: the administrator reads it out.
-
-| | Today (spec 01) | After this phase |
-|---|---|---|
-| New coach | Administrator picks the username; temporary password; forced change | Administrator gets a **login code**; the coach enters it and picks their own username and password |
-| Forgotten password | Reset → temporary password → forced change | Reset → **login code** tied to that coach → they pick a new password. Same username, same login |
-| Expires | Never | 3 days, and works once |
-| Server lock while a change is due | `403 password_change_required` on every coach route | Not needed: there is no half-finished login |
-
-**What the code is.** Eight characters from the setup code's alphabet (no `0`, `O`,
-`1`, `I`, `L`), typed however the person likes: case, spaces and dashes are ignored.
-Reuse `normalize_setup_code` and the alphabet from `coach_auth.py`.
-
-**Data.** `CoachLoginCode`:
-
-| Field | Notes |
-|---|---|
-| `user` | FK to the login, nullable. **Set for a reset. Empty for a new coach**, whose login does not exist until the code is used |
-| `label` | Who a new-coach code is for ("Maria Reyes"). Shown on the Coaches page until the code is used. Empty for a reset |
-| `code_hash` | `make_password` of the code. The code itself is never stored |
-| `created_by` | the administrator, `SET_NULL` |
-| `created_at`, `expires_at` | expiry = created + 3 days |
-| `used_at`, `cancelled_at` | null until it happens |
-
-The hashing, expiry, single-use and "one answer for every failure" rules are the ones
-`services/login_links.py` already has from Phase 0. Put the shared part in one place
-and use it for both; do not write it twice. A typed code has no public lookup id, so
-`find` checks the code against the unused, unexpired rows; keep that set small by
-cancelling a coach's older reset code when a new one is issued and by refusing more
-than twenty outstanding new-coach codes.
-
-**Coaches already live in the database, and their links must survive.** A coach login
-is a row in the same PostgreSQL database as everything else (Django's own `auth_user`
-table), with a `CoachProfile` beside it. Two things point at that row:
-
-- `TrainingGroupCoach` — which coaches run which training group, as head or assistant.
-  A label, never a permission.
-- `TrainingBlock.coach` — who made a training block.
-
-Both refuse to let the login be deleted. So:
-
-- **A reset never creates a new login.** It sets a new password on the same row; every
-  group and block still points at the same coach.
-- **A new coach has no row until they use their code.** They cannot be put on a
-  training group before that. The Coaches page shows them as "Invited", by label.
-- **Deactivating is still never deleting.** Unchanged from spec 01.
-
-**Routes.**
-
-- `POST /api/coaches/invite/` `{label}` — administrator only. Returns the code **once**.
-- `POST /api/coaches/{id}/reset/` — administrator only. Now returns a code tied to that
-  coach, not a temporary password. Their current password keeps working until the code
-  is used, so a reset pressed on the wrong row locks nobody out.
-- `DELETE /api/coaches/codes/{id}/` — administrator only. Cancels an unused code.
-- `GET /api/coaches/` — also lists unused new-coach codes: label, when they expire.
-- `POST /api/auth/code/check/` `{code}` — open. `{kind: "new"}` or
-  `{kind: "reset", username}`, or one `400` for every kind of bad code.
-- `POST /api/auth/code/` `{code, username?, password}` — open. New: creates the login
-  with a coach profile, not an administrator. Reset: sets the password on that login.
-  Either way the code is spent and the reply is the same tokens signing in gives.
-- Add both open routes to the sign-in rate limit in `nginx.conf`.
-
-**Screens** (built in the look of the sign-in card; no new board is needed for the
-card, but draw the Coaches page's "Invited" rows on the Final designs page first):
-
-- **Coaches:** **Add coach** asks for a name, then shows the code **in the same dialog
-  the athlete login link uses** (Devin, 2026-10-07): the title "For <name>", the code,
-  a **Copy code** button with the link icon, the three facts (works once, expires, makes
-  them a coach), the amber "Don't post this in a group chat" warning, **Cancel this
-  code** and **Done**. One dialog component serves both. Its text includes "Pass it on now. It cannot be shown
-  again. It works once and expires in 3 days." Unused codes show as rows: the label,
-  "Invited · expires Oct 9", and **Cancel**. **Reset password** shows a code the same way.
-- **Sign in:** one quiet line under the form, "Have a login code?", opening a card that
-  asks for the code. A new coach is then asked for a username and a password twice; a
-  coach resetting sees their username and is asked only for the password.
-
-**Removed in this phase:** temporary passwords and everything that existed only for
-them — `CoachProfile.must_change_password` (a migration drops it),
-`refuse_while_password_change_due` and its three call sites in `permissions.py`, the
-`must_change_password` field in the sign-in and "who am I" replies, and the forced mode
-of `ChangePassword.jsx`. **Changing your own password from the account menu stays.**
-
-**The one case nobody on the website can fix** is a sole administrator who forgets
-their own password. That is deliberate, the same rule as `setup_code` and `make_admin`:
-it takes the machine. Django's own command does it, and the docs must say so:
-`docker compose exec django python manage.py changepassword <username>`.
-
-**Done when:**
-
-- [ ] A new-coach code creates one login with the username and password the coach
-      chose, a coach profile, and no administrator flag.
-- [ ] A reset code changes the password of the coach it was issued for and nobody
-      else's; their username, their id, their training groups and their training
-      blocks are unchanged.
-- [ ] A coach's old password works until their reset code is used, and stops then.
-- [ ] A wrong code, an expired code, a used code and a cancelled code get the same
-      answer from both open routes.
-- [ ] A code cannot be used twice; two requests racing to use one create one login.
-- [ ] Issuing a second reset code for a coach makes the first stop working.
-- [ ] The code is nowhere in the database or the logs after it is issued.
-- [ ] A regular coach gets `403` from invite, reset and cancel.
-- [ ] A new-coach code can never produce an administrator, and cannot take a username
-      that exists.
-- [ ] After the migration no login is on a temporary password: every login that had
-      `must_change_password` set is given a reset code instead (printed by the
-      migration's management command, not stored), or the migration refuses to run
-      until none are left. **Decide which before building.**
-- [ ] `must_change_password` appears nowhere in the code base, and the spec 01 tests
-      for the temporary-password lock are replaced, not just deleted.
-- [ ] *(Browser)* Add a coach → read the code → "Have a login code?" → choose a
-      username and password → the workspace opens. On a gym box with no internet.
-- [ ] *(Browser)* Reset a coach → they use the code → same username, new password,
-      still listed on their training groups.
-- [ ] `changepassword` is documented beside `setup_code` and `make_admin`.
-
-**Stop. Devin reviews.**
+Moved 2026-10-18 (Devin): coach login codes are built as the **last phase of the coach
+interface redesign**, [spec 11, Phase 4](../ui/11-mine-first.md), not here. They change
+the Coaches page and coach sign-in, which the redesign rebuilds anyway, and they are not
+needed for Definition of Done #4. This spec is complete without them.
 
 ---
 

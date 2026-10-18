@@ -198,6 +198,27 @@ update schools and nothing else (`k8s/cluster/deployer.yaml`, applied by
    **"Require approval for all outside collaborators"**, and a tag rule so only you
    can push `v*` tags. The deploy job only runs on tags.
 
+## Only the 3-day job can move `main`
+
+`main` is what gets released, and it only ever moves forward to `SprintBranch`
+(`.github/workflows/promote-main.yml`). A pull request merged straight into `main`
+would skip `SprintBranch`'s checks and stop that job. So the "protect main" ruleset
+lets only one key update `main`: a **deploy key** the job pushes with. Set up once:
+
+1. **Make the key, on your laptop** (no passphrase; the job can't type one):
+   `ssh-keygen -t ed25519 -N "" -C "promote-main" -f ~/promote-main-key`
+2. **Give GitHub the public half:** the repo → Settings → Deploy keys → Add deploy key →
+   title `promote-main`, paste `~/promote-main-key.pub`, tick **Allow write access**.
+3. **Give the job the private half:** Settings → Secrets and variables → Actions →
+   New repository secret → name `PROMOTE_MAIN_KEY`, paste `~/promote-main-key`.
+   Then delete both files from your laptop: GitHub now holds the only copies.
+4. **Check the job works with the key** while nothing is blocked yet: Actions → Move main
+   forward → Run workflow, at a time when `main` is behind `SprintBranch`.
+5. **Turn the rule on:** Settings → Rules → Rulesets → protect main → Add rule →
+   **Restrict updates**; under Bypass list → Add bypass → **Deploy keys** → Always. Save.
+6. **Check both sides:** a pull request into `main` now can't be merged, and the next
+   Move main forward still moves it.
+
 ## Later: from a clone to a release bundle
 
 While the code changes daily, the server holds a git clone. Once it settles, each
