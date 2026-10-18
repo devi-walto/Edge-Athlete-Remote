@@ -2,8 +2,8 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: **Built 2026-10-18** (Phases 0–4) on `feature-login_links`; browser checks still
-  to do. Coach login codes (once Phase 5 here) moved to spec 11, Phase 4
+- Status: **Done 2026-10-18** (Phases 0–4) on `feature-login_links`, browser checks
+  passed by Devin on a remote-mode copy of the app on his Mac. Coach login codes (once Phase 5 here) moved to spec 11, Phase 4
 - Form item: Definition of Done #4
 - Depends on: [02 Roles](02-roles.md) (must be merged first), [05 Hosted mode](05-hosted-mode.md)
 - Mockup: `F_Remote_Roster`, `F_Remote_LoginLink` and the REMOTE flow on the canvas's Final
@@ -196,7 +196,7 @@ existing roster in PLANNING → Groups), **only when `useDeployment()` says host
 
 - [ ] *(Frontend test)* The column and buttons are absent on a gym box and present when hosted.
 - [ ] *(Frontend test)* The link is rendered once and is not kept in state after the dialog closes.
-- [ ] *(Browser)* Send, copy, cancel and unlink each update the row's status without a reload.
+- [x] *(Browser)* Send, copy, cancel and unlink each update the row's status without a reload.
 
 **Stop. Devin reviews.**
 
@@ -216,7 +216,7 @@ Mockups `F_Ath_R1` (login link), `F_Ath_R1b` (a link that no longer works) and
 
 **Done when:**
 
-- [ ] *(Browser)* The whole path works: coach sends a link → athlete opens it in a
+- [x] *(Browser)* The whole path works: coach sends a link → athlete opens it in a
       private window → sets a login → signs out → signs in again.
 - [ ] *(Browser)* Sending a second link after that, and using it, makes the first login
       stop working and keeps the athlete's history.
@@ -243,8 +243,10 @@ Mockups `F_Ath_R1` (login link), `F_Ath_R1b` (a link that no longer works) and
   in practice: an athlete's renewal token is now kept and used
   (`athlete/athleteAuth.js`, `freshAthleteToken()`). Coaches are unchanged. The coach
   sign-in page links to the athlete one on a remote school.
-- **Not yet:** the browser checks in Phases 3 and 4 (no browser in the build session),
-  and the "Send login link" shortcut on SESSION's "Not joined yet" list (that list is
+- **Browser checks passed** (Devin, 2026-10-18, a remote-mode copy on his Mac): send,
+  copy, cancel and unlink update the row without a reload; link → choose a login →
+  signed in → sign out → sign in again; a used link shows the dead-link page.
+- **Not yet:** the "Send login link" shortcut on SESSION's "Not joined yet" list (that list is
   spec 04, Phase 4).
 
 ---
