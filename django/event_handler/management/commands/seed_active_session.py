@@ -41,24 +41,23 @@ BLOCK_NAME = "Base Strength"
 # different thing and can name a real day, because a session IS one.
 WORKOUT_NAME = "Day 1 — Lower + Push"
 
-# The demo roster is the team. Real names beat "Jordan Lee" in front of a room:
-# nobody has to be told the gym is fake, and everyone watching can find
-# themselves on the wall display.
-ATHLETES = ["Devin Walton", "Braydon Callender", "Derrilon Young", "Riley Brooks"]
+# The demo roster. Invented names on purpose: this data also goes on the public
+# demo school (spec 14), and no real person's name belongs there.
+ATHLETES = ["Alex Rivera", "Jordan Lee", "Casey Morgan", "Riley Brooks"]
 
-# NFC wristband tags, keyed by athlete name. Only Braydon's is filled in — it is
+# NFC wristband tags, keyed by athlete name. Only Jordan's is filled in — it is
 # the one the demo actually taps, and it is the value the READER reads (which can
 # differ from the label printed on the band; the reader is authoritative). A
 # fresh seed leaves the others untagged, exactly like a real gym roster. This
 # lives in the seeder because nothing else assigns tags, and a fresh database
 # without it silently loses wristband sign-in — which is how the demo got burned.
 NFC_TAG_BY_ATHLETE = {
-    "Braydon Callender": "044DF23A1F1D91",
+    "Jordan Lee": "044DF23A1F1D91",
 }
 
-DEVIN = "Devin Walton"
-BRAYDON = "Braydon Callender"
-DERRILON = "Derrilon Young"
+ALEX = "Alex Rivera"
+JORDAN = "Jordan Lee"
+CASEY = "Casey Morgan"
 RILEY = "Riley Brooks"
 
 # The prescription, written once for the whole group. 72% of a 315 squat is 227,
@@ -227,24 +226,24 @@ class Command(BaseCommand):
             training_program_workout=program.workouts.order_by("position").first())
 
         # Give TWO of the four a finished set already, so has_data is non-trivial
-        # (Devin + Braydon read as has_data=true; Derrilon + Riley as false → their
+        # (Alex + Jordan read as has_data=true; Casey + Riley as false → their
         # next set would NOT be a makeup, the first two's WOULD).
-        self._finish_a_set(session, node, athletes[DEVIN], squat, 1, 205.0)
-        self._finish_a_set(session, node, athletes[BRAYDON], squat, 1, 255.0)
+        self._finish_a_set(session, node, athletes[ALEX], squat, 1, 205.0)
+        self._finish_a_set(session, node, athletes[JORDAN], squat, 1, 255.0)
 
         # Recorded reference maxes (AthleteReferenceMax). Deliberately shaped to
         # exercise the endpoint:
-        #  - Devin gets an OLD squat ref then a NEWER one → endpoint must return 315.
+        #  - Alex gets an OLD squat ref then a NEWER one → endpoint must return 315.
         #  - Most athletes have both lifts; Riley has NO bench ref → the rack
         #    screen's inline "set your max" prompt has a real gap to fill.
-        self._record_max(athletes[DEVIN],    squat, 300.0, days_ago=40)
-        self._record_max(athletes[DEVIN],    squat, 315.0, days_ago=3)
-        self._record_max(athletes[DEVIN],    bench, 205.0, days_ago=5)
-        self._record_max(athletes[BRAYDON],  squat, 365.0, days_ago=7)
-        self._record_max(athletes[BRAYDON],  bench, 245.0, days_ago=7)
-        self._record_max(athletes[DERRILON], squat, 245.0, days_ago=10)
-        self._record_max(athletes[DERRILON], bench, 175.0, days_ago=10)
-        self._record_max(athletes[RILEY],     squat, 275.0, days_ago=14)
+        self._record_max(athletes[ALEX],   squat, 300.0, days_ago=40)
+        self._record_max(athletes[ALEX],   squat, 315.0, days_ago=3)
+        self._record_max(athletes[ALEX],   bench, 205.0, days_ago=5)
+        self._record_max(athletes[JORDAN], squat, 365.0, days_ago=7)
+        self._record_max(athletes[JORDAN], bench, 245.0, days_ago=7)
+        self._record_max(athletes[CASEY],  squat, 245.0, days_ago=10)
+        self._record_max(athletes[CASEY],  bench, 175.0, days_ago=10)
+        self._record_max(athletes[RILEY],  squat, 275.0, days_ago=14)
         # Riley Brooks — Bench Press: intentionally left with no max on file.
 
         self.stdout.write(self.style.SUCCESS(
