@@ -98,3 +98,7 @@
 @media (max-width: 900px) { .acct-row { grid-template-columns: 1fr 1fr; padding: 10px 16px; } .acct-row.is-head { display: none; } .acct-actions { grid-column: 1 / -1; justify-content: flex-start; } }
 
 .acct-menu .acct-menu-button span { font-size: 15px; font-weight: 800; letter-spacing: 0; text-transform: none; }
+
+/* Coach sign in, remote: the "Athlete? Athlete sign in" link under the card. */
+.acct-screen-stack { flex-direction: column; gap: 22px; }
+.acct-switch { font-size: 14px; font-weight: 800; }

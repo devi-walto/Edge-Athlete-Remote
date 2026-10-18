@@ -2,7 +2,9 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: Written — not started. Phase 5 (coach login codes) added 2026-10-06
+- Status: Phases 0–4 built 2026-10-18 on `feature-login_links` (browser checks still to do).
+  Phase 5 (coach login codes, added 2026-10-06) not started: not needed for Definition of
+  Done #4
 - Form item: Definition of Done #4
 - Depends on: [02 Roles](02-roles.md) (must be merged first), [05 Hosted mode](05-hosted-mode.md)
 - Mockup: `F_Remote_Roster`, `F_Remote_LoginLink` and the REMOTE flow on the canvas's Final
@@ -220,6 +222,31 @@ Mockups `F_Ath_R1` (login link), `F_Ath_R1b` (a link that no longer works) and
 - [ ] *(Browser)* Sending a second link after that, and using it, makes the first login
       stop working and keeps the athlete's history.
 - [ ] *(Browser)* Neither page shows any name but the athlete's own.
+
+### Built (Phases 0–4, 2026-10-17/18)
+
+- **Phase 0:** `AthleteLoginLink` (migration `0027`), `services/login_links.py`. A link is
+  `<lookup>.<secret>`: the lookup finds the row, the secret is stored only as a hash.
+  Using a link switches the old login off **and renames it** (`<name>~replaced-<id>`) so
+  the athlete can keep their username; an archived athlete's link stops working.
+- **Phase 1:** the coach routes, in `athlete_logins.py`; the link is built from the
+  request's own address, after a `#`.
+- **Phase 2:** the athlete routes. A bad link answers `404`, which also counts toward
+  the wrong-attempt limit (`LimitWrongAttempts.counted_statuses`), so links can't be
+  guessed freely. Usernames ignore capitals. An athlete's sign-in lasts 30 days on
+  sign-in, link and renewal (`ATHLETE_SIGN_IN_LIFETIME`); a coach keeps 7.
+- **Phase 3:** the roster has no Roster tab yet (spec 07 builds it), so the Login
+  column, Send login link / Send new link / Unlink and the dialog went on the existing
+  roster table in PLANNING → Groups (Devin, 2026-10-18: build with what exists; the
+  server side is already what the redesign needs). Remote only.
+- **Phase 4:** `/login-link#…` (read, then wiped from the address bar) and `/athlete`.
+  **The screens had never renewed a sign-in**, so the 30 days would have been 8 hours
+  in practice: an athlete's renewal token is now kept and used
+  (`athlete/athleteAuth.js`, `freshAthleteToken()`). Coaches are unchanged. The coach
+  sign-in page links to the athlete one on a remote school.
+- **Not yet:** the browser checks in Phases 3 and 4 (no browser in the build session),
+  and the "Send login link" shortcut on SESSION's "Not joined yet" list (that list is
+  spec 04, Phase 4).
 
 ---
 
