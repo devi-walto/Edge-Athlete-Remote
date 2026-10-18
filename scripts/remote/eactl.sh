@@ -140,7 +140,9 @@ render() {
 # is public over HTTPS; "suspended" (switched off, data kept) comes in spec 13.
 
 APP_IMAGES="ghcr.io/devi-walto/edge-athlete-django ghcr.io/devi-walto/edge-athlete-react"
-# The school's own parts, by the jersey patch (app: …) every one of them wears.
+# The school's own parts, in the order an update waits for them, and by the
+# jersey patch (app: …) every one of them wears.
+APP_PARTS="mosquitto django react mqtt-listener monitoring-publisher"
 APP_PARTS_SELECTOR="app in (mosquitto,django,react,mqtt-listener,monitoring-publisher)"
 
 # school_info <short name> <field> — read one thing the namespace remembers.
@@ -298,13 +300,64 @@ update_school() {
         read -r -p "Apply these changes to $short? (y/N) " answer
         [ "$answer" = y ] || { echo "nothing applied to $short"; return 0; }
     fi
+    # Each part's version number before the change, so a failed update can put
+    # back exactly what was running (see undo_parts).
+    local before
+    before="$(part_revisions "$ns")"
     kube -n "$ns" apply -f - <<< "$school" || { echo "[!] $short did not apply"; return 1; }
     echo "==> waiting for every part of $short to be ready"
-    for d in mosquitto django react mqtt-listener monitoring-publisher; do
+    local d
+    for d in $APP_PARTS; do
         kube -n "$ns" rollout status "deployment/$d" --timeout=300s || {
-            echo "[!] $d is not ready. Look: kubectl -n $ns get pods"; return 1; }
+            echo "[!] $d is not ready. Look: kubectl -n $ns get pods"
+            undo_parts "$ns" "$before"
+            return 1; }
     done
     echo "✓ $short is up to date: $(school_info "$short" address), $(school_info "$short" version)"
+}
+
+# part_revisions <namespace> — "mosquitto=3 django=7 …": the version number
+# Kubernetes gave each part's current setup. Each change to a part's setup gets
+# the next number, and Kubernetes keeps the old setups, so a number is enough to
+# go back to one. A part that doesn't exist yet (a new school) has none.
+part_revisions() {
+    local ns="$1" d rev out=""
+    for d in $APP_PARTS; do
+        rev="$(kubectl -n "$ns" get deployment "$d" \
+            -o jsonpath='{.metadata.annotations.deployment\.kubernetes\.io/revision}' 2>/dev/null)"
+        out="$out $d=$rev"
+    done
+    echo "$out"
+}
+
+# undo_parts <namespace> "<part_revisions from before>" — after a failed update,
+# put every part that changed back to its setup from before: same images, same
+# settings files, same everything. Re-applying the old release instead would
+# not be enough, because the template itself can be what broke (v0.5.0: a
+# settings file the broker couldn't read). Parts that didn't change, and parts
+# that didn't exist before, are left alone.
+undo_parts() {
+    local ns="$1" before="$2" pair d old now undone=""
+    echo "==> undoing this update: putting back what was running before"
+    for pair in $before; do
+        d="${pair%%=*}" old="${pair#*=}"
+        [ -n "$old" ] || continue
+        now="$(kubectl -n "$ns" get deployment "$d" \
+            -o jsonpath='{.metadata.annotations.deployment\.kubernetes\.io/revision}' 2>/dev/null)"
+        [ "$now" = "$old" ] && continue
+        kube -n "$ns" rollout undo "deployment/$d" --to-revision="$old" >/dev/null \
+            || { echo "[!] could not put $d back. Look: kubectl -n $ns rollout history deployment/$d"; continue; }
+        undone="$undone $d"
+    done
+    if [ -z "$undone" ]; then
+        echo "    nothing to undo"
+        return 0
+    fi
+    for d in $undone; do
+        kube -n "$ns" rollout status "deployment/$d" --timeout=180s >/dev/null \
+            || echo "[!] $d is still not ready after undoing. Look: kubectl -n $ns get pods"
+    done
+    echo "    put back:$undone"
 }
 
 # short_name_from "Demo U" — demo-u-k7m2qx: the display name made safe (lowercase
@@ -988,7 +1041,7 @@ update)
             # Put the record back, so it still says what's actually running.
             [ -n "$version" ] && [ "$old" != "$version" ] \
                 && kube label namespace "ea-$short" ea/version="$old" --overwrite >/dev/null
-            echo "[!] stopped at $short; schools after it were not touched"
+            echo "[!] stopped at $short (put back as it was); schools after it were not touched"
             exit 1
         fi
         # Moving ONE school back to an older release is a deliberate choice, so hold

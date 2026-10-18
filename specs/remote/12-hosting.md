@@ -509,6 +509,35 @@ health check fails (Django and React update side by side, so the old copy keeps 
 
 **Stop. Devin reviews.**
 
+### Phase 4 result so far: v0.5.0 failed on the demo school, v0.5.1 fixes it (2026-10-17)
+
+What happened, in order:
+
+1. Images built and stored; the deploy started with the demo school, as designed.
+2. The new broker stopped at once: "Unable to open acl_file". Its rules file was
+   readable by root only (`defaultMode: 0400`), but the broker reads it after
+   switching from root to its own user. Django's setup step and both workers then
+   crashed too, because they connect to the broker when they start.
+3. The deploy gave up after 5 minutes and stopped there: the other school was never
+   touched. The demo school's site kept loading (the old django kept running), but
+   its live updates were down.
+
+Why the test before release missed it: it ran on a Mac, where Docker doesn't enforce
+file permissions on shared folders. Retested with a Docker volume, which does: root
+only fails exactly as on the server; readable by the broker's group works.
+
+What v0.5.1 changes:
+
+- **The fix:** `fsGroup` gives the broker's files to its own group, and `defaultMode:
+  0440` lets that group read them (`k8s/app/base/mosquitto.yaml`).
+- **Clearer names:** the broker's two ports are named `programs` (1883) and `screens`
+  (9001). The broker's Linux user comes with its image (`mosquitto`, number 1883, the
+  same number as the port only by the image's choice); the files say so.
+- **A failed update now undoes itself.** Before, `eactl` put back only the school's
+  record ("v0.4.0") while the school ran a mix of old and new parts. Now every part
+  that changed goes back to its setup from before (`kubectl rollout undo`). Re-applying
+  the old release would not have been enough: the template itself was what broke.
+
 ## Phase 5 — Backups, and a restore that has been done
 
 - A CronJob per installation: a nightly database dump, **copied off the Dell**, so a dead

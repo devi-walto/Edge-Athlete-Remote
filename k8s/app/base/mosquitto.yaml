@@ -6,7 +6,18 @@
 # broker, so one school's messages can never reach another school.
 #
 # Same broker as a local install. Its settings are mosquitto-remote.conf, the
-# local settings with the screens' door made listen-only.
+# local settings with the screens door made listen-only.
+#
+# Names used in this file and its settings:
+#   the broker            the program, Mosquitto
+#   the broker's user     the Linux user the broker switches to after starting.
+#                         It comes with the broker's image: user "mosquitto"
+#                         (number 1883) in group "mosquitto" (number 1883).
+#   the programs door     port 1883, the standard MQTT port: django, the workers,
+#                         and later the sensors. Not reachable from outside.
+#   the screens door      port 9001: browsers, through the site's /mqtt address.
+# The user's number and the programs door's number are both 1883 only because
+# the image's makers chose them to match. They have nothing to do with each other.
 
 apiVersion: v1
 # PersistentVolumeClaim: a locker ticket. Why the broker needs a locker: when a
@@ -46,18 +57,29 @@ spec:
       labels:
         app: mosquitto
     spec:
+      # The broker starts as root, then switches to the broker's user before it
+      # reads its rules file (browser.acl). So the files Kubernetes puts in this
+      # pod are given to the broker's user's group, and defaultMode below lets
+      # that group read them. Kubernetes only accepts the group's number here,
+      # not its name.
+      securityContext:
+        fsGroup: 1883   # group "mosquitto", the broker's user's group (not the port)
+        # Only change the locker's group if it's wrong, instead of on every start.
+        fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: mosquitto
           # Pinned, so a rebuild months from now gets exactly this broker.
           image: eclipse-mosquitto:2.0.22
           ports:
-            # Plain MQTT, for programs: django's listener and publisher (and,
+            # The programs door: plain MQTT, for django and the workers (and,
             # on a local install, the sensors).
-            - containerPort: 1883
-            # MQTT wrapped in WebSockets, for screens in a browser. A web page
-            # isn't allowed to use plain MQTT, only web-style connections.
+            - name: programs
+              containerPort: 1883
+            # The screens door: MQTT wrapped in WebSockets, for browsers. A web
+            # page isn't allowed to use plain MQTT, only web-style connections.
             # Online, Traefik adds the encryption (wss) in front of this.
-            - containerPort: 9001
+            - name: screens
+              containerPort: 9001
           volumeMounts:
             # The settings file, placed exactly where the broker looks for it.
             # subPath puts in just that one file and leaves the rest of the
@@ -65,24 +87,24 @@ spec:
             - name: config
               mountPath: /mosquitto/config/mosquitto.conf
               subPath: mosquitto.conf
-            # The rules for the screens' door (listen-only), next to it.
+            # The rules for the screens door (listen-only), next to it.
             - name: config
               mountPath: /mosquitto/config/browser.acl
               subPath: browser.acl
             # The locker, where mosquitto.conf says to keep held messages.
             - name: data
               mountPath: /mosquitto/data
-          # "Ready?" Is the broker accepting connections yet? Until it is,
-          # nothing is sent its way.
+          # "Ready?" Is the programs door accepting connections yet? Until it
+          # is, nothing is sent its way.
           readinessProbe:
             tcpSocket:
-              port: 1883
+              port: programs
             periodSeconds: 5
           # "Still alive?" The same question, asked less often. Three misses in
           # a row and it's restarted.
           livenessProbe:
             tcpSocket:
-              port: 1883
+              port: programs
             initialDelaySeconds: 10
             periodSeconds: 20
           # A broker for one gym's racks needs very little. The limit stops a
@@ -97,9 +119,14 @@ spec:
         - name: config
           configMap:
             name: mosquitto-config   # made by kustomization.yaml
-            # Readable by its owner only. The broker warns about a rules file
-            # anyone can read, and says future versions will refuse it.
-            defaultMode: 0400
+            # Readable by root and the broker's user's group, nobody else.
+            #   0400 (root only): the broker can't open its rules file and stops.
+            #     This is what broke v0.5.0.
+            #   0444 (everyone): works, but the broker warns future versions
+            #     will refuse it.
+            # Checked against Mosquitto 2.0.22 with real file permissions (a
+            # Docker volume, not a Mac shared folder, which ignores them).
+            defaultMode: 0440
         - name: data
           persistentVolumeClaim:
             claimName: mosquitto-data
@@ -113,13 +140,16 @@ kind: Service
 metadata:
   name: mosquitto
 spec:
-  # Inside the server only. Phase 4 lets browsers reach 9001 through the site's
-  # own address; sensors over the internet come with the sensors spec.
+  # Inside the server only. Browsers reach the screens door through the site's
+  # /mqtt address (ingress.yaml); sensors over the internet come with the
+  # sensors spec.
   type: ClusterIP
   selector:
     app: mosquitto
   ports:
-    - name: mqtt
+    - name: programs
       port: 1883
-    - name: websockets
+      targetPort: programs
+    - name: screens
       port: 9001
+      targetPort: screens
