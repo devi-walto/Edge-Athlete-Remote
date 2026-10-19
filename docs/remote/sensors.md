@@ -200,6 +200,24 @@ Pulses and motion stay at QoS 0: a lost one is replaced by the next a moment lat
 **What it cost.** A little more memory on the sensor for the outbox, and a new library to
 learn. The messages themselves do not change, so nothing on the server does.
 
+### A sensor belongs to an athlete; a simulated one is only labelled
+
+**Built (October 2026, spec 04).** A sensor record now has an owner. When an athlete
+joins a session online, their own sensor is pointed at their own rack, and never at
+anyone else's. A gym sensor has no owner and belongs to its rack, as before.
+
+**Simulated sensors are labelled, not hidden** (decided October 17). The database had a
+"simulated" flag from an earlier design: a simulated sensor couldn't be attached to a
+rack, and its sets were left out of the live room, reports and max updates. Nothing ever
+set it, so it did nothing, until demo data needed it. Now it is a label only: a simulated
+sensor drives a rack and counts like a real one, and the label lets the demo seeder find
+and remove its own rows. Nothing on a gym box is marked simulated, so nothing changes
+there.
+
+**Demo data uses it** (spec 04, Phase 5, next): the seeder gives each of its invented
+athletes their own simulated sensor, and one command wakes them for two hours, so a demo
+school can be shown with live reps and no hardware.
+
 ## What we rejected, and why
 
 **Setting up Wi-Fi over Bluetooth from a web page.** Web Bluetooth does not work on

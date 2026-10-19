@@ -279,6 +279,7 @@ class CoachTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 
 class CoachTokenObtainPairView(LimitWrongAttempts, TokenObtainPairView):
+    """Sign in with a username and password, coach or athlete; wrong tries are slowed down."""
     serializer_class = CoachTokenObtainPairSerializer
     attempt_scope = 'sign_in'
 
@@ -309,6 +310,7 @@ class CheckedTokenRefreshSerializer(TokenRefreshSerializer):
 
 
 class CheckedTokenRefreshView(TokenRefreshView):
+    """Renew a sign-in, refused for a login that was switched off or lost its role."""
     serializer_class = CheckedTokenRefreshSerializer
 
 

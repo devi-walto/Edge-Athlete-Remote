@@ -194,12 +194,13 @@ it matches what is actually wired up.
 
 Health, and the settings an operator changes before a real gym uses the box.
 
-:::::{dropdown} 3 routes
+:::::{dropdown} 4 routes
 
 <!-- routes:system:start -->
 | Route | Methods | Access | What it does | Handler |
 |---|---|---|---|---|
 | `/api/health/` | `GET` | open | 200 when the app can serve and the database answers, 503 when it cannot | `health` |
+| `/api/system/info/` | `GET` | open | Which kind of installation this is, and which build | `system_info` |
 | `/api/system/status/` | `GET` | 🔒 coach | Coach-only | `system_status` |
 | `/api/system/wifi-password/` | `POST` | 🔒 coach | Queue a Wi-Fi password change for the host agent to apply | `change_wifi_password` |
 <!-- routes:system:end -->
@@ -224,8 +225,8 @@ Rack screens, and the sensors on them.
 <!-- routes:the-room:start -->
 | Route | Methods | Access | What it does | Handler |
 |---|---|---|---|---|
-| `/api/racks/register/` | `POST` | open | A rack tablet announces itself | `rack_register` |
-| `/api/racks/racknumber/` | `GET` | open | A waiting tablet asks "which rack am I?" Returns its rack_number (empty until a coach assigns it) | `rack_racknumber` |
+| `/api/racks/register/` | `POST` | local: open · online: refused | A rack tablet announces itself | `rack_register` |
+| `/api/racks/racknumber/` | `GET` | local: open · online: refused | A waiting tablet asks "which rack am I?" Returns its rack_number (empty until a coach assigns it) | `rack_racknumber` |
 | `/api/racks/unassigned/` | `GET` | 🔒 coach | Coach-only: list every tablet still waiting for a rack (rack_number empty) | `racks_unassigned` |
 | `/api/racks/node-assignment/` | `PUT` | 🔒 coach | Select this physical rack's registered node | `rack_node_assignment` |
 | `/api/racks/release-all/` | `POST` | 🔒 coach | Coach-only: force-clear EVERY rack in one go — the end-of-session reset | `racks_release_all` |
@@ -233,17 +234,17 @@ Rack screens, and the sensors on them.
 | `/api/ble/scans/` | `POST` | 🔒 coach | — | `ble_scans` |
 | `/api/ble/verifications/` | `POST` | 🔒 coach | — | `ble_verifications` |
 | `/api/racks/<int:rack_number>/ble-selection/` | `PUT` | 🔒 coach | — | `rack_ble_selection` |
-| `/api/racks/<int:rack_number>/sensor-health/` | `GET` | open | — | `rack_sensor_health` |
-| `/api/racks/<int:rack_number>/state/` | `GET,PATCH` | open | Read the authoritative rack mirror or apply one fenced state transition | `rack_state` |
-| `/api/racks/<int:rack_number>/controller/acquire/` | `POST` | open | Claim or renew ownership after validating the physical rack identity | `rack_controller_acquire` |
-| `/api/racks/<int:rack_number>/controller/heartbeat/` | `POST` | open | Extend the current lease using server time; heartbeats are not visible events | `rack_controller_heartbeat` |
-| `/api/racks/<int:rack_number>/controller/release/` | `POST` | open | Release a quiet rack without allowing an open set to lose its owner | `rack_controller_release` |
-| `/api/racks/<int:rack_number>/checkin/` | `POST` | open | Record that an athlete signed in at this rack (Phase 11 Step 2) | `rack_checkin` |
-| `/api/racks/<int:rack_number>/checkins/` | `GET` | open | The rack's HOT LIST: athletes this rack currently 'owns' — those whose NEWEST check-in this session is this rack | `rack_checkins` |
-| `/api/racks/<int:rack_number>/nfc-tap/` | `POST` | open | Consume one NFC tap and resolve it to an athlete in the active session | `rack_nfc_tap` |
+| `/api/racks/<int:rack_number>/sensor-health/` | `GET` | local: open · online: coach, or the rack's own athlete | — | `rack_sensor_health` |
+| `/api/racks/<int:rack_number>/state/` | `GET,PATCH` | local: open · online: coach, or the rack's own athlete | Read the authoritative rack mirror or apply one fenced state transition | `rack_state` |
+| `/api/racks/<int:rack_number>/controller/acquire/` | `POST` | local: open · online: coach, or the rack's own athlete | Claim or renew ownership after validating the physical rack identity | `rack_controller_acquire` |
+| `/api/racks/<int:rack_number>/controller/heartbeat/` | `POST` | local: open · online: coach, or the rack's own athlete | Extend the current lease using server time; heartbeats are not visible events | `rack_controller_heartbeat` |
+| `/api/racks/<int:rack_number>/controller/release/` | `POST` | local: open · online: coach, or the rack's own athlete | Release a quiet rack without allowing an open set to lose its owner | `rack_controller_release` |
+| `/api/racks/<int:rack_number>/checkin/` | `POST` | local: open · online: coach, or the rack's own athlete | Record that an athlete signed in at this rack (Phase 11 Step 2) | `rack_checkin` |
+| `/api/racks/<int:rack_number>/checkins/` | `GET` | local: open · online: coach, or the rack's own athlete | The rack's HOT LIST: athletes this rack currently 'owns' — those whose NEWEST check-in this session is this rack | `rack_checkins` |
+| `/api/racks/<int:rack_number>/nfc-tap/` | `POST` | local: open · online: refused | Consume one NFC tap and resolve it to an athlete in the active session | `rack_nfc_tap` |
 | `/api/racks/<int:rack_number>/` | `DELETE` | 🔒 coach | Coach-only: FORCE-CLEAR a rack so a fresh screen can take it over | `rack_remove` |
-| `/api/nodes/` | `GET` | open | Open: list every sensor node and its latest status | `nodes_list` |
-| `/api/nodes/register/` | `POST` | open | A sensor announces itself | `node_register` |
+| `/api/nodes/` | `GET` | local: open · online: coach | Open: list every sensor node and its latest status | `nodes_list` |
+| `/api/nodes/register/` | `POST` | local: open · online: coach | A sensor announces itself | `node_register` |
 | `/api/nodes/<str:node_id>/acquisition-kind/` | `PUT` | 🔒 coach | Provision the transport trusted to supply one registered node's health | `node_acquisition_kind` |
 | `/api/racks/<str:device_id>/` | `PATCH` | 🔒 coach | Coach-only: give a waiting tablet its rack number, or release it | `rack_assign` |
 <!-- routes:the-room:end -->
@@ -260,13 +261,15 @@ never return to that list. See the deadlock in {doc}`rack-tablet`.
 
 Athletes, the groups they train in, and the staff who run those groups.
 
-:::::{dropdown} 7 routes
+:::::{dropdown} 9 routes
 
 <!-- routes:people:start -->
 | Route | Methods | Access | What it does | Handler |
 |---|---|---|---|---|
-| `/api/athletes/` | `GET,POST` | open | GET: list lifters (open) | `athletes_view` |
+| `/api/athletes/` | `GET,POST` | local: open · online: coach | GET: list lifters (open) | `athletes_view` |
 | `/api/athletes/<int:athlete_id>/` | `GET,PATCH,DELETE` | 🔒 coach | Coach-only: read or update one lifter | `athlete_detail` |
+| `/api/athletes/<int:athlete_id>/login-link/` | `POST,DELETE` | 🔒 coach | POST: make a new link for this athlete | `athlete_login_link` |
+| `/api/athletes/<int:athlete_id>/login/` | `DELETE` | 🔒 coach | Remove this athlete's login | `athlete_login` |
 | `/api/training-groups/` | `GET,POST` | 🔒 coach | Coach-only: list or create TrainingGroups | `training_groups_view` |
 | `/api/training-groups/<int:group_id>/athletes/` | `GET,POST,DELETE` | 🔒 coach | Coach-only: who is in this TrainingGroup | `training_group_athletes_view` |
 | `/api/training-groups/<int:group_id>/coaches/` | `GET,POST,PATCH,DELETE` | 🔒 coach | Coach-only: who runs this TrainingGroup | `training_group_coaches_view` |
@@ -285,7 +288,7 @@ The shared vocabulary plans are written in.
 <!-- routes:the-movement-catalog:start -->
 | Route | Methods | Access | What it does | Handler |
 |---|---|---|---|---|
-| `/api/exercises/` | `GET` | open | Open: list the movement catalog — the official set of exercises the rack and coach pickers choose from, so nobody hand-types a name into drift | `exercises_list` |
+| `/api/exercises/` | `GET` | local: open · online: anyone signed in | Open: list the movement catalog — the official set of exercises the rack and coach pickers choose from, so nobody hand-types a name into drift | `exercises_list` |
 | `/api/block-categories/` | `GET,POST` | 🔒 coach | Coach-only: the catalog's label vocabulary — "Off-season", "Football" | `block_categories_view` |
 <!-- routes:the-movement-catalog:end -->
 
@@ -333,17 +336,18 @@ A template placed in time, and the slots it generates.
 
 The live session, and the room's current picture.
 
-:::::{dropdown} 8 routes
+:::::{dropdown} 9 routes
 
 <!-- routes:running-a-training-day:start -->
 | Route | Methods | Access | What it does | Handler |
 |---|---|---|---|---|
-| `/api/room-state/` | `GET` | open | The live picture of the room, for the wall display and the coach tablet | `room_state` |
+| `/api/room-state/` | `GET` | local: open · online: coach | The live picture of the room, for the wall display and the coach tablet | `room_state` |
 | `/api/sessions/` | `POST` | 🔒 coach | Coach-only: start a training session | `sessions_view` |
-| `/api/sessions/active/` | `GET` | open | The rack tablet's ONE startup fetch (open, no login) | `sessions_active` |
-| `/api/sessions/active/athlete/<int:athlete_id>/progress/` | `GET` | open | The rack's athlete DAY-VIEW (open, no login) | `athlete_progress` |
-| `/api/sessions/active/status/` | `GET` | open | Room state for the active session: each athlete's live status + since-when | `session_status` |
+| `/api/sessions/active/` | `GET` | local: open · online: anyone signed in | The rack tablet's ONE startup fetch (open, no login) | `sessions_active` |
+| `/api/sessions/active/athlete/<int:athlete_id>/progress/` | `GET` | local: open · online: coach, or the athlete asked about | The rack's athlete DAY-VIEW (open, no login) | `athlete_progress` |
+| `/api/sessions/active/status/` | `GET` | local: open · online: anyone signed in | Room state for the active session: each athlete's live status + since-when | `session_status` |
 | `/api/sessions/<int:session_id>/` | `PATCH` | 🔒 coach | Coach-only: update a session | `session_detail` |
+| `/api/sessions/<int:session_id>/join/` | `POST` | remote only · athlete | Join a session online: get your own rack, checked in, with your own sensor on it | `session_join` |
 | `/api/sessions/<int:session_id>/participation/` | `GET,POST,DELETE` | 🔒 coach | Coach-only: which TrainingGroups are training in this session, and what they're doing | `session_participation_view` |
 | `/api/sessions/<int:session_id>/start/` | `POST` | 🔒 coach | Coach-only: start a session that was created ahead of time | `session_start` |
 <!-- routes:running-a-training-day:end -->
@@ -359,13 +363,13 @@ Sets, reps, prescriptions, maxes, and everything derived from them.
 <!-- routes:performed-work:start -->
 | Route | Methods | Access | What it does | Handler |
 |---|---|---|---|---|
-| `/api/prescriptions/` | `GET,POST` | open | GET: an athlete's training plan for today, ?athlete={id} to filter (open) | `prescriptions_view` |
+| `/api/prescriptions/` | `GET,POST` | local: open · online: coach, or the athlete asked about | GET: an athlete's training plan for today, ?athlete={id} to filter (open) | `prescriptions_view` |
 | `/api/reports/` | `GET` | 🔒 coach | Coach-only: browse finished training days, newest first | `reports_view` |
 | `/api/reports/<int:report_id>/` | `GET` | 🔒 coach | Coach-only: one finished day in full | `report_detail_view` |
 | `/api/reports/<int:report_id>/pdf/` | `GET` | 🔒 coach | Coach-only: the same finished day, as a printable PDF | `report_pdf_view` |
 | `/api/reference-maxes/` | `POST` | 🔒 coach | Coach-only: record what athletes can currently lift | `reference_maxes_view` |
-| `/api/sets/` | `POST` | open | Start a set: create the empty set record when an athlete begins, so the finish endpoint has something to fill in | `set_create` |
-| `/api/sets/<int:set_id>/complete/` | `POST` | open | Save a finished set | `set_complete` |
+| `/api/sets/` | `POST` | local: open · online: coach, or the rack's own athlete | Start a set: create the empty set record when an athlete begins, so the finish endpoint has something to fill in | `set_create` |
+| `/api/sets/<int:set_id>/complete/` | `POST` | local: open · online: coach, or the rack's own athlete | Save a finished set | `set_complete` |
 | `/api/analytics/session/<int:session_id>/` | `GET` | 🔒 coach | Coach-only: a quick summary of one session — how many sets and reps total, and each athlete's average velocity | `analytics_session` |
 | `/api/analytics/athlete/<int:athlete_id>/` | `GET` | 🔒 coach | Coach-only: everything the athlete and history tabs need (P13) | `analytics_athlete` |
 <!-- routes:performed-work:end -->
@@ -400,5 +404,28 @@ Two routes for all three kinds of sheet.
 
 
 
+
+## Signing in and accounts
+
+Sign-in, first-run setup, coach accounts, and athletes using a login link.
+
+:::::{dropdown} 10 routes
+
+<!-- routes:signing-in-and-accounts:start -->
+| Route | Methods | Access | What it does | Handler |
+|---|---|---|---|---|
+| `/api/auth/setup/` | `GET,POST` | open | First-run enrollment | `SetupView` |
+| `/api/auth/me/` | `GET` | signed in | "Who am I": any signed-in login may ask, whatever its role | `CoachSessionView` |
+| `/api/auth/password/` | `POST` | signed in | Let a signed-in coach replace their own password | `PasswordChangeView` |
+| `/api/auth/login-link/lookup/` | `POST` | open | "Who is this link for?" Only that athlete's name: the page says "Hi <name>" | `LoginLinkLookupView` |
+| `/api/auth/login-link/redeem/` | `POST` | open | Use the link: make the athlete's login, and sign them straight in | `LoginLinkRedeemView` |
+| `/api/coaches/` | `GET,POST` | 🔒 administrator | List every coach login, or create one with a temporary password (administrators) | `CoachListView` |
+| `/api/coaches/<int:user_id>/` | `PATCH` | 🔒 administrator | Change one coach login: switch it off or on, or make it an administrator | `CoachDetailView` |
+| `/api/coaches/<int:user_id>/reset/` | `POST` | 🔒 administrator | Give one coach a new temporary password, to change at their next sign-in | `CoachResetPasswordView` |
+| `/api/auth/login/` | `POST` | open | Sign in with a username and password, coach or athlete; wrong tries are slowed down | `CoachTokenObtainPairView` |
+| `/api/auth/refresh/` | `POST` | open | Renew a sign-in, refused for a login that was switched off or lost its role | `CheckedTokenRefreshView` |
+<!-- routes:signing-in-and-accounts:end -->
+
+:::::
 <!-- ROUTES SECTION END -->
 

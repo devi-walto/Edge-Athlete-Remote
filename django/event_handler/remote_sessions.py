@@ -20,6 +20,7 @@ from .services.session_join import JoinRefused, join
 @api_view(['POST'])
 @permission_classes([RemoteOnly, IsAthlete])
 def session_join(request, session_id):
+    """Join a session online: get your own rack, checked in, with your own sensor on it."""
     try:
         rack, sensor = join(session_id, request.user.athlete)
     except JoinRefused as refused:
