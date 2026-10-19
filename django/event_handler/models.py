@@ -62,6 +62,12 @@ class Node(models.Model):
     ]
 
     node_id = models.CharField(max_length=255, unique=True)
+    # The athlete this sensor belongs to (spec 04). An online athlete's own sensor
+    # follows them to whatever rack they join; nobody else's rack ever gets it.
+    # Empty for a gym sensor, which belongs to a rack, not a person. SET_NULL:
+    # archiving or removing an athlete never removes the sensor or its history.
+    owner = models.ForeignKey('Athlete', on_delete=models.SET_NULL, null=True, blank=True,
+                              related_name='owned_nodes')
     rack_number = models.IntegerField(null=True, blank=True)
     mount_type = models.CharField(max_length=10, choices=MOUNT_CHOICES, default=MOUNT_BAR)
     firmware_version = models.CharField(max_length=50, null=True, blank=True)
@@ -128,9 +134,19 @@ class RackScreen(models.Model):
         return f"RackScreen {self.device_id} (rack {rack})"
 
 
+# Virtual racks (spec 04) are numbered from here up. An online athlete's rack is made
+# for them when they join a session; physical racks in a gym keep small numbers
+# (1, 2, 3 …). Far apart, so the two can never collide on one installation.
+VIRTUAL_RACK_BASE = 10_000
+
+
 class RackRuntime(models.Model):
     """The server-owned controller lease and transient presentation state for one rack.
-    Completed training history remains in Set and Rep; no raw sensor data lives here."""
+    Completed training history remains in Set and Rep; no raw sensor data lives here.
+
+    A VIRTUAL rack (spec 04) is one made for an online athlete when they join a session:
+    it has an owner_athlete and a session, and a number from VIRTUAL_RACK_BASE up. A
+    physical rack in a gym has neither."""
     PHASE_IDLE = "idle"
     PHASE_COUNTDOWN = "countdown"
     PHASE_ACTIVE = "active"
@@ -175,6 +191,22 @@ class RackRuntime(models.Model):
     latest_color = models.CharField(max_length=16, blank=True)
     phase_started_at = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # Whose rack this is, on a virtual rack only. This is the fact the rest of spec 04
+    # reads: only this athlete may use the rack, and it can never lose them.
+    owner_athlete = models.ForeignKey(
+        "Athlete", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="owned_racks",
+    )
+    # The session a virtual rack was made for, so ending that session can find and
+    # release its racks. Empty on a physical rack.
+    session = models.ForeignKey(
+        "TrainingSession", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="virtual_racks",
+    )
+
+    @property
+    def is_virtual(self):
+        return self.rack_number >= VIRTUAL_RACK_BASE
 
     def __str__(self):
         return f"Rack {self.rack_number} runtime ({self.phase}, v{self.state_version})"
