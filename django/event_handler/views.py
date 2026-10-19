@@ -1848,6 +1848,22 @@ def session_detail(request, session_id):
     return Response(body)
 
 
+def _visible_athletes(request, athletes):
+    """Who a caller may see in the room. Online, an athlete sees only themselves.
+
+    The active-session routes list everyone in the session (names, plans, maxes,
+    statuses) because a gym's rack tablet needs the whole roster to show its
+    check-in list. Online, the caller is an athlete on their own phone, and other
+    athletes are none of their business (spec 04). Coaches and gym tablets see
+    everyone, as before.
+    """
+    from .deployment import is_hosted
+    athlete = getattr(request.user, 'athlete', None) if is_hosted() else None
+    if athlete is None or role_of(request.user) != 'athlete':
+        return athletes
+    return [a for a in athletes if a.pk == athlete.pk]
+
+
 @api_view(["GET"])
 @permission_classes([open_on_local(ONLINE_ANY_ROLE)])
 def sessions_active(request):
@@ -1894,7 +1910,7 @@ def sessions_active(request):
         # special-case an HTTP error status.
         return Response({"session_id": None, "label": None, "roster": [], "session_exercises": []})
 
-    athletes = list(session.athletes.order_by("name", "id"))
+    athletes = _visible_athletes(request, list(session.athletes.order_by("name", "id")))
     athlete_ids = [a.id for a in athletes]
 
     # Everyone's plan for today, resolved once — the same helper the wall display
@@ -2104,7 +2120,7 @@ def session_status(request):
     if session is None:
         return Response({"session_id": None, "athletes": []})
 
-    athletes = list(session.athletes.order_by("name", "id"))
+    athletes = _visible_athletes(request, list(session.athletes.order_by("name", "id")))
     ids = [a.id for a in athletes]
 
     # in-progress set (lifting) per athlete

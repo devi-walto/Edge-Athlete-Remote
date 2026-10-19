@@ -344,9 +344,11 @@ their login.
   until 3e.
 - **The coach's "Show on a big screen" button (3f):** the display reads the room's state
   without a login, which is coach-only online; it needs its own sign-in first.
-- **Found while building, not changed:** online, any signed-in athlete can read
-  `sessions/active/` and `sessions/active/status/`, which list every athlete in the
-  session by name. Raised with Devin.
+- **A privacy gap found while building, fixed (2026-10-19):** online, any signed-in
+  athlete could read `sessions/active/` and `sessions/active/status/`, which listed
+  every athlete in the session (names, plan targets, maxes, statuses). Now, online, an
+  athlete asking sees only their own entry (`_visible_athletes` in `views.py`); coaches
+  and gym tablets see everyone, as before. `test_room_privacy.py` failed on the old code.
 
 **Done when:**
 
