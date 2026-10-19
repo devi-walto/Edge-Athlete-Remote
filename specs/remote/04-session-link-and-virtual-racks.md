@@ -2,8 +2,9 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: Written — not started. No decisions open (who may join: decided 2026-10-14;
-  where a browser lands online: decided 2026-10-17)
+- Status: Built (2026-10-19): Phases 0–3 and 5. Phase 4 (the coach's side) moved to the
+  end of the UI redesign; Phase 6 (the rehearsal) skipped by Devin. No decisions open
+  (who may join: decided 2026-10-14; where a browser lands online: decided 2026-10-17)
 - Form items: Definition of Done #3 and #4
 - Depends on: [02 Roles](02-roles.md), [05 Hosted mode](05-hosted-mode.md), [03 Login links](03-athlete-login-links.md)
 - Mockup: coach side `F_Remote_Session` on the canvas's Final designs page. Athlete side:
@@ -416,6 +417,10 @@ Only when hosted:
 - [ ] *(Frontend test)* None of this renders on a gym box.
 - [ ] *(Browser)* The copied link opens the right session for a signed-in athlete.
 
+**Moved (Devin, 2026-10-19): built at the end of the UI redesign (specs 06–11), with the
+rest of the coach's session screen.** Not needed for the Definition of Done: the link is
+`/session/<id>`, and a coach can share it by hand until the button exists.
+
 **Stop. Devin reviews.**
 
 ## Phase 5 — Demo data: seeded athletes with their own simulated sensors
@@ -515,6 +520,25 @@ a set running. Neither can be run on a remote school today.
       and the seeded session.
 - [ ] Full suite passes in both modes.
 
+**Built (2026-10-19).** Every item above has a test (`test_demo_data.py`, 14 tests; the
+simulator ones run the real simulator against the test broker), and the full suite
+passes in both modes (667).
+- The seeder refuses, writing nothing, on: no coach yet, a session it didn't make, a real
+  athlete with a demo name. `--reset` removes only its own rows.
+- An existing `sim-<name>` sensor is adopted if it is that seeded athlete's or nobody's;
+  one owned by anyone else is left alone.
+- `simulate_node --seeded` runs every seeded sensor at once, each following its own
+  athlete's rack. Stopping by time or by SIGTERM both unlink and switch them off.
+- `ensure_demo_coach` now gives its login a coach profile (since spec 01 it made a login
+  that couldn't sign in).
+- **On the review copy:** the seeder refused the older data, seeded once it was labelled,
+  a reseed replaced only its own session, and all four sensors woke.
+- **Not tried on a cluster yet:** `eactl seed` and `eactl sim` (the Job passes a strict
+  schema check). First run: Demo U, after the release that carries this spec.
+- **Noted:** `--stop-after` counts the machine's running time, so on a Mac that sleeps
+  it runs longer than it says. The server never sleeps, and the Job's own limit stands
+  behind it.
+
 **Stop. Devin reviews.**
 
 ## Phase 6 — Rehearsal
@@ -535,6 +559,12 @@ By hand, hosted mode, two browsers, on the demo school after `eactl seed` and wi
       both athletes' sets.
 - [ ] The same build, switched to `local`, runs a normal gym session with a rack
       tablet and no logins.
+
+**Skipped (Devin, 2026-10-19).** What it would have shown is covered by tests and by
+Phase 3's browser check: separate racks and sensors (Phase 1, the fifty-at-once test),
+an outsider turned away, a reload keeping the set, ending releasing the racks (Phase 2),
+and local mode unchanged (the full suite in both modes). The same-bar case rests on the
+rack screen listening to its sensor only while a set is running (`RackScreen.jsx`).
 
 ---
 
