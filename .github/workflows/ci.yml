@@ -103,3 +103,15 @@ jobs:
           python-version: "3.12"
       - name: Build the docs (warnings are errors)
         run: ./docs/build.sh
+
+  # The rule that decides which versions a release builds and deploys
+  # (scripts/remote/release-version.sh), checked against a throwaway repository.
+  # The release workflow runs the same test before it releases anything.
+  release-rule:
+    name: release rule
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check which versions a release would pick
+        run: ./scripts/remote/tests/release-version.sh
