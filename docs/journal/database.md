@@ -133,6 +133,7 @@ An ESP32 + sensor unit on a rack. Identified by node_id; a coach links it to a p
 | Column | Type | Notes |
 |---|---|---|
 | `node_id` | text | **unique**, max 255 |
+| `owner` | link → | → `Athlete`, on delete: `SET_NULL`, optional, reverse: `owned_nodes` |
 | `rack_number` | whole number | optional |
 | `mount_type` | text | max 10, choices: `MOUNT_CHOICES`, default `MOUNT_BAR` |
 | `firmware_version` | text | optional, max 50 |
@@ -266,6 +267,8 @@ The server-owned controller lease and transient presentation state for one rack.
 | `latest_color` | text | max 16 |
 | `phase_started_at` | date + time | optional |
 | `updated_at` | date + time | set on save |
+| `owner_athlete` | link → | → `Athlete`, on delete: `SET_NULL`, optional, reverse: `owned_racks` |
+| `session` | link → | → `TrainingSession`, on delete: `SET_NULL`, optional, reverse: `virtual_racks` |
 <!-- schema:RackRuntime:end -->
 
 

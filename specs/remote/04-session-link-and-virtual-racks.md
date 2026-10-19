@@ -2,8 +2,9 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: Written — not started. No decisions open (who may join: decided 2026-10-14;
-  where a browser lands online: decided 2026-10-17)
+- Status: Built (2026-10-19): Phases 0–3 and 5. Phase 4 (the coach's side) moved to the
+  end of the UI redesign; Phase 6 (the rehearsal) skipped by Devin. No decisions open
+  (who may join: decided 2026-10-14; where a browser lands online: decided 2026-10-17)
 - Form items: Definition of Done #3 and #4
 - Depends on: [02 Roles](02-roles.md), [05 Hosted mode](05-hosted-mode.md), [03 Login links](03-athlete-login-links.md)
 - Mockup: coach side `F_Remote_Session` on the canvas's Final designs page. Athlete side:
@@ -99,6 +100,8 @@ lock everyone out of a quick one.
 - The coach's live room: virtual racks, sensor status, **Not joined yet**, **Copy
   session link**.
 - Assigning a sensor to an athlete from the roster.
+- Demo data (Phase 5): the seeder safe online, seeded athletes with their own simulated
+  sensors, `eactl seed` and `eactl sim`.
 
 ## Non-goals
 
@@ -315,6 +318,45 @@ their login.
 - **Only `/` and that button change.** What `/rack/setup` and `/dashboard` may do
   online is already decided by the server (spec 05).
 
+**Built so far (2026-10-19): 3a, 3b, 3c, 3f.**
+- `/session/<id>` (`react/src/athlete/SessionPage.jsx`): signed out → `/athlete` and
+  straight back; joined → the gym's `RackScreen` through the same controller hook, with
+  no rack setup and nobody signed out (unlike `RackLive`). R4 rechecks every 5 s; R4b
+  and R10 as boards. The session ending mid-workout is caught by asking every 10 s
+  whether this session is still the open one.
+- The rack screen sends the athlete's sign-in on every call when an athlete is signed in
+  (`signInHeaders()` in `api/client.js`); a gym tablet sends what it always did.
+- `owner_athlete` added to the rack's state; `docs/reference/message-contract.md`
+  updated. (The merge canon isn't in this repo; the field is additive and names only the
+  athlete already in `selected_athlete`.)
+- The join reply's sensor carries its `id` (the rack screen starts sets with it); the
+  not-started and ended replies carry the session's name, and only to athletes who
+  belong in it.
+- On an owned rack the controller retakes control by itself even with a set open (a gym
+  rack still waits for "recover").
+- `/` online: an athlete → `/athlete`, anyone else → `/coach`; a saved device role is
+  ignored; nothing shows until the deployment is known.
+
+**Browser check passed (Devin, 2026-10-19, the remote-mode copy on his Mac):** the session
+link signed out → sign in → straight back to the athlete's own rack, named after them
+with no list of names; a set runs with a simulated sensor; a reload mid-set keeps the
+rack and the open set; the coach ending the session shows "Session ended"; `/` lands on
+`/athlete` or `/coach`.
+
+**Left for later, on purpose:**
+- **R4's plan list and R10's summary** need athlete routes that spec 10 builds; for now
+  those pages say what happened and what to do.
+- **3d and 3e** (velocity bars, the WT901 card, typed sets): not needed for the
+  Definition of Done; an athlete without a sensor can open their rack but not run a set
+  until 3e.
+- **The coach's "Show on a big screen" button (3f):** the display reads the room's state
+  without a login, which is coach-only online; it needs its own sign-in first.
+- **A privacy gap found while building, fixed (2026-10-19):** online, any signed-in
+  athlete could read `sessions/active/` and `sessions/active/status/`, which listed
+  every athlete in the session (names, plan targets, maxes, statuses). Now, online, an
+  athlete asking sees only their own entry (`_visible_athletes` in `views.py`); coaches
+  and gym tablets see everyone, as before. `test_room_privacy.py` failed on the old code.
+
 **Done when:**
 
 - [ ] *(Frontend test)* Rendered with an owner: no check-in list, no "Not here?", no
@@ -375,14 +417,139 @@ Only when hosted:
 - [ ] *(Frontend test)* None of this renders on a gym box.
 - [ ] *(Browser)* The copied link opens the right session for a signed-in athlete.
 
+**Moved (Devin, 2026-10-19): built at the end of the UI redesign (specs 06–11), with the
+rest of the coach's session screen.** Not needed for the Definition of Done: the link is
+`/session/<id>`, and a coach can share it by hand until the button exists.
+
 **Stop. Devin reviews.**
 
-## Phase 5 — Rehearsal
+## Phase 5 — Demo data: seeded athletes with their own simulated sensors
 
-By hand, hosted mode, two browsers:
+Folded in from a separate seeder spec (Devin, 2026-10-17), so it is built once, after
+sensors can belong to athletes. It is what the rehearsal (Phase 6) runs on, and what
+fills the demo school for demos and screenshots.
+
+**What exists.** The seeder (`seed_active_session`) builds one live session with a
+roster, a plan, a few finished sets and recorded maxes; a local install runs it with
+`docker compose run --rm seed`. The simulator (`simulate_node`) pretends to be a sensor:
+it registers, sends a heartbeat every 5 seconds, and sends reps only while its rack has
+a set running. Neither can be run on a remote school today.
+
+**Why the seeder can't simply be run online as it is:**
+
+1. It can make a well-known login: on a database with no users it creates `coach` /
+   `coach`, which spec 01 forbids.
+2. It ends every open session (only one may be open), which on a real school would end
+   a real workout.
+3. `--reset` deletes by name, and the names aren't unique to the demo: a real school
+   very likely has a group called "Varsity", and could have an athlete called Jordan Lee.
+
+**Decisions (Devin, 2026-10-17):**
+
+- **Invented names, in both local and remote** (done: Alex Rivera, Jordan Lee, Casey
+  Morgan, Riley Brooks; the local wristband tag moved to Jordan Lee).
+- **The seeder only adds, and recognizes its own rows** instead of guessing by name:
+  - its athletes are marked `is_simulated` (nothing in the app treats a simulated
+    athlete differently, so they show and lift like anyone else);
+  - its group and plan have names no real school would use ("Demo Squad", "Demo Strength
+    Block");
+  - its sensors are marked `is_simulated` too, and owned by a seeded athlete;
+  - `--reset` deletes only those rows;
+  - if a real (not simulated) athlete already has one of the seeded names, it refuses.
+- **It never makes a login.** With no coach in the school it stops: "Claim this school
+  first (setup code), then seed it." The plan belongs to the first administrator.
+- **It never ends a session it didn't make.** Another session open → it stops: "A
+  session is running. End it first." Its own earlier seeded session may be replaced.
+- **One owned simulated sensor per seeded athlete** (`sim-alex-rivera`, …; the id is
+  for people to read, the seeder finds them by the label), made by the seeder with
+  `Node.owner` set (Phase 0). Like any owned sensor, it only ever attaches
+  to its owner's rack. (The gym-style `rack_1` sensor stays for a local install.)
+- **`is_simulated` is a label only** (Devin, 2026-10-17; done on this branch). It
+  used to bar a simulated sensor from racks and hide simulated sets from the live room
+  and from max updates, a "simulation mode" from before the redesign that nothing ever
+  switched on. Now a simulated sensor is linked, used and counted exactly like a real
+  one, and sets it records are still labelled simulated; the label only lets the seeder
+  find and wipe its own rows. No change on a local install in practice: nothing there
+  is marked simulated. (The whole-day "Simulation active" label on the coach's session
+  strip is untouched; nothing turns it on either.)
+- **No flag for demo schools.** Seeding only adds fake rows that a coach can archive in
+  the app, and `eactl sim` only wakes sensors owned by seeded athletes, so a school that
+  was never seeded has nothing to wake. `eactl seed` still asks you to type the
+  school's short name.
+- **The local `seed` step runs `ensure_demo_coach` first, then the seeder**, because the
+  seeder no longer makes a login. One line in `docker-compose.yml`; the local result is
+  the same as before.
+- **The simulator responds; people drive** (option A). The sensors send reps while
+  their athlete's set runs; a person opens the session link as that athlete and starts
+  the set. Fake athletes that lift by themselves (signing in, starting and ending sets)
+  are left for after the class.
+
+**Commands (`eactl`, remote):**
+
+- `eactl seed "School Name" [--reset]`: asks for the short name, then runs the seeder
+  inside the school's django (only the seeder, never `ensure_demo_coach`).
+- `eactl sim "School Name" [--hours 2] [--stop]`: wakes the seeded athletes' sensors.
+  It runs the simulator as a one-off Kubernetes Job in the school, using the school's
+  own django image, for all of those sensors at once.
+  - **It stops itself after 2 hours, twice over:** the simulator gets a `--stop-after`
+    setting and exits cleanly, and the Job has a hard limit (`activeDeadlineSeconds`)
+    in case the simulator hangs. `--stop` ends it early.
+  - **On stopping, its sensors are unregistered: unlinked from any rack and marked
+    inactive.** Not deleted: each finished set remembers the sensor that measured it.
+    The next `eactl sim` makes them active again.
+  - A second `eactl sim` while one is running says so and starts nothing.
+- Tab completion, `eactl help` and `scripts/remote/README.md` list both.
+
+**Done when:**
+
+- [ ] No real person's name is left in the seeder or its comments. *(done)*
+- [ ] On a database with no users, the seeder writes nothing and creates no login.
+- [ ] With a non-seeded session open, the seeder writes nothing and that session is
+      still open; with only its own seeded session open, a re-run replaces it.
+- [ ] `--reset` on a school that also has a real "Varsity" group and a real athlete
+      leaves both untouched.
+- [ ] With a real athlete named like a seeded one, the seeder refuses and writes nothing.
+- [ ] Each seeded athlete owns exactly one sensor, marked `is_simulated`.
+- [ ] *(done)* A simulated sensor can be linked to a rack and is usable; its sets count
+      in the live room and feed max updates (`test_simulated_label.py`).
+- [ ] The simulator runs several sensors at once; each sends reps only while its own
+      athlete's set runs, on that athlete's rack.
+- [ ] With `--stop-after`, the simulator exits by itself and its sensors are unlinked
+      and inactive (a test with a short time); deleting the Job early does the same.
+- [ ] A fresh local box: `docker compose run --rm seed` still ends with the demo coach
+      and the seeded session.
+- [ ] Full suite passes in both modes.
+
+**Built (2026-10-19).** Every item above has a test (`test_demo_data.py`, 14 tests; the
+simulator ones run the real simulator against the test broker), and the full suite
+passes in both modes (667).
+- The seeder refuses, writing nothing, on: no coach yet, a session it didn't make, a real
+  athlete with a demo name. `--reset` removes only its own rows.
+- An existing `sim-<name>` sensor is adopted if it is that seeded athlete's or nobody's;
+  one owned by anyone else is left alone.
+- `simulate_node --seeded` runs every seeded sensor at once, each following its own
+  athlete's rack. Stopping by time or by SIGTERM both unlink and switch them off.
+- `ensure_demo_coach` now gives its login a coach profile (since spec 01 it made a login
+  that couldn't sign in).
+- **On the review copy:** the seeder refused the older data, seeded once it was labelled,
+  a reseed replaced only its own session, and all four sensors woke.
+- **Not tried on a cluster yet:** `eactl seed` and `eactl sim` (the Job passes a strict
+  schema check). First run: Demo U, after the release that carries this spec.
+- **Noted:** `--stop-after` counts the machine's running time, so on a Mac that sleeps
+  it runs longer than it says. The server never sleeps, and the Job's own limit stands
+  behind it.
+
+**Stop. Devin reviews.**
+
+## Phase 6 — Rehearsal
+
+By hand, hosted mode, two browsers, on the demo school after `eactl seed` and with
+`eactl sim` running:
 
 - [ ] A coach starts a session; two athletes in the group open the link and each land
       on their own rack; an athlete outside the group is turned away.
+- [ ] Two seeded athletes join from two browsers, and each one's simulated sensor feeds
+      only their own rack.
 - [ ] Two simulators stand in for two sensors **on the same bar** (both publish every
       rep). Each athlete's set records only while it is running; neither rack records
       the other's set. *(This is the siblings case.)*
@@ -392,6 +559,12 @@ By hand, hosted mode, two browsers:
       both athletes' sets.
 - [ ] The same build, switched to `local`, runs a normal gym session with a rack
       tablet and no logins.
+
+**Skipped (Devin, 2026-10-19).** What it would have shown is covered by tests and by
+Phase 3's browser check: separate racks and sensors (Phase 1, the fifty-at-once test),
+an outsider turned away, a reload keeping the set, ending releasing the racks (Phase 2),
+and local mode unchanged (the full suite in both modes). The same-bar case rests on the
+rack screen listening to its sensor only while a set is running (`RackScreen.jsx`).
 
 ---
 
@@ -409,10 +582,12 @@ By hand, hosted mode, two browsers:
 | Risk | What reduces it |
 |---|---|
 | Two joins race for one rack number | A row lock in Phase 1, and the fifty-at-once test |
-| A remote athlete is stranded as a read-only observer after a reload — the bug that already happened in the gym | Phase 2 ties the lease to the login on virtual racks; Phase 5 rehearses it |
+| A remote athlete is stranded as a read-only observer after a reload — the bug that already happened in the gym | Phase 2 ties the lease to the login on virtual racks; Phase 6 rehearses it |
 | Virtual racks leak when a session is never ended | Release also runs when a stale session is ended late; rows carry `session`, so a cleanup command can find orphans |
 | The rack screen is forked and the two copies drift | Phase 3 uses the one `RackScreen.jsx`, switched by a fact in the rack's state; a test renders it with and without an owner |
 | Adding `owner_athlete` to rack state breaks the frozen rack contract | It is additive; Phase 3b checks the canon first and stops if it is not allowed |
+| Demo data reaching a real school | The seeder only adds, recognizes its own rows, refuses on a name clash, never makes a login or ends another session; `eactl seed` asks for the short name |
+| A simulator left running | It stops itself after 2 hours, and Kubernetes ends the Job at the same limit if it doesn't |
 
 ## Docs to update when done
 

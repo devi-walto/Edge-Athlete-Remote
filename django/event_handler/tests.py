@@ -1054,24 +1054,27 @@ class RackControllerConcurrencyTests(TransactionTestCase):
 
     def setUp(self):
         Node.objects.create(node_id="node-1", rack_number=1)
+        # One screen per rack (migration 0022). The race that can still happen is two
+        # tabs of that one screen claiming the rack at the same moment. (This test
+        # used two screens on one rack; it only passed while an earlier migration
+        # test left the database without that rule. See latest_migrations().)
         RackScreen.objects.create(device_id="screen-a", rack_number=1)
-        RackScreen.objects.create(device_id="screen-b", rack_number=1)
 
     def test_two_simultaneous_claims_produce_one_controller(self):
-        def claim(device_id):
+        def claim(tab):
             close_old_connections()
             connections.close_all()
             try:
                 return APIClient().post("/api/racks/1/controller/acquire/", {
-                    "device_id": device_id,
-                    "client_instance_id": device_id + "-tab",
+                    "device_id": "screen-a",
+                    "client_instance_id": tab,
                     "controller_token": controller_token(),
                 }, format="json").status_code
             finally:
                 connections.close_all()
 
         with ThreadPoolExecutor(max_workers=2) as pool:
-            statuses = list(pool.map(claim, ["screen-a", "screen-b"]))
+            statuses = list(pool.map(claim, ["tab-1", "tab-2"]))
 
         self.assertEqual(sorted(statuses), [200, 409])
         self.assertEqual(MonitoringEvent.objects.filter(reason="controller_acquired").count(), 1)
@@ -1283,9 +1286,15 @@ class SeederNfcTagTests(APITestCase):
     Nothing else in the system assigns tags, and the seeder used to create
     athletes with nfc_tag_id None — which is exactly how a fresh database lost
     wristband sign-in until someone set the tag by hand.
+
+    The seeder never makes a login (spec 04, Phase 5), so each test claims the
+    school with a coach first, as a real school would be.
     """
 
-    def test_seed_assigns_braydons_wristband_tag(self):
+    def setUp(self):
+        make_coach(username="seed-coach", password="pw", is_staff=True, is_active=True)
+
+    def test_seed_assigns_the_demo_wristband_tag(self):
         from django.core.management import call_command
         from event_handler.management.commands.seed_active_session import NFC_TAG_BY_ATHLETE
 
@@ -1298,10 +1307,11 @@ class SeederNfcTagTests(APITestCase):
     def test_seed_never_clobbers_a_manually_set_tag(self):
         from django.core.management import call_command
 
-        Athlete.objects.create(name="Braydon Callender", nfc_tag_id="04FFFFFFFFFFFFFF")
+        # The demo athlete, retagged by hand by a coach since the last seed.
+        Athlete.objects.create(name="Jordan Lee", nfc_tag_id="04FFFFFFFFFFFFFF", is_simulated=True)
         call_command("seed_active_session")
 
-        athlete = Athlete.objects.get(name="Braydon Callender")
+        athlete = Athlete.objects.get(name="Jordan Lee")
         self.assertEqual(
             athlete.nfc_tag_id, "04FFFFFFFFFFFFFF",
             "a coach-retagged wristband must survive re-seeding",
@@ -1897,16 +1907,20 @@ class RackNodeAssignmentTests(APITestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.data["code"], "node_not_found")
 
-    def test_assignment_rejects_inactive_and_simulated_nodes(self):
+    def test_assignment_rejects_inactive_nodes(self):
         self._authenticate_staff()
         self.node.is_active = False
         self.node.save(update_fields=["is_active"])
         self.assertEqual(self._assign().data["code"], "node_inactive")
 
-        self.node.is_active = True
+    def test_a_simulated_node_is_assigned_like_a_real_one(self):
+        # is_simulated is a demo-data label only (spec 04, Phase 5): the seeded
+        # athletes' stand-in sensors must drive racks like real ones.
+        self._authenticate_staff()
         self.node.is_simulated = True
-        self.node.save(update_fields=["is_active", "is_simulated"])
-        self.assertEqual(self._assign().data["code"], "simulated_node")
+        self.node.save(update_fields=["is_simulated"])
+        self.assertNotEqual(self._assign().data.get("code"), "simulated_node")
+        self.assertEqual(self._assign().status_code, 200)
 
     def test_node_list_exposes_simulation_provenance_to_the_rack_gate(self):
         self.node.is_simulated = True
@@ -4010,6 +4024,11 @@ class TrainingGroupStaffTests(APITestCase):
         self.assertEqual(res.status_code, 201)
 
 
+def latest_migrations():
+    """The newest migration of every app: where a migration test must leave the database."""
+    return MigrationExecutor(connection).loader.graph.leaf_nodes()
+
+
 class TrainingGroupCoachMigrationTests(TransactionTestCase):
     """The 0015 data migration, run for real against a database.
 
@@ -4052,9 +4071,11 @@ class TrainingGroupCoachMigrationTests(TransactionTestCase):
         self.assertEqual(Link.objects.count(), 0)
 
     def tearDown(self):
-        # Leave the database at the latest migration, or every test that runs
-        # after this class sees a half-migrated schema.
-        self._migrate([("event_handler", "0021_node_acquisition_and_receipt_index")])
+        # Leave the database at the LATEST migration, or every test that runs after
+        # this class sees a half-migrated schema. Worked out each time, not named:
+        # a fixed name ("0021…") silently went stale, and a later test failed the
+        # day a migration after it touched the same table (spec 04, 0028).
+        self._migrate(latest_migrations())
 
 
 class NodeAssignmentMigrationTests(TransactionTestCase):
@@ -4108,7 +4129,7 @@ class NodeAssignmentMigrationTests(TransactionTestCase):
         self.assertIsNone(RolledBackNode.objects.get(node_id="duplicate-b").rack_number)
 
     def tearDown(self):
-        self._migrate([("event_handler", "0021_node_acquisition_and_receipt_index")])
+        self._migrate(latest_migrations())  # see TrainingGroupCoachMigrationTests
 
 
 class NodeAcquisitionMigrationTests(TransactionTestCase):
@@ -4134,7 +4155,7 @@ class NodeAcquisitionMigrationTests(TransactionTestCase):
         self.assertEqual(NewNode.objects.get(node_id="mqtt").acquisition_kind, "mqtt")
 
     def tearDown(self):
-        self._migrate(self.migrate_to)
+        self._migrate(latest_migrations())  # see TrainingGroupCoachMigrationTests
 
 
 class OneOpenSessionTests(APITestCase):

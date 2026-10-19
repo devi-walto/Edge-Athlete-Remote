@@ -88,7 +88,7 @@ The Django suite had 447 tests on 2026-10-06 and **491 after spec 01** (2026-10-
 | 05 | [Hosted mode](remote/05-hosted-mode.md) | 3 | 02 | **Done 2026-10-14**, merged into `SprintBranch`. Includes CI (Phase 1) |
 | 12 | [Hosting on k3s, with CD](remote/12-hosting.md) | 1, 5 | 05 | **Phases 0–3 done** (merged): schools on the Dell, deploy on a version tag. Phase 4 (`wss`, then the domain) in progress; Phases 5–7 tabled |
 | 03 | [Athlete login links](remote/03-athlete-login-links.md) | 4 | 02, 05 | **Done 2026-10-18** on `feature-login_links` (Phases 0–4, browser-checked). Coach login codes moved to spec 11, Phase 4 |
-| 04 | [Session link and virtual racks](remote/04-session-link-and-virtual-racks.md) | 3, 4 | 02, 03, 05 | Written |
+| 04 | [Session link and virtual racks](remote/04-session-link-and-virtual-racks.md) | 3, 4, 5 | 02, 03, 05 | Built 2026-10-19: Phases 0–3 and 5 (demo data, `eactl seed` / `eactl sim`). Phase 4 (coach's side) moved to the end of the UI redesign; Phase 6 (rehearsal) skipped |
 | 10 | [The athlete's home page](remote/10-athlete-pages.md) | 4 | 03, 04, 05 | Written. Phase 4 (opening a past session) is built last, if time |
 | 06 | [Design rules for the coach interface](ui/06-design-rules.md) | 11 | — | Written |
 | 07 | [Planning](ui/07-planning.md) | 11 | 06, 01 | Written |

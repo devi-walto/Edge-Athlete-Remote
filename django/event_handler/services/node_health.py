@@ -11,7 +11,7 @@ WT901_FRESHNESS = timedelta(seconds=2)
 
 
 def node_is_usable(node, now=None):
-    if not node.is_active or node.is_simulated:
+    if not node.is_active:
         return False
     if node.acquisition_kind != Node.ACQUISITION_WT901_BLE:
         return True

@@ -140,17 +140,77 @@ access to the broker is **read-only**, tied to the user's login, and limited to 
 installation's topics. The one screen that publishes — the connection-test page — is
 a development tool and must not be served by a hosted installation.
 
-### Deploys come from CI
+**Built (October 2026, `v0.5.0`–`v0.5.1`).** Screens reach the broker at
+`wss://<school>/mqtt`: a routing rule on the school's own address, not a page and not an
+API route, so no new port. The page picks its address from its own scheme: `https` →
+`wss://<school>/mqtt`, plain `http` (a gym box) → `ws://<box>:9001` as before. **The
+screens door is listen-only online**: a remote school's broker has its own settings file
+that lets anyone read the app's topics on that door and nobody send; django's door is
+unchanged and never reachable from outside. A gym box keeps its own settings untouched,
+so its test page can still send. Logging in to the broker is still to come; until then
+it is read-only and public, which is acceptable while the data is test data.
 
-A push builds the images, tags them, and rolls them out to the cluster. The gym box
-keeps installing from its own clone ({doc}`../journal/scripts`).
+**The `v0.5.0` lesson.** The listen-only rules file was readable by root only, and the
+broker reads it after switching to its own user, so it stopped and took the demo
+school's live updates down. The release stopped at the demo school as designed. The
+test before it had passed on a Mac, where Docker doesn't enforce file permissions on
+shared folders. `v0.5.1` gave the file to the broker's group and named the two doors
+(`programs` 1883, `screens` 9001). **Since then, anything whose owner or mode matters is
+tested with real Linux permissions**, and a release that fails on a school now undoes
+itself (below).
+
+### Deploys come from CI
 
 Because the cluster sits behind a home router, CI cannot reach in to deploy — and the
 control port is deliberately never opened for it. Instead, the **rollout step runs on
 the Dell itself** (a self-hosted runner): it reaches out to collect the job, so nothing
-new is exposed.
+new is exposed. The gym box keeps installing from its own clone
+({doc}`../journal/scripts`).
+
+**How a release works (built October 2026):**
+
+- **Work reaches `main` only through `SprintBranch`.** Every change is a pull request
+  into `SprintBranch` with CI green; a job moves `main` forward to it every three days
+  (or on a button). **`main` is locked so only that job can move it**: the branch rule
+  admits only a deploy key, which the job pushes with. A pull request into `main` can't
+  be merged, by anyone.
+- **A version releases once its tag is on `main`.** Tag the merge on `SprintBranch`; when
+  it reaches `main`, the release builds it. Several versions arriving at once are all
+  built, so each can be rolled back to, and only the newest is deployed. A tag not on
+  `main` yet waits; nothing is released from a commit that skipped CI.
+- **The demo school goes first.** If it fails, no other school is touched, and every part
+  that changed is put back to its exact previous setup.
+- **A school can be held** at its release; automatic deploys skip it. Moving one school
+  back to an older release holds it automatically, after checking which database changes
+  the older release doesn't know and offering to undo them behind a safety copy.
+- **The deploy login can update schools and nothing else**: no secrets, no shared
+  database, no cluster add-ons.
+- **The server's own copy of the tools keeps itself current**: an hourly timer on the
+  Dell moves it to the newest release, using the Dell's read-only key, so the commands
+  typed there match what the schools run. Re-running the setup script is only for a new
+  machine.
 
 ## What we rejected, and why
+
+**Moving `main` with the workflow's own login.** It can't be singled out by a branch rule,
+so locking `main` would lock the job out too, and its pushes never start another
+workflow, so a tag reaching `main` couldn't release itself. A write deploy key does
+both; it lives only in GitHub's secret store and is used by that one job.
+
+**Running the setup script from the release pipeline.** It runs as root, and the deploy
+runner was built to have no root at all; giving it root, or letting it change the copy
+root later runs, would let anything that reaches the runner own the machine. The hourly
+timer needs no new access.
+
+**Undoing a failed update by re-applying the old release.** It would re-apply the new
+template with old images, and the template can be what broke (`v0.5.0`). Each part goes
+back to its own previous setup instead.
+
+**One address with a path per school** (`<domain>/<school>/`) instead of a subdomain each.
+The browser keeps saved data per address, not per path, so schools would share one
+store: one school's sign-in would overwrite another's, and a bug on one school's page
+could read every school's tokens. A wildcard certificate and DNS record make subdomains
+as little work.
 
 **A separate WebSocket server with a message store behind it**, instead of the broker's
 own listener. This was the first plan. Checking the code showed the browser already
@@ -189,13 +249,18 @@ take incoming traffic.
   loud before a live demo.
 - **The home network is now partly public.** Three ports point at the Dell, so the
   Dell needs to be kept updated, and nothing else in the house should depend on it.
+- **A write deploy key to look after.** If it is ever exposed, it is deleted under the
+  repo's deploy keys and replaced; the setup steps are in `scripts/remote/README.md`.
+- **Two broker settings files** (gym and remote) that say the same thing apart from the
+  screens door, so a change to one must be made to both.
 
 **Checked, October 5:** the home connection has its own public address (no CGNAT). A
 traceroute to the public address reaches it in one hop, so the router holds that
 address itself.
 
-**Still to check:**
+**Checked, October 14:** the provider allows incoming traffic on 80 and 443; the sites
+are served over HTTPS with certificates that renew themselves.
 
-- Does the provider allow incoming traffic on ports 80 and 443? Only testable once the
-  Dell is serving something and the router forwards those ports.
-- Have the domain's old DNS records been cleared out, so only the project's remain?
+**Decided, October 17:** the project's own domain (with a wildcard record and
+certificate) waits until after the class, and is then the test of rebuilding the whole
+setup from scratch.

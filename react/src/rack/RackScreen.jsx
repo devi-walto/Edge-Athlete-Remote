@@ -161,7 +161,7 @@ function SummaryPhase({ summary, onRest }) {
   )
 }
 
-function RestPhase({ onDone, movementName, nextSetNumber, roster, hotList, groupName, statusMap, onSelectAthlete }) {
+function RestPhase({ onDone, movementName, nextSetNumber, roster, hotList, groupName, statusMap, onSelectAthlete, owned }) {
   const [secs, setSecs] = useState(REST_SECONDS)
   useEffect(() => {
     if (secs <= 0) { onDone(); return }
@@ -186,14 +186,17 @@ function RestPhase({ onDone, movementName, nextSetNumber, roster, hotList, group
       </div>
       <Button onClick={onDone}>Next Set</Button>
 
-      {/* or hand the rack to the next lifter — athletes rotate one set at a time */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '26px 0 18px' }}>
-        <div style={{ flex: 1, height: 1, background: T.line }} />
-        <span style={LABEL}>or, next lifter</span>
-        <div style={{ flex: 1, height: 1, background: T.line }} />
-      </div>
-      <CheckInList roster={roster} hotList={hotList} groupName={groupName}
-        statusMap={statusMap} onSelect={onSelectAthlete} />
+      {/* or hand the rack to the next lifter — athletes rotate one set at a time.
+          Not on an online athlete's own rack: nobody else lifts there (spec 04). */}
+      {!owned && <>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '26px 0 18px' }}>
+          <div style={{ flex: 1, height: 1, background: T.line }} />
+          <span style={LABEL}>or, next lifter</span>
+          <div style={{ flex: 1, height: 1, background: T.line }} />
+        </div>
+        <CheckInList roster={roster} hotList={hotList} groupName={groupName}
+          statusMap={statusMap} onSelect={onSelectAthlete} />
+      </>}
     </div>
   )
 }
@@ -382,7 +385,11 @@ export default function RackScreen({ rackNumber, session, node, controller }) {
   // local agent is unreachable we fall back to asking Django, which talks to a
   // reader attached to the base station — so a rack with no local reader still
   // works.
-  const showCheckInList = (phase === 'idle' && !selectedAthlete) || phase === 'rest'
+  // An online athlete's own rack (spec 04, Phase 3): the server keeps its athlete
+  // selected, so there is no lifter to choose, no list of names to show, and no
+  // wristband reader to poll. One fact from the rack's state decides it.
+  const owned = Boolean(controller.snapshot?.owner_athlete)
+  const showCheckInList = !owned && ((phase === 'idle' && !selectedAthlete) || phase === 'rest')
   useEffect(() => {
     if (!showCheckInList || !controller.canControl) {
       setNfcStatus('')
@@ -586,7 +593,10 @@ export default function RackScreen({ rackNumber, session, node, controller }) {
       {/* top bar: rack + phase badge on top, session label centered below */}
       <div style={{ padding: '16px 24px', borderBottom: `1px solid ${T.line}` }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: 16, fontWeight: 850, letterSpacing: '-.02em' }}>Rack {rackNumber}</div>
+          <div style={{ fontSize: 16, fontWeight: 850, letterSpacing: '-.02em' }}>
+            {/* An online athlete's rack is named after them; its number means nothing to them. */}
+            {owned ? controller.snapshot.owner_athlete.name : `Rack ${rackNumber}`}
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8,
             background: T.panel, border: `1px solid ${T.line}`, borderRadius: 999,
             padding: '7px 12px', fontSize: 10, fontWeight: 850, letterSpacing: '.08em',
@@ -625,6 +635,7 @@ export default function RackScreen({ rackNumber, session, node, controller }) {
           groupName={session?.label}
           statusMap={statusMap}
           selectedAthlete={selectedAthlete}
+          owned={owned}
           onSelectAthlete={selectAthlete}
           onClearAthlete={() => controller.updateState({
             selected_athlete: null,
@@ -672,6 +683,7 @@ export default function RackScreen({ rackNumber, session, node, controller }) {
           groupName={session?.label}
           statusMap={statusMap}
           onSelectAthlete={selectAthlete}
+          owned={owned}
         />
       )}
 

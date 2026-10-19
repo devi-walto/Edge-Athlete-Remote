@@ -284,7 +284,7 @@ def _leaderboard(session, exercise_id, include_details):
         return [], False
     rows = (Set.objects
             .filter(session=session, exercise_id=exercise_id, ended_at__isnull=False,
-                    is_false_set=False, is_simulated=False)
+                    is_false_set=False)
             .exclude(avg_velocity=None)
             .values("athlete_id", "athlete__name")
             .annotate(best_avg_velocity=Max("avg_velocity"), name_sort=Lower("athlete__name"))
@@ -309,7 +309,7 @@ def _insights(session):
     if session is None:
         return []
     real = Set.objects.filter(session=session, ended_at__isnull=False,
-                              is_false_set=False, is_simulated=False)
+                              is_false_set=False)
     out = []
 
     fastest = real.exclude(avg_velocity=None).select_related("athlete").order_by("-avg_velocity").first()
@@ -395,7 +395,7 @@ def room_state_snapshot(include_details):
 
     # Room totals over real finished work only.
     real = Set.objects.filter(session=session, ended_at__isnull=False,
-                              is_false_set=False, is_simulated=False) if session else Set.objects.none()
+                              is_false_set=False) if session else Set.objects.none()
     totals = real.aggregate(completed_sets=Count("id"), completed_reps=Sum("reps_completed"),
                             room_avg_velocity=Max("avg_velocity"))
     avg = real.exclude(avg_velocity=None).aggregate(v=Sum("avg_velocity"), n=Count("id"))

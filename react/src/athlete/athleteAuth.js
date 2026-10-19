@@ -14,6 +14,9 @@ import {
   setSignedInRole,
 } from '../coach/api.js'
 
+// Where sign-in sends an athlete back to: a session link they opened while signed out.
+export const RETURN_KEY = 'athlete_after_sign_in'
+
 const LOOKUP = '/api/auth/login-link/lookup/'
 const REDEEM = '/api/auth/login-link/redeem/'
 const SIGN_IN = '/api/auth/login/'

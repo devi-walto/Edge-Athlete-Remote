@@ -28,6 +28,7 @@ from django.utils import timezone
 
 from ..models import (AthleteReferenceMax, DailyReport, MonitoringEvent,
                       RackCheckIn, Rep, TrainingSession, Set)
+from .virtual_racks import release_session_racks
 from .lifting_math import one_rep_max
 
 REPORT_SCHEMA_VERSION = 1
@@ -137,7 +138,7 @@ def _recalculate_reference_maxes(session):
     """
     best = {}
     for a_set in Set.objects.filter(session=session, ended_at__isnull=False,
-                                    is_false_set=False, is_simulated=False,
+                                    is_false_set=False,
                                     is_coach_adjustment=False):
         estimate = estimated_one_rep_max(a_set.weight_lbs, a_set.reps_completed)
         if estimate is None:
@@ -179,6 +180,9 @@ def end_session(session_id, ended_at=None):
 
         session.ended_at = end_time
         session.save(update_fields=["ended_at"])
+        # The session's virtual racks (online athletes' own racks) go away with it:
+        # open sets ended and kept, sensors freed, rack rows removed (spec 04).
+        release_session_racks(session)
 
         report = DailyReport.objects.create(
             session=session,

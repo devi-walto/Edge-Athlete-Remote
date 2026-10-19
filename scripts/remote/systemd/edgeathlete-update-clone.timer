@@ -1,0 +1,13 @@
+# edgeathlete-update-clone.timer — run edgeathlete-update-clone.service once an hour.
+# Persistent: if the server was off at the time, it runs soon after it starts again.
+# Installed and switched on by bootstrap.sh.
+[Unit]
+Description=Edge Athlete: check hourly for a newer release of the server's code
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

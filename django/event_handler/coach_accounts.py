@@ -92,6 +92,7 @@ class CoachCreateSerializer(serializers.Serializer):
 
 
 class CoachListView(APIView):
+    """List every coach login, or create one with a temporary password (administrators)."""
     permission_classes = [IsInstallationAdmin]
 
     def get(self, request):
@@ -120,6 +121,7 @@ class CoachListView(APIView):
 
 
 class CoachDetailView(APIView):
+    """Change one coach login: switch it off or on, or make it an administrator."""
     permission_classes = [IsInstallationAdmin]
 
     def patch(self, request, user_id):
@@ -147,6 +149,7 @@ class CoachDetailView(APIView):
 
 
 class CoachResetPasswordView(APIView):
+    """Give one coach a new temporary password, to change at their next sign-in."""
     permission_classes = [IsInstallationAdmin]
 
     def post(self, request, user_id):
