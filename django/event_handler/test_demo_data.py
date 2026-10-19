@@ -80,6 +80,19 @@ class SeederAddsTests(TestCase):
         self.assertEqual(TrainingBlock.objects.get(name=BLOCK_NAME).coach, self.admin)
         self.assertEqual(User.objects.count(), 1)          # no login was made
 
+    def test_an_existing_sim_sensor_of_the_athlete_is_adopted(self):
+        riley = Athlete.objects.create(name='Riley Brooks', is_simulated=True)
+        Node.objects.create(node_id='sim-riley-brooks', owner=riley)          # no label yet
+        seed()
+        self.assertTrue(Node.objects.get(node_id='sim-riley-brooks').is_simulated)
+
+    def test_a_sim_named_sensor_someone_else_owns_is_left_alone(self):
+        real = Athlete.objects.create(name='Sam Real')
+        Node.objects.create(node_id='sim-riley-brooks', owner=real)
+        seed()
+        sensor = Node.objects.get(node_id='sim-riley-brooks')
+        self.assertEqual((sensor.owner, sensor.is_simulated), (real, False))
+
     def test_seeding_again_replaces_only_its_own_session(self):
         seed()
         first = TrainingSession.objects.get(label=SESSION_LABEL, ended_at__isnull=True)

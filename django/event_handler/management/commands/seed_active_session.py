@@ -154,9 +154,16 @@ class Command(BaseCommand):
         # they join a session online it goes on their own rack; `eactl sim` (the
         # simulator with --seeded) makes them send reps. Marked simulated too.
         for athlete in athletes.values():
-            Node.objects.get_or_create(
+            sensor, _ = Node.objects.get_or_create(
                 node_id=sensor_id(athlete.name),
                 defaults={"owner": athlete, "is_simulated": True, "mount_type": Node.MOUNT_BAR})
+            # A "sim-" sensor already there (made by hand, or before sensors were
+            # labelled) is adopted if it is this athlete's or nobody's; one that
+            # belongs to anyone else is left alone.
+            if sensor.owner_id in (None, athlete.pk) and not (
+                    sensor.is_simulated and sensor.owner_id == athlete.pk):
+                sensor.owner, sensor.is_simulated = athlete, True
+                sensor.save(update_fields=["owner", "is_simulated"])
 
         group, _ = TrainingGroup.objects.get_or_create(name=GROUP_NAME)
         # Staff are a join table now, not a field — a group can have several.
