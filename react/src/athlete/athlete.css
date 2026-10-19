@@ -9,3 +9,18 @@
 .athlete-center { text-align: center; }
 .athlete-field-error { color: #ff9aa0; font-size: 12px; font-weight: 400; }
 .athlete-switch { font-size: 14px; font-weight: 800; }
+
+/* ── the session link's pages (boards F_Ath_R4, R4b, R10) ── */
+.athlete-page { background: #070b0e; color: #f5f7f2; min-height: 100vh; }
+.athlete-bar { align-items: center; border-bottom: 1px solid #263239; display: flex; gap: 14px; padding: 14px 18px; }
+.athlete-bar b { font-size: 20px; font-weight: 850; letter-spacing: -.02em; }
+.athlete-avatar { align-items: center; background: #a9f04d; border-radius: 10px; color: #071006; display: grid; font-size: 14px; height: 40px; justify-items: center; width: 40px; }
+.athlete-body { display: flex; flex-direction: column; gap: 16px; margin: 0 auto; max-width: 460px; padding: 16px 18px 32px; }
+.athlete-card { background: #10171b; border: 1px solid #263239; padding: 20px 22px; }
+.athlete-card > span { color: #a9f04d; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.athlete-card h2 { font-size: 26px; font-weight: 850; letter-spacing: -.03em; margin: 6px 0 4px; }
+.athlete-card p { color: #89969d; font-size: 15px; margin: 6px 0 0; }
+.athlete-notice { border: 1px dashed #5c6a72; padding: 20px 22px; }
+.athlete-notice h1 { font-size: 20px; font-weight: 850; margin: 0 0 8px; }
+.athlete-notice p { color: #89969d; font-size: 15px; line-height: 1.5; margin: 0; }
+.athlete-signout { align-self: center; font-size: 15px; font-weight: 800; margin-top: 24px; }

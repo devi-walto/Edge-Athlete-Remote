@@ -317,6 +317,37 @@ their login.
 - **Only `/` and that button change.** What `/rack/setup` and `/dashboard` may do
   online is already decided by the server (spec 05).
 
+**Built so far (2026-10-19): 3a, 3b, 3c, 3f.**
+- `/session/<id>` (`react/src/athlete/SessionPage.jsx`): signed out → `/athlete` and
+  straight back; joined → the gym's `RackScreen` through the same controller hook, with
+  no rack setup and nobody signed out (unlike `RackLive`). R4 rechecks every 5 s; R4b
+  and R10 as boards. The session ending mid-workout is caught by asking every 10 s
+  whether this session is still the open one.
+- The rack screen sends the athlete's sign-in on every call when an athlete is signed in
+  (`signInHeaders()` in `api/client.js`); a gym tablet sends what it always did.
+- `owner_athlete` added to the rack's state; `docs/reference/message-contract.md`
+  updated. (The merge canon isn't in this repo; the field is additive and names only the
+  athlete already in `selected_athlete`.)
+- The join reply's sensor carries its `id` (the rack screen starts sets with it); the
+  not-started and ended replies carry the session's name, and only to athletes who
+  belong in it.
+- On an owned rack the controller retakes control by itself even with a set open (a gym
+  rack still waits for "recover").
+- `/` online: an athlete → `/athlete`, anyone else → `/coach`; a saved device role is
+  ignored; nothing shows until the deployment is known.
+
+**Left for later, on purpose:**
+- **R4's plan list and R10's summary** need athlete routes that spec 10 builds; for now
+  those pages say what happened and what to do.
+- **3d and 3e** (velocity bars, the WT901 card, typed sets): not needed for the
+  Definition of Done; an athlete without a sensor can open their rack but not run a set
+  until 3e.
+- **The coach's "Show on a big screen" button (3f):** the display reads the room's state
+  without a login, which is coach-only online; it needs its own sign-in first.
+- **Found while building, not changed:** online, any signed-in athlete can read
+  `sessions/active/` and `sessions/active/status/`, which list every athlete in the
+  session by name. Raised with Devin.
+
 **Done when:**
 
 - [ ] *(Frontend test)* Rendered with an owner: no check-in list, no "Not here?", no

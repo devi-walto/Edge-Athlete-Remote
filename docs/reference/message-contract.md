@@ -357,7 +357,8 @@ during an open set. Accepted release retries return the original response.
 
 `GET /api/racks/{rack_number}/state/` is open for observer reconciliation.
 Its snapshot contains rack number, controller-active flag, epoch, lease expiry,
-state version, phase and phase start, selected athlete/exercise, current set id,
+state version, phase and phase start, selected athlete/exercise, the owner athlete
+(on an online athlete's own rack, spec 04; null on a gym rack), current set id,
 rep count, latest mean/peak/color, update time, and server time. It never contains
 the token, digest, screen identity, or client instance identity.
 

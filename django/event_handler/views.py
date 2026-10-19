@@ -134,6 +134,13 @@ def _runtime_snapshot(runtime, now=None, *, recovery_required=False):
             {"id": runtime.selected_exercise_id, "name": runtime.selected_exercise.name}
             if runtime.selected_exercise_id else None
         ),
+        # Whose rack this is, on an online athlete's own rack; null on a gym rack.
+        # The rack screen reads it to skip choosing a lifter (spec 04, Phase 3).
+        # Added, nothing renamed: older screens simply ignore it.
+        "owner_athlete": (
+            {"id": runtime.owner_athlete_id, "name": runtime.owner_athlete.name}
+            if runtime.owner_athlete_id else None
+        ),
         "current_set": runtime.current_set_id,
         "rep_count": runtime.rep_count,
         "latest_mean_velocity": runtime.latest_mean_velocity,

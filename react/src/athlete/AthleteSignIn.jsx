@@ -12,7 +12,7 @@ import { useEffect, useState } from 'react'
 import { Mark } from '../coach/SignIn.jsx'
 import { useInstallationName } from '../useDeployment.js'
 import { navigate } from '../router.js'
-import { athleteSignIn, athleteSignOut, freshAthleteToken } from './athleteAuth.js'
+import { RETURN_KEY, athleteSignIn, athleteSignOut, freshAthleteToken } from './athleteAuth.js'
 import '../coach/account.css'
 import './athlete.css'
 
@@ -37,6 +37,16 @@ export default function AthleteSignIn() {
     freshAthleteToken().then((token) => { if (!cancelled) setSignedIn(Boolean(token)) })
     return () => { cancelled = true }
   }, [])
+
+  // Signed in, and they came here from a session link: straight back to it.
+  useEffect(() => {
+    if (!signedIn) return
+    const back = sessionStorage.getItem(RETURN_KEY)
+    if (back) {
+      sessionStorage.removeItem(RETURN_KEY)
+      navigate(back, { replace: true })
+    }
+  }, [signedIn])
 
   async function submit(event) {
     event.preventDefault()

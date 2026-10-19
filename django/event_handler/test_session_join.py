@@ -109,12 +109,25 @@ class JoinTests(APITestCase):
         waiting.athletes.add(self.on_roster)
         reply = self.join_as(self.on_roster, waiting)
         self.assertEqual((reply.status_code, reply.data['code']), (409, 'not_started'))
+        self.assertEqual(reply.data['session'], {'id': waiting.pk, 'label': 'Later'})   # the waiting page names it
 
         self.session.ended_at = timezone.now()
         self.session.save()
         reply = self.join_as(self.on_roster)
         self.assertEqual((reply.status_code, reply.data['code']), (409, 'ended'))
+        self.assertEqual(reply.data['session']['label'], 'Remote day')
         self.assertFalse(RackRuntime.objects.exists())
+
+    def test_an_outsider_learns_nothing_about_a_session_that_has_not_started(self):
+        waiting = TrainingSession.objects.create(label='Secret plan')
+        reply = self.join_as(self.outsider, waiting)
+        self.assertEqual((reply.status_code, reply.data['code']), (403, 'not_in_session'))
+        self.assertNotIn('session', reply.data)
+
+    def test_the_rack_state_names_its_owner(self):
+        rack = self.join_as(self.in_group).data['rack_number']
+        state = self.client.get(f'/api/racks/{rack}/state/').data
+        self.assertEqual(state['owner_athlete'], {'id': self.in_group.pk, 'name': 'Riley Brooks'})
 
     def test_an_unknown_session_is_404(self):
         self.client.force_authenticate(self.on_roster.user)
@@ -126,6 +139,7 @@ class JoinTests(APITestCase):
         mine.refresh_from_db()
         self.assertEqual(mine.rack_number, reply.data['rack_number'])
         self.assertEqual(reply.data['sensor']['node_id'], 'sim-riley-brooks')
+        self.assertEqual(reply.data['sensor']['id'], mine.pk)   # the rack screen starts sets with it
 
     def test_someone_elses_sensor_never_goes_on_their_rack(self):
         jordans = Node.objects.create(node_id='sim-jordan-lee', owner=self.on_roster)

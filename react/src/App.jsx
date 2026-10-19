@@ -13,6 +13,7 @@
 //   /connection-test → the API/architecture demo kept from the scaffold
 //   /login-link      → an athlete opening their login link (#link after it)
 //   /athlete         → athlete sign in
+//   /session/:id     → the session link: an online athlete's own rack (athlete/SessionPage)
 //
 // localStorage still remembers this device's identity (its role, its generated
 // device id, its assigned rack number) so a cold reboot at "/" can redirect back
@@ -28,7 +29,9 @@ import RackNodeSetup from './rack/RackNodeSetup.jsx'
 import RackObserver from './rack/RackObserver.jsx'
 import { useRackController } from './rack/controller.js'
 import CoachTablet from './coach/CoachTablet.jsx'
-import { setCoachToken } from './coach/api.js'
+import { getSignedInRole, setCoachToken } from './coach/api.js'
+import useDeployment from './useDeployment.js'
+import SessionPage, { sessionIdFromPath } from './athlete/SessionPage.jsx'
 import Dashboard from './Dashboard.jsx'
 import AthleteSignIn from './athlete/AthleteSignIn.jsx'
 import LoginLinkPage from './athlete/LoginLinkPage.jsx'
@@ -177,6 +180,15 @@ function Picker() {
 // the picker. The redirect runs in an effect (see Redirect) so we never navigate
 // mid-render.
 function Home() {
+  // Online, a person is a coach or an athlete, known from their login, and nobody
+  // sets a phone up as a rack tablet (spec 04, section 3f). So "/" goes to the
+  // athlete's page or the coach's, and a device role saved in this browser is
+  // ignored. A local install runs exactly as before, picker included.
+  const deployment = useDeployment()
+  if (deployment === null) return null   // not known yet: show nothing, not the picker
+  if (deployment === 'remote') {
+    return <Redirect to={getSignedInRole() === 'athlete' ? '/athlete' : '/coach'} />
+  }
   const role = localStorage.getItem('device_role')
   if (!role) return <Picker />
   if (role === 'rack') {
@@ -267,6 +279,9 @@ function route(pathname) {
   // signing in after that.
   if (pathname === '/login-link') return <LoginLinkPage />
   if (pathname === '/athlete') return <AthleteSignIn />
+  // The session link a coach shares: the athlete's own rack (spec 04).
+  const sessionId = sessionIdFromPath(pathname)
+  if (sessionId != null) return <SessionPage key={sessionId} sessionId={sessionId} />
   if (pathname === '/rack/setup') return <RackSetup />
   if (pathname === '/coach/setup') return <CoachTablet />
 

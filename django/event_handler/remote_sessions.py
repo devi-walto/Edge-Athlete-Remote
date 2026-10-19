@@ -23,8 +23,13 @@ def session_join(request, session_id):
     try:
         rack, sensor = join(session_id, request.user.athlete)
     except JoinRefused as refused:
-        return Response({'code': refused.code, 'detail': refused.detail}, status=refused.status)
+        body = {'code': refused.code, 'detail': refused.detail}
+        if refused.session:
+            body['session'] = refused.session
+        return Response(body, status=refused.status)
     return Response({
         'rack_number': rack.rack_number,
-        'sensor': {'node_id': sensor.node_id, 'last_seen': sensor.last_seen} if sensor else None,
+        # id too: the rack screen names its sensor by id when it starts a set.
+        'sensor': ({'id': sensor.pk, 'node_id': sensor.node_id, 'last_seen': sensor.last_seen}
+                   if sensor else None),
     })

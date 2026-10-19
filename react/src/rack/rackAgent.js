@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getDeviceId } from '../device.js'
+import { signInHeaders } from '../api/client.js'
 
 export function requiresRackAgent(node) {
   return node?.acquisition_kind === 'wt901_ble'
@@ -18,7 +19,8 @@ export function sensorHealthIsReady(health, node) {
 export async function getRackSensorHealth(rackNumber, deviceId) {
   const response = await fetch(`/api/racks/${encodeURIComponent(rackNumber)}/sensor-health/`, {
     cache: 'no-store',
-    headers: { 'X-Rack-Device-ID': deviceId },
+    // Online, the athlete's sign-in too (nothing is added on a gym tablet).
+    headers: { 'X-Rack-Device-ID': deviceId, ...(await signInHeaders()) },
   })
   if (!response.ok) throw new Error(`Sensor health HTTP ${response.status}`)
   return response.json()

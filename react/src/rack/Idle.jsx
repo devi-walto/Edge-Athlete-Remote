@@ -75,7 +75,7 @@ function Scroll({ children }) {
 }
 
 export default function Idle({ roster, hotList, groupName, statusMap, selectedAthlete, onSelectAthlete,
-  onClearAthlete, progress, progressLoading, selectedExerciseId, onSelectMovement,
+  owned = false, onClearAthlete, progress, progressLoading, selectedExerciseId, onSelectMovement,
   effectiveLoad, onEditWeight, onStart }) {
 
   // ── no athlete yet: the check-in screen ──────────────────────────────────────
@@ -115,14 +115,17 @@ export default function Idle({ roster, hotList, groupName, statusMap, selectedAt
 
   return (
     <Scroll>
-      {/* athlete + "wrong person?" escape */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <div>
-          <div style={{ ...LABEL, color: T.lime, marginBottom: 3 }}>Lifting</div>
-          <div style={{ fontSize: 22, fontWeight: 850, letterSpacing: '-.03em' }}>{selectedAthlete.name}</div>
+      {/* athlete + "wrong person?" escape. Not on an online athlete's own rack: their
+          name is already in the top bar, and the server would refuse to clear them. */}
+      {!owned && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div>
+            <div style={{ ...LABEL, color: T.lime, marginBottom: 3 }}>Lifting</div>
+            <div style={{ fontSize: 22, fontWeight: 850, letterSpacing: '-.03em' }}>{selectedAthlete.name}</div>
+          </div>
+          <button onClick={onClearAthlete} style={GHOST_SM}>Not here?</button>
         </div>
-        <button onClick={onClearAthlete} style={GHOST_SM}>Not here?</button>
-      </div>
+      )}
 
       {/* overall session progress */}
       <div style={{ marginBottom: 22 }}>

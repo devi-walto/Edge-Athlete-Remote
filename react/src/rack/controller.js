@@ -232,11 +232,14 @@ export function useRackController(rackNumber, deviceId, enabled, canClaim = true
       || !canClaim
       || !snapshot
       || snapshot.controller_active
-      || snapshot.current_set != null
+      // An unfinished set waits for someone to choose recovery, since in a gym a
+      // different person may be at the rack. On an online athlete's own rack only
+      // its owner can be, and the server hands it back with the set still open.
+      || (snapshot.current_set != null && !snapshot.owner_athlete)
     ) return
     const retry = setTimeout(() => setClaimAttempt((attempt) => attempt + 1), 2000)
     return () => clearTimeout(retry)
-  }, [mode, canClaim, snapshot?.controller_active, snapshot?.current_set])
+  }, [mode, canClaim, snapshot?.controller_active, snapshot?.current_set, snapshot?.owner_athlete])
 
   // The rack is holding a set nobody can finish, and THIS screen is the one
   // bolted to it. Offer the way out rather than sitting read-only forever.

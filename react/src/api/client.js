@@ -1,11 +1,15 @@
 // api/client.js — the one place the rack screen talks to Django's REST API.
 //
 // Everything goes through the same Nginx that served this page, which forwards
-// /api/* to Django, so these calls need no host or auth setup. The rack screen
+// /api/* to Django, so these calls need no host setup. In a gym they need no login
+// either. Online, the rack screen is an athlete's own phone, so every call carries
+// that athlete's sign-in (spec 04, Phase 3); see signInHeaders(). The rack screen
 // only ever makes a handful of REST calls (register itself, ask its rack number,
 // and ONE active-session fetch at startup) — everything live comes over MQTT.
 
 import { controllerHeaders } from '../rack/controllerIdentity.js'
+import { getSignedInRole } from '../coach/api.js'
+import { freshAthleteToken } from '../athlete/athleteAuth.js'
 
 const API = '/api'
 
@@ -20,8 +24,19 @@ export class ApiError extends Error {
   }
 }
 
-async function jsonFetch(path, opts) {
-  const res = await fetch(API + path, opts)
+// The signed-in athlete's sign-in, renewed if it ran out; nothing for anyone else.
+// A gym rack tablet has no one signed in, so it sends exactly what it always did.
+export async function signInHeaders() {
+  let role = null
+  try { role = getSignedInRole() } catch { return {} }   // no storage: nobody signed in
+  if (role !== 'athlete') return {}
+  const token = await freshAthleteToken()
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+async function jsonFetch(path, opts = {}) {
+  const auth = await signInHeaders()
+  const res = await fetch(API + path, { ...opts, headers: { ...(opts.headers || {}), ...auth } })
   const body = res.status === 204 ? null : await res.json().catch(() => null)
   if (!res.ok) {
     throw new ApiError(body?.detail || `${(opts && opts.method) || 'GET'} ${path} → HTTP ${res.status}`, res.status, body)

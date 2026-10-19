@@ -28,9 +28,12 @@ from .rack_checkin import record_check_in
 class JoinRefused(Exception):
     """Why an athlete can't join: a code for the screen, and the HTTP status."""
 
-    def __init__(self, code, status, detail):
+    def __init__(self, code, status, detail, session=None):
         super().__init__(detail)
         self.code, self.status, self.detail = code, status, detail
+        # The session's name, for a session the athlete belongs in that hasn't
+        # started or has ended: the waiting and ended pages show it.
+        self.session = session
 
 
 def may_join(session, athlete):
@@ -47,12 +50,13 @@ def join(session_id, athlete):
         session = TrainingSession.objects.select_for_update().filter(pk=session_id).first()
         if session is None:
             raise JoinRefused('not_found', 404, 'That session does not exist.')
-        if session.started_at is None:
-            raise JoinRefused('not_started', 409, "Your coach hasn't started this session yet.")
-        if session.ended_at is not None:
-            raise JoinRefused('ended', 409, 'This session has ended.')
         if not athlete.is_active or not may_join(session, athlete):
             raise JoinRefused('not_in_session', 403, "You're not on this session. Ask your coach.")
+        named = {'id': session.pk, 'label': session.label}
+        if session.started_at is None:
+            raise JoinRefused('not_started', 409, "Your coach hasn't started this session yet.", named)
+        if session.ended_at is not None:
+            raise JoinRefused('ended', 409, 'This session has ended.', named)
 
         # On the roster from now on, so the live room and the report include them
         # (a group member may not have been on it when the day was set up).
