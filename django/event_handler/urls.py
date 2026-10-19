@@ -14,6 +14,7 @@ from django.urls import path
 
 from . import views
 from . import athlete_logins
+from . import remote_sessions
 from . import deployment
 from . import health
 from . import system_status
@@ -99,6 +100,8 @@ urlpatterns = [
     path('sessions/active/athlete/<int:athlete_id>/progress/', views.athlete_progress, name='athlete_progress'),
     path('sessions/active/status/', views.session_status, name='session_status'),
     path('sessions/<int:session_id>/', views.session_detail, name='session_detail'),
+    # Athlete, remote only: join a session and get your own rack (spec 04).
+    path('sessions/<int:session_id>/join/', remote_sessions.session_join, name='session_join'),
 
     # planning — TrainingGroups, reusable templates, and templates deployed for a TrainingGroup.
     # Route names follow what the coach front end already calls: its

@@ -59,6 +59,7 @@ from .permissions import (
     refuse_while_password_change_due)
 from .roles import role_of
 from . import athlete_logins
+from .services.rack_checkin import record_check_in
 from .serializers import (SetSerializer, SetCompleteSerializer, RackScreenSerializer,
                           AthleteSerializer, TrainingSessionSerializer,
                           NodeSerializer, ExerciseSerializer, TrainingGroupSerializer,
@@ -1426,14 +1427,8 @@ def rack_checkin(request, rack_number):
             return _controller_conflict(
                 "duplicate_checkin", "athlete is already selected at this rack revision", runtime,
             )
-        RackCheckIn.objects.create(session=session, athlete=athlete, rack_number=rack_number)
-        runtime.selected_athlete = athlete
-        runtime.state_version += 1
-        runtime.save(update_fields=["selected_athlete", "state_version", "updated_at"])
-        MonitoringEvent.objects.create(
-            reason="athlete_checked_in",
-            is_simulated=session.is_simulated,
-        )
+        # The same step joining a session online uses (services/rack_checkin.py).
+        record_check_in(runtime, session, athlete)
         body = {
             "session_id": session.id,
             "athlete": {"id": athlete.id, "name": athlete.name},

@@ -7,7 +7,7 @@ roles.py does that, from what the login is attached to. Each class here just
 says which roles it lets through. Endpoints that are open to any screen simply
 don't use this bouncer.
 """
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.permissions import BasePermission
 
 from .roles import ADMINISTRATOR, ATHLETE, COACH, role_of
@@ -81,6 +81,18 @@ class IsAthlete(BasePermission):
 
     def has_permission(self, request, view):
         return _role(request) == ATHLETE
+
+
+class RemoteOnly(BasePermission):
+    """A route that exists only on a remote server. On a local install it answers 404,
+    as if it weren't there, before any question of who is asking: a gym has no online
+    athletes, so there is nothing to refuse or explain."""
+
+    def has_permission(self, request, view):
+        from .deployment import is_hosted
+        if not is_hosted():
+            raise NotFound()
+        return True
 
 
 class IsCoachOrAthlete(BasePermission):
