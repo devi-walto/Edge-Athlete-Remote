@@ -105,6 +105,13 @@ landing page ─ search or scroll "Demo U" ─▶ remembered in this browser ─
   nothing to install. The app is installed from the school's own address, after the
   first visit, so each installed app belongs to one school.
 - **It's a new screen:** a mockup on the Final designs page first. Remote only.
+- **It goes live with the new domain, not before** (Devin, 2026-10-19). The landing
+  page lives at the domain's own address (`<domain>`, no school in front), and that
+  address only exists once spec 12 Phase 4's domain work is done. So the picker and the
+  domain work are launched together, after the class, as one from-scratch test of the
+  public face: landing page, schools, certificates. The page itself doesn't depend on
+  DNS and can be built and tried at any address first; moving it is the ingress
+  address and one DNS record.
 
 ## Phases (outline; to be cut properly when scheduled)
 
