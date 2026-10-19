@@ -1286,9 +1286,15 @@ class SeederNfcTagTests(APITestCase):
     Nothing else in the system assigns tags, and the seeder used to create
     athletes with nfc_tag_id None — which is exactly how a fresh database lost
     wristband sign-in until someone set the tag by hand.
+
+    The seeder never makes a login (spec 04, Phase 5), so each test claims the
+    school with a coach first, as a real school would be.
     """
 
-    def test_seed_assigns_braydons_wristband_tag(self):
+    def setUp(self):
+        make_coach(username="seed-coach", password="pw", is_staff=True, is_active=True)
+
+    def test_seed_assigns_the_demo_wristband_tag(self):
         from django.core.management import call_command
         from event_handler.management.commands.seed_active_session import NFC_TAG_BY_ATHLETE
 
@@ -1301,10 +1307,11 @@ class SeederNfcTagTests(APITestCase):
     def test_seed_never_clobbers_a_manually_set_tag(self):
         from django.core.management import call_command
 
-        Athlete.objects.create(name="Braydon Callender", nfc_tag_id="04FFFFFFFFFFFFFF")
+        # The demo athlete, retagged by hand by a coach since the last seed.
+        Athlete.objects.create(name="Jordan Lee", nfc_tag_id="04FFFFFFFFFFFFFF", is_simulated=True)
         call_command("seed_active_session")
 
-        athlete = Athlete.objects.get(name="Braydon Callender")
+        athlete = Athlete.objects.get(name="Jordan Lee")
         self.assertEqual(
             athlete.nfc_tag_id, "04FFFFFFFFFFFFFF",
             "a coach-retagged wristband must survive re-seeding",

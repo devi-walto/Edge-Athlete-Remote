@@ -17,6 +17,8 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand, CommandError
 
+from event_handler.models import CoachProfile
+
 DEMO_USERNAME = "coach"
 DEMO_PASSWORD = "coachpass"
 
@@ -48,6 +50,9 @@ class Command(BaseCommand):
         user.set_password(DEMO_PASSWORD)
         user.is_active = True
         user.save()
+        # A login counts as a coach only when it has a coach profile (spec 02);
+        # without one it is refused at sign-in, and the seeder finds no coach.
+        CoachProfile.objects.get_or_create(user=user)
         verb = "Created" if created else "Updated"
         self.stdout.write(self.style.WARNING(
             f"{verb} demo coach account: {DEMO_USERNAME} / {DEMO_PASSWORD} — "

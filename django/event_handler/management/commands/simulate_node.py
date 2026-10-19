@@ -14,17 +14,27 @@
 #
 # The heartbeat is NOT gated, deliberately. Pulses are how Django knows the node
 # is alive; going quiet on those would make an idle rack look like a dead one.
+#
+# TWO WAYS TO RUN IT.
+#   --node-id rack_1   one sensor, as before (a local install's demo).
+#   --seeded           every seeded demo athlete's OWN sensor at once (spec 04,
+#                      Phase 5): what `eactl sim` runs on a remote school. Each one
+#                      follows its athlete's rack, so it wakes when its athlete joins
+#                      a session online and starts a set. With --stop-after it stops
+#                      itself; however it stops (time up, Ctrl+C, or Kubernetes
+#                      ending the job), its sensors are unlinked and marked inactive.
 
 import json
 import os
 import random
+import signal
 import threading
 import time
 from datetime import datetime, timezone
 
 import paho.mqtt.client as mqtt
-from django.core.management.base import BaseCommand
-from django.db import close_old_connections
+from django.core.management.base import BaseCommand, CommandError
+from django.db import close_old_connections, connection
 
 MQTT_HOST = os.getenv("MQTT_HOST", "mosquitto")
 MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
@@ -161,11 +171,19 @@ class Command(BaseCommand):
             "Reps pause while the linked rack is idle; pulses never stop.")
 
     def add_arguments(self, parser):
-        parser.add_argument("--node-id", type=str, required=True,
-                            help="Node ID to simulate, e.g. rack_1")
+        which = parser.add_mutually_exclusive_group(required=True)
+        which.add_argument("--node-id", type=str,
+                           help="Node ID to simulate, e.g. rack_1")
+        which.add_argument("--seeded", action="store_true",
+                           help="Simulate every seeded demo athlete's own sensor at once "
+                                "(spec 04, Phase 5; what `eactl sim` runs). On stopping, "
+                                "they are unlinked from their racks and marked inactive.")
+        parser.add_argument("--stop-after", type=float, default=None, metavar="MINUTES",
+                            help="Stop by itself after this many minutes (default: run until "
+                                 "stopped). `eactl sim` uses 120.")
         parser.add_argument("--rack", type=int, default=None,
-                            help="Rack number to watch. Default: whatever rack this "
-                                 "node is linked to in the database.")
+                            help="Rack number to watch (--node-id only). Default: whatever "
+                                 "rack this node is linked to in the database.")
         parser.add_argument("--interval", type=float, default=3.0,
                             help="Seconds between reps (default: 3.0)")
         parser.add_argument("--reps-per-set", type=int, default=5,
@@ -178,114 +196,151 @@ class Command(BaseCommand):
                                  "there. 'always': never pause — the old behaviour.")
 
     def handle(self, *args, **options):
-        node_id = options["node_id"]
-        fixed_rack = options["rack"]
-        interval = options["interval"]
-        reps_per_set = options["reps_per_set"]
-        mode = options["active_when"]
-
-        # Register before publishing, the way real firmware should.
-        #
-        # Pulses from an unknown node are REJECTED ("node is not registered"), so
-        # without this a second simulated rack published forever into nothing: the
-        # container ran, the log looked healthy, and no node ever appeared for a
-        # coach to link. The only thing that had ever created an MQTT node was the
-        # seeder, which makes exactly one.
-        #
-        # Not marked simulated here. is_simulated is now a label only (it no
-        # longer bars a sensor from racks or hides its sets; spec 04, Phase 5),
-        # and the seeder is what marks its own sensors. This command just drives
-        # whichever sensor it is given.
         from ...models import Node
-        node, created = Node.objects.get_or_create(node_id=node_id)
-        self.stdout.write(
-            f"{'Registered' if created else 'Found'} node {node_id} "
-            f"(rack: {node.rack_number if node.rack_number is not None else 'unassigned'})"
-        )
-        if node.rack_number is None:
-            self.stdout.write(
-                "  ^ link it to a rack in the coach admin page before it publishes reps"
-            )
 
-        self.stdout.write(f"Starting simulate_node for {node_id} "
+        fixed_rack = options["rack"]
+        mode = options["active_when"]
+        seeded = options["seeded"]
+
+        if seeded:
+            # The seeded demo athletes' own sensors: marked simulated, owned by a
+            # simulated athlete. Woken (made active) for the length of this run.
+            nodes = Node.objects.filter(is_simulated=True, owner__is_simulated=True)
+            node_ids = list(nodes.values_list("node_id", flat=True))
+            if not node_ids:
+                raise CommandError("No seeded demo sensors here. Seed the school first.")
+            nodes.update(is_active=True)
+            self.stdout.write(f"Woke {len(node_ids)} demo sensor(s): {', '.join(node_ids)}")
+            fixed_rack = None   # each follows its own athlete's rack
+        else:
+            node_id = options["node_id"]
+            # Register before publishing, the way real firmware should.
+            #
+            # Pulses from an unknown node are REJECTED ("node is not registered"), so
+            # without this a second simulated rack published forever into nothing: the
+            # container ran, the log looked healthy, and no node ever appeared for a
+            # coach to link.
+            #
+            # Not marked simulated here. is_simulated is now a label only (it no
+            # longer bars a sensor from racks or hides its sets; spec 04, Phase 5),
+            # and the seeder is what marks its own sensors. This command just drives
+            # whichever sensor it is given.
+            node, created = Node.objects.get_or_create(node_id=node_id)
+            self.stdout.write(
+                f"{'Registered' if created else 'Found'} node {node_id} "
+                f"(rack: {node.rack_number if node.rack_number is not None else 'unassigned'})"
+            )
+            if node.rack_number is None:
+                self.stdout.write(
+                    "  ^ link it to a rack in the coach admin page before it publishes reps"
+                )
+            node_ids = [node_id]
+
+        self.stdout.write(f"Starting simulate_node for {', '.join(node_ids)} "
                           f"(gate: {mode}, rack: {fixed_rack or 'from database'})")
 
         client = mqtt.Client()
         client.connect(MQTT_HOST, MQTT_PORT, 60)
         client.loop_start()
 
-        pulse_topic = f"edgeathlete/node/{node_id}/pulse"
-        rep_topic = f"edgeathlete/node/{node_id}/rep"
-
-        # Pulse runs on its own timer in the background, completely independent of
-        # the rep loop below — and, since the gate arrived, independent of whether
-        # the rack is busy. An idle node is still a healthy node.
+        # One stop signal for every thread. Set by the time limit, Ctrl+C, or
+        # SIGTERM, which is what Kubernetes sends when `eactl sim --stop` deletes
+        # the Job, or when the Job's own hard time limit runs out.
         stop_event = threading.Event()
+        previous_sigterm = signal.signal(signal.SIGTERM, lambda *_: stop_event.set())
 
-        def pulse_loop():
-            while not stop_event.is_set():
-                close_old_connections()
-                payload = build_pulse_payload(node_id)
-                client.publish(pulse_topic, json.dumps(payload), qos=1)
-                stop_event.wait(PULSE_INTERVAL_SECONDS)
+        threads = []
+        for node_id in node_ids:
+            for target in (self._pulse_loop, self._rep_loop):
+                thread = threading.Thread(
+                    target=target, daemon=True,
+                    args=(client, node_id, stop_event, fixed_rack, mode, options))
+                thread.start()
+                threads.append(thread)
 
-        pulse_thread = threading.Thread(target=pulse_loop, daemon=True)
-        pulse_thread.start()
-
-        rep_number = 0
-        last_token = None
-        last_why = None
-
+        deadline = options["stop_after"] * 60 if options["stop_after"] else None
         try:
-            while True:
-                # Long-running command: the connection can be dropped underneath
-                # us (idle timeout, a database restart) and Django will keep
-                # handing back the dead one until it is told to let go.
-                close_old_connections()
-
-                rack = fixed_rack if fixed_rack is not None else rack_for_node(node_id)
-                active, token, why = rack_activity(rack, mode)
-
-                # Say something only when the answer CHANGES. Logging every poll
-                # buries the interesting moments in a wall of identical lines.
-                if why != last_why:
-                    state = "ACTIVE" if active else "idle"
-                    self.stdout.write(f"[{node_id}] {state} — {why}")
-                    last_why = why
-
-                if not active:
-                    rep_number = 0
-                    last_token = None
-                    stop_event.wait(GATE_POLL_SECONDS)
-                    continue
-
-                # A new set means rep numbering starts over. The node's rep_number
-                # is advisory anyway — the tablet assigns the authoritative one —
-                # but a stream that counts to 40 across five sets looks wrong to
-                # anyone watching the topic.
-                if token != last_token:
-                    rep_number = 0
-                    last_token = token
-
-                rep_number += 1
-                payload = build_rep_payload(node_id, rep_number)
-                client.publish(rep_topic, json.dumps(payload), qos=1)
-                self.stdout.write(f"[{node_id}] rep {rep_number} -> "
-                                  f"{payload['mean_velocity']} m/s")
-
-                # 'always' has no tablet telling it where a set ends, so it keeps
-                # the original count-and-rest rhythm. The gated modes don't need
-                # it: the set ends when the coach ends it.
-                if mode == MODE_ALWAYS and rep_number >= reps_per_set:
-                    rep_number = 0
-                    self.stdout.write(f"[{node_id}] set complete, resting")
-                    stop_event.wait(interval * 2)
-                else:
-                    stop_event.wait(interval)
-
+            if stop_event.wait(deadline):
+                self.stdout.write("Asked to stop.")
+            else:
+                self.stdout.write(f"Time's up ({options['stop_after']:g} min).")
         except KeyboardInterrupt:
             self.stdout.write("\nStopping simulate_node...")
         finally:
             stop_event.set()
+            for thread in threads:
+                thread.join(timeout=5)
             client.loop_stop()
             client.disconnect()
+            signal.signal(signal.SIGTERM, previous_sigterm)
+            if seeded:
+                # Unregister: off their racks and inactive, so nothing shows a
+                # "live" sensor once the demo is over. Not deleted: each finished
+                # set remembers the sensor that measured it.
+                close_old_connections()
+                Node.objects.filter(node_id__in=node_ids).update(rack_number=None, is_active=False)
+                self.stdout.write(f"Unregistered {len(node_ids)} demo sensor(s).")
+
+    def _pulse_loop(self, client, node_id, stop_event, fixed_rack, mode, options):
+        """Heartbeats, never gated: an idle node is still a healthy node."""
+        topic = f"edgeathlete/node/{node_id}/pulse"
+        try:
+            while not stop_event.is_set():
+                close_old_connections()
+                client.publish(topic, json.dumps(build_pulse_payload(node_id)), qos=1)
+                stop_event.wait(PULSE_INTERVAL_SECONDS)
+        finally:
+            connection.close()   # each thread has its own; let it go with the thread
+
+    def _rep_loop(self, client, node_id, stop_event, fixed_rack, mode, options):
+        """Reps, only while this node's rack is busy (see the gate above)."""
+        try:
+            self._reps(client, node_id, stop_event, fixed_rack, mode, options)
+        finally:
+            connection.close()   # each thread has its own; let it go with the thread
+
+    def _reps(self, client, node_id, stop_event, fixed_rack, mode, options):
+        topic = f"edgeathlete/node/{node_id}/rep"
+        interval, reps_per_set = options["interval"], options["reps_per_set"]
+        rep_number = 0
+        last_token = None
+        last_why = None
+        while not stop_event.is_set():
+            # Long-running: the database connection can be dropped underneath us
+            # (idle timeout, a restart) and Django keeps handing back the dead one
+            # until it is told to let go.
+            close_old_connections()
+
+            rack = fixed_rack if fixed_rack is not None else rack_for_node(node_id)
+            active, token, why = rack_activity(rack, mode)
+
+            # Say something only when the answer CHANGES.
+            if why != last_why:
+                state = "ACTIVE" if active else "idle"
+                self.stdout.write(f"[{node_id}] {state} — {why}")
+                last_why = why
+
+            if not active:
+                rep_number = 0
+                last_token = None
+                stop_event.wait(GATE_POLL_SECONDS)
+                continue
+
+            # A new set means rep numbering starts over.
+            if token != last_token:
+                rep_number = 0
+                last_token = token
+
+            rep_number += 1
+            payload = build_rep_payload(node_id, rep_number)
+            client.publish(topic, json.dumps(payload), qos=1)
+            self.stdout.write(f"[{node_id}] rep {rep_number} -> {payload['mean_velocity']} m/s")
+
+            # 'always' has no tablet telling it where a set ends, so it keeps the
+            # original count-and-rest rhythm.
+            if mode == MODE_ALWAYS and rep_number >= reps_per_set:
+                rep_number = 0
+                self.stdout.write(f"[{node_id}] set complete, resting")
+                stop_event.wait(interval * 2)
+            else:
+                stop_event.wait(interval)

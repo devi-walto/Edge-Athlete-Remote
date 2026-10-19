@@ -36,6 +36,12 @@
 #     eactl make-admin "Name" USER
 #                                 make an existing login an administrator again
 #
+#   DEMO DATA  (invented athletes and simulated sensors; only ever adds)
+#     eactl seed "Name"           fill it with demo data (asks for the short name;
+#                                 --reset removes the earlier demo rows first)
+#     eactl sim "Name"            wake the demo athletes' sensors for 2 hours
+#                                 (--hours N; --stop ends them early)
+#
 #   SAFETY COPIES  (of a school's database)
 #     eactl backup "Name"         take a safety copy now
 #     eactl restore "Name"        put one back (lists them)
@@ -43,7 +49,7 @@
 #   LOOKING INSIDE A SCHOOL
 #     eactl logs "Name" PART      what PART has been printing (django, react,
 #                                 mosquitto, mqtt-listener, monitoring-publisher,
-#                                 setup); add -f to keep following
+#                                 setup, sim); add -f to keep following
 #     eactl shell "Name"          a command line inside the school's django
 #
 #   eactl help                    this list
@@ -790,10 +796,95 @@ logs)
             kube -n "$ns" logs "deploy/$part" --tail=100 $follow ;;
         setup)
             kube -n "$ns" logs deploy/django -c prepare-database --tail=100 $follow ;;
+        sim)
+            kube -n "$ns" logs job/demo-sim --tail=100 $follow ;;
         *)  echo 'usage: eactl logs "School Name" <part> [-f]'
-            echo '  parts: django react mosquitto mqtt-listener monitoring-publisher setup'
+            echo '  parts: django react mosquitto mqtt-listener monitoring-publisher setup sim'
             exit 1 ;;
     esac
+    ;;
+
+seed)
+    # Fill a school with demo data (spec 04, Phase 5): four invented athletes, each
+    # with their own simulated sensor, a plan, a live session, a few finished sets.
+    # The seeder only adds and recognises its own rows; it refuses on a school with
+    # no coach yet, with another session running, or with a real athlete under a
+    # demo name. --reset removes its own earlier demo rows first.
+    short="$(find_school "${1:-}")" || exit 1
+    reset=""
+    [ "${2:-}" = --reset ] && reset="--reset"
+    echo "==> demo data for $(school_info "$short" display-name) ($short): invented athletes,"
+    echo "    their simulated sensors, a plan and a live demo session.${reset:+ Earlier demo rows are removed first.}"
+    read -r -p "Type the short name ($short) to go ahead: " typed
+    [ "$typed" = "$short" ] || { echo "nothing seeded"; exit 0; }
+    kube -n "ea-$short" exec deploy/django -- python manage.py seed_active_session $reset
+    ;;
+
+sim)
+    # Wake the seeded athletes' sensors for a demo (spec 04, Phase 5): a one-off Job
+    # in the school runs the simulator for all of them, and each sends reps while
+    # its athlete's set is running. It stops itself after --hours (default 2), and
+    # Kubernetes ends it at the same limit if it hangs; either way its sensors are
+    # unlinked and switched off. --stop ends it early.
+    short="$(find_school "${1:-}")" || exit 1
+    shift
+    hours=2 stop=no
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --hours) hours="${2:-}"; shift 2 ;;
+            --stop) stop=yes; shift ;;
+            *) echo 'usage: eactl sim "School Name" [--hours 2] [--stop]'; exit 1 ;;
+        esac
+    done
+    case "$hours" in ''|*[!0-9]*|0) echo "[!] --hours must be a whole number of hours, 1 or more"; exit 1 ;; esac
+    ns="ea-$short"
+    if [ "$stop" = yes ]; then
+        # Deleting the Job stops its pod politely; the simulator then unlinks its sensors.
+        kube -n "$ns" delete job demo-sim --ignore-not-found --wait=true
+        echo "==> demo sensors stopped"
+        exit 0
+    fi
+    if [ "$(kubectl -n "$ns" get job demo-sim -o jsonpath='{.status.active}' 2>/dev/null)" = 1 ]; then
+        echo "==> the demo sensors are already awake. To end them: eactl sim $short --stop"
+        exit 0
+    fi
+    kubectl -n "$ns" delete job demo-sim --ignore-not-found --wait=true >/dev/null
+    # The simulator runs from the same image as the school's django, so it matches
+    # the school's release exactly.
+    image="$(kubectl -n "$ns" get deployment django -o jsonpath='{.spec.template.spec.containers[0].image}')"
+    [ -n "$image" ] || { echo "[!] could not read $short's release"; exit 1; }
+    minutes=$((hours * 60))
+    kube -n "$ns" apply -f - <<EOF
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: demo-sim
+  labels: { app: demo-sim }
+spec:
+  # A hard stop a few minutes after the simulator's own, in case it hangs.
+  activeDeadlineSeconds: $((minutes * 60 + 300))
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels: { app: demo-sim }
+    spec:
+      restartPolicy: Never
+      terminationGracePeriodSeconds: 30
+      imagePullSecrets: [{ name: ghcr-pull }]
+      containers:
+        - name: demo-sim
+          image: $image
+          command: ["python", "manage.py", "simulate_node", "--seeded", "--stop-after", "$minutes"]
+          env: [{ name: PYTHONUNBUFFERED, value: "1" }]
+          envFrom:
+            - configMapRef: { name: school-settings }
+            - secretRef: { name: school-secrets }
+          resources:
+            requests: { cpu: 20m, memory: 96Mi }
+            limits: { memory: 256Mi }
+EOF
+    echo "==> demo sensors awake for ${hours}h. Watch: eactl logs $short sim -f   End early: eactl sim $short --stop"
     ;;
 
 shell)

@@ -15,13 +15,26 @@
 # Brooks's missing bench max shows up as a real "no target" case rather than a
 # made-up number.
 #
-# Re-runnable: pass --reset to wipe just the rows this command creates (matched
-# by the fixed names below) and rebuild them cleanly.
+# SAFE ON A REAL SCHOOL'S SERVER (spec 04, Phase 5), because it only adds, and
+# recognises its own rows:
+#   - its athletes and sensors are marked simulated; its group, plan and session
+#     have demo-only names;
+#   - it refuses if a real athlete already has one of its names;
+#   - it never makes a login: with no coach in the school it stops ("claim it
+#     first"); the plan belongs to the first administrator;
+#   - it never ends a session it didn't make: another session running → it stops.
+# On a remote server it is run with `eactl seed "School"`. Each invented athlete gets
+# their own simulated sensor; `eactl sim` (simulate_node --seeded) wakes them.
+#
+# Re-runnable: pass --reset to remove just this command's own earlier rows (by the
+# simulated label and the demo names, never by an athlete's name) and rebuild.
 from datetime import timedelta
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
+from django.utils.text import slugify
 
 from django.contrib.auth.models import User
 
@@ -30,11 +43,15 @@ from event_handler.models import (Athlete, AthleteReferenceMax, DailyReport, Exe
                                   TrainingBlock, TrainingBlockExercise, TrainingBlockWorkout,
                                   TrainingGroup, TrainingGroupCoach, TrainingProgram)
 from event_handler.services.planning import generate_schedule, instantiate_block
+from event_handler.services.virtual_racks import release_session_racks
 
-SESSION_LABEL = "Thursday — Lower + Push"
-NODE_ID = "rack_1"
-GROUP_NAME = "Varsity"
-BLOCK_NAME = "Base Strength"
+# Names no real school would use, so the seeder (and --reset) can recognise its own
+# group, plan and session without guessing (spec 04, Phase 5). A real school very
+# likely has a "Varsity" group.
+SESSION_LABEL = "Demo session — Lower + Push"
+NODE_ID = "rack_1"          # a gym-style sensor on rack 1, for a local install's demo
+GROUP_NAME = "Demo Squad"
+BLOCK_NAME = "Demo Strength Block"
 # A day INSIDE a block is timeless — it gets scheduled onto whatever date the
 # cadence lands on, so naming it after a weekday reads as a contradiction the
 # moment the calendar puts "Thursday" on a Friday. The SESSION label above is a
@@ -74,65 +91,73 @@ SQUAT = "Back Squat"
 BENCH = "Bench Press"
 
 
+def sensor_id(name):
+    """Each invented athlete's own simulated sensor: "sim-alex-rivera"."""
+    return "sim-" + slugify(name)
+
+
 class Command(BaseCommand):
-    help = "Seed one active (not-yet-ended) session with roster, programs, sets, and maxes."
+    help = ("Seed one live demo session: invented athletes (marked simulated), each with "
+            "their own simulated sensor, a plan, a few finished sets and maxes. Only adds; "
+            "refuses rather than touch real data.")
 
     def add_arguments(self, parser):
         parser.add_argument("--reset", action="store_true",
-                            help="Delete this command's previously seeded rows first, then reseed.")
+                            help="Remove this command's own earlier demo rows first, then reseed.")
 
     @transaction.atomic
     def handle(self, *args, **options):
-        names = list(ATHLETES)
+        # ── checks first: refuse rather than touch anything real ──────────────
+        # (All of this runs in one transaction, so a refusal anywhere leaves
+        # nothing behind.)
+        coach = self._coach()
+        clash = list(Athlete.objects.filter(name__in=ATHLETES, is_simulated=False)
+                     .values_list("name", flat=True))
+        if clash:
+            raise CommandError(
+                f"A real athlete already has a demo name ({', '.join(clash)}). Nothing was "
+                "seeded: demo data never mixes with a real athlete.")
+        foreign = (TrainingSession.objects.filter(started_at__isnull=False, ended_at__isnull=True)
+                   .exclude(pk__in=self._own_sessions()))
+        if foreign.exists():
+            raise CommandError(
+                f"A session is running ({foreign.first().label!r}). End it first: the seeder "
+                "never ends a session it didn't make.")
 
         if options["reset"]:
-            # We clear by the fixed names/ids this seed owns, so real data is
-            # left alone.
-            #
-            # Order matters, and BOTH of these are PROTECT on purpose: a Set is
-            # the only permanent record that an athlete actually lifted, and a
-            # DailyReport is the frozen history of a finished day. Neither may
-            # be taken out silently by deleting a session. So the seeder — which
-            # is allowed to destroy its own demo data — has to say plainly that
-            # it is removing them.
-            #
-            # The report side only bites once a day has actually been ENDED, so
-            # it went unnoticed until someone ended one in the browser.
-            Set.objects.filter(session__label=SESSION_LABEL).delete()
-            DailyReport.objects.filter(session__label=SESSION_LABEL).delete()
-            TrainingSession.objects.filter(label=SESSION_LABEL).delete()
-            AthleteReferenceMax.objects.filter(athlete__name__in=names).delete()
-            TrainingProgram.objects.filter(training_group__name=GROUP_NAME).delete()
-            TrainingBlock.objects.filter(name=BLOCK_NAME).delete()
-            TrainingGroup.objects.filter(name=GROUP_NAME).delete()
-            Athlete.objects.filter(name__in=names).delete()
-            Node.objects.filter(node_id=NODE_ID).delete()
-            self.stdout.write("Reset: cleared previously seeded rows.")
+            self._reset()
 
-        # A sensor node linked to rack 1, so the simulator + broadcasts have a
-        # rack to talk about later in Phase 10/11.
+        # ── the rows (only ever added, or reused if they're already ours) ─────
         node, _ = Node.objects.get_or_create(
-            node_id=NODE_ID, defaults={"rack_number": 1, "mount_type": Node.MOUNT_BAR})
+            node_id=NODE_ID, defaults={"rack_number": 1, "mount_type": Node.MOUNT_BAR,
+                                       "is_simulated": True})
 
-        # The two movements, in the catalog. Everything below links to these.
         squat, _ = Exercise.objects.get_or_create(name=SQUAT)
         bench, _ = Exercise.objects.get_or_create(name=BENCH)
 
-        # A coach to own the group and the template.
-        coach = User.objects.filter(is_staff=True).first() or User.objects.first()
-        if coach is None:
-            coach = User.objects.create_user(username="coach", password="coach")
-
-        # Athletes, and the group they all train with.
-        athletes = {name: Athlete.objects.get_or_create(name=name)[0] for name in ATHLETES}
+        # Invented athletes, marked simulated: that label is how the seeder (and
+        # --reset) recognises its own rows, never by name alone.
+        athletes = {name: Athlete.objects.get_or_create(name=name, is_simulated=True)[0]
+                    for name in ATHLETES}
         # Wristband tags must survive re-seeding: get_or_create keeps an existing
         # athlete, so only assign when the row has none. (A coach may have
-        # retagged someone by hand; never clobber that.)
+        # retagged someone by hand; never clobber that.) And never take a tag a
+        # real athlete already has.
         for name, tag in NFC_TAG_BY_ATHLETE.items():
             athlete = athletes.get(name)
-            if athlete is not None and not athlete.nfc_tag_id:
+            if (athlete is not None and not athlete.nfc_tag_id
+                    and not Athlete.objects.filter(nfc_tag_id=tag).exists()):
                 athlete.nfc_tag_id = tag
                 athlete.save(update_fields=["nfc_tag_id"])
+
+        # Each invented athlete owns one simulated sensor (spec 04, Phase 5). When
+        # they join a session online it goes on their own rack; `eactl sim` (the
+        # simulator with --seeded) makes them send reps. Marked simulated too.
+        for athlete in athletes.values():
+            Node.objects.get_or_create(
+                node_id=sensor_id(athlete.name),
+                defaults={"owner": athlete, "is_simulated": True, "mount_type": Node.MOUNT_BAR})
+
         group, _ = TrainingGroup.objects.get_or_create(name=GROUP_NAME)
         # Staff are a join table now, not a field — a group can have several.
         TrainingGroupCoach.objects.get_or_create(
@@ -144,24 +169,14 @@ class Command(BaseCommand):
         # The template, written once — then deployed for the group. Deploying
         # copies the rows down, which is why editing the template later can't
         # rewrite what this group already trained.
-        # Cadence and duration are set so the demo block actually SCHEDULES.
-        # They were both blank before P14, which was harmless while nothing read
-        # them — now it would mean a deployed program with an empty calendar and
-        # no obvious reason why.
         block, _ = TrainingBlock.objects.get_or_create(name=BLOCK_NAME, coach=coach)
-        # Set rather than passed as `defaults`: defaults only apply when the row
-        # is CREATED, so on any database that already held this block from before
-        # P14 the cadence would have stayed blank and the demo would show a
-        # deployed program with an empty calendar and no obvious reason why. A
-        # seeder should converge on the state it promises, not depend on running
-        # first.
+        # Set rather than passed as `defaults`, so a block from an earlier run
+        # converges on the cadence this promises; an empty cadence would show a
+        # deployed program with an empty calendar and no obvious reason why.
         if not block.cadence_days_of_week or not block.duration_weeks:
             block.cadence_days_of_week = "Mon,Wed,Fri"
             block.duration_weeks = 4
             block.save(update_fields=["cadence_days_of_week", "duration_weeks"])
-        # Same convergence problem as the cadence above: a block from an earlier
-        # run keeps its day names, so renaming WORKOUT_NAME here would never reach
-        # an existing demo database. Day 1 is the one this seeder owns.
         block.workouts.filter(position=1).exclude(name=WORKOUT_NAME).update(name=WORKOUT_NAME)
         if not block.workouts.exists():
             workout = TrainingBlockWorkout.objects.create(
@@ -174,68 +189,45 @@ class Command(BaseCommand):
                     target_percent=row["percent"],
                     velocity_zone_min=row["zone_min"], velocity_zone_max=row["zone_max"])
 
-        # localdate(), not now().date(): a calendar date should be the date in the
-        # gym, not in UTC. Identical while TIME_ZONE is UTC, and wrong by a day
-        # every evening the moment anyone sets a real one. room_state.py already
-        # uses localdate() for the same reason.
-        # Reuse this group's existing deployment instead of adding another. Every
-        # run used to create a fresh program, which was invisible before P14 and
-        # is not any more: each program brings its own calendar, so three reseeds
-        # showed three overlapping slots on every training day. The seeder should
-        # describe one gym, not a pile of history.
+        # Reuse this group's existing deployment instead of adding another: each
+        # program brings its own calendar, so reseeds would stack overlapping slots.
         program = (TrainingProgram.objects
                    .filter(training_group=group, training_block=block)
                    .order_by("id").first())
         if program is None:
             program = instantiate_block(block, group, start_date=timezone.localdate())
         else:
-            # A program deployed before P14 has no calendar, and reusing it would
-            # leave the demo with a schedule-shaped hole. generate_schedule is
-            # idempotent (one slot per program per day), so calling it on an
-            # already-scheduled program is a no-op rather than a duplicate.
-            generate_schedule(program, block)
-        # And converge the PROGRAM's own copy of the day name. Renaming the block
-        # deliberately does NOT rename a deployed program's days — that
-        # independence is the point of snapshot-copying — so a demo database keeps
-        # showing the old name on its calendar until this says otherwise.
+            generate_schedule(program, block)   # idempotent: one slot per day
         program.workouts.filter(position=1).exclude(name=WORKOUT_NAME).update(name=WORKOUT_NAME)
 
-        # Close anything still open before opening a new day. Re-running the
-        # seeder used to stack another open session every time, which is exactly
-        # how the demo database ended up with four of them and made "End training
-        # day" look broken (canon D18) — ending the top one just promoted the
-        # next. The API now refuses a second open session; the seeder writes rows
-        # directly, so it has to hold the same rule itself.
-        closed = TrainingSession.objects.filter(ended_at__isnull=True).update(
-            ended_at=timezone.now())
+        # Only one day may be open at a time (canon D18). The seeder replaces its
+        # OWN earlier demo day; anything else running was refused above.
+        own_open = TrainingSession.objects.filter(
+            pk__in=self._own_sessions(), ended_at__isnull=True)
+        for old in own_open:
+            release_session_racks(old)
+        closed = own_open.update(ended_at=timezone.now())
         if closed:
-            self.stdout.write(f"  closed {closed} session(s) that were still open")
+            self.stdout.write(f"  ended the earlier demo session ({closed})")
 
         # The live session, roster = all four athletes.
-        # started_at is explicit since P14 — a session can now exist unstarted,
-        # and the whole point of this seeder is a day that is actually running.
-        session = TrainingSession.objects.create(label=SESSION_LABEL,
-                                                 started_at=timezone.now())
+        session = TrainingSession.objects.create(label=SESSION_LABEL, started_at=timezone.now())
         session.athletes.set(athletes.values())
 
         # Put the group ON the session, pointed at the day's workout. Without
-        # this the session has a roster but nobody has anything to lift — the
-        # session is where the plan and the people actually meet.
+        # this the session has a roster but nobody has anything to lift.
         SessionParticipation.objects.create(
             session=session, training_program=program,
             training_program_workout=program.workouts.order_by("position").first())
 
         # Give TWO of the four a finished set already, so has_data is non-trivial
-        # (Alex + Jordan read as has_data=true; Casey + Riley as false → their
-        # next set would NOT be a makeup, the first two's WOULD).
+        # (Alex + Jordan read as has_data=true; Casey + Riley as false).
         self._finish_a_set(session, node, athletes[ALEX], squat, 1, 205.0)
         self._finish_a_set(session, node, athletes[JORDAN], squat, 1, 255.0)
 
-        # Recorded reference maxes (AthleteReferenceMax). Deliberately shaped to
-        # exercise the endpoint:
+        # Recorded reference maxes, shaped to exercise the endpoint:
         #  - Alex gets an OLD squat ref then a NEWER one → endpoint must return 315.
-        #  - Most athletes have both lifts; Riley has NO bench ref → the rack
-        #    screen's inline "set your max" prompt has a real gap to fill.
+        #  - Riley has NO bench ref → the "set your max" prompt has a gap to fill.
         self._record_max(athletes[ALEX],   squat, 300.0, days_ago=40)
         self._record_max(athletes[ALEX],   squat, 315.0, days_ago=3)
         self._record_max(athletes[ALEX],   bench, 205.0, days_ago=5)
@@ -244,12 +236,55 @@ class Command(BaseCommand):
         self._record_max(athletes[CASEY],  squat, 245.0, days_ago=10)
         self._record_max(athletes[CASEY],  bench, 175.0, days_ago=10)
         self._record_max(athletes[RILEY],  squat, 275.0, days_ago=14)
-        # Riley Brooks — Bench Press: intentionally left with no max on file.
 
         self.stdout.write(self.style.SUCCESS(
-            f"Seeded active session '{session.label}' (id={session.id}) with "
-            f"{len(athletes)} athletes in '{GROUP_NAME}' training '{program.name}', "
-            f"2 completed sets, and maxes."))
+            f"Seeded demo session '{session.label}' (id={session.id}) with "
+            f"{len(athletes)} invented athletes in '{GROUP_NAME}', each with their own "
+            f"simulated sensor, 2 finished sets, and maxes."))
+
+    # ── what is ours, and who owns the plan ───────────────────────────────────
+
+    def _coach(self):
+        """The school's first administrator, or else its first coach. The seeder
+        never makes a login: a school with no coach is claimed first (setup code)."""
+        coaches = User.objects.filter(coach_profile__isnull=False, is_active=True)
+        coach = coaches.filter(is_staff=True).order_by("id").first() or coaches.order_by("id").first()
+        if coach is None:
+            raise CommandError(
+                "This school has no coach yet. Claim it first (setup code), then seed it. "
+                "The seeder never makes a login.")
+        return coach
+
+    def _own_sessions(self):
+        """Demo sessions: the demo label, with the demo group taking part."""
+        return (TrainingSession.objects.filter(
+                    label=SESSION_LABEL,
+                    participations__training_program__training_group__name=GROUP_NAME)
+                .values("pk"))
+
+    def _reset(self):
+        """Remove this command's own rows, and nothing else.
+
+        Recognised by the simulated label (athletes, sensors) and the demo-only
+        group, plan and session names, never by an athlete's name. Order matters:
+        a Set and a DailyReport both PROTECT their session, on purpose, so the
+        seeder has to say plainly that it is removing its own.
+        """
+        demo = Athlete.objects.filter(is_simulated=True, name__in=ATHLETES)
+        sessions = TrainingSession.objects.filter(pk__in=self._own_sessions())
+        for session in sessions:
+            release_session_racks(session)
+        Set.objects.filter(session__in=sessions).delete()
+        DailyReport.objects.filter(session__in=sessions).delete()
+        sessions.delete()
+        AthleteReferenceMax.objects.filter(athlete__in=demo).delete()
+        Node.objects.filter(is_simulated=True).filter(
+            Q(owner__in=demo) | Q(node_id=NODE_ID)).delete()
+        TrainingProgram.objects.filter(training_group__name=GROUP_NAME).delete()
+        TrainingBlock.objects.filter(name=BLOCK_NAME).delete()
+        TrainingGroup.objects.filter(name=GROUP_NAME).delete()
+        demo.delete()
+        self.stdout.write("Reset: removed the earlier demo rows.")
 
     def _finish_a_set(self, session, node, athlete, exercise, set_number, weight_lbs):
         """Create one already-completed set with a couple of reps, so the athlete

@@ -159,7 +159,9 @@ services:
     build: ./django
     env_file: .env
     profiles: ["seed"]
-    command: sh -c "python manage.py seed_active_session && python manage.py ensure_demo_coach --i-know-this-is-a-demo-box"
+    # The demo coach first: the seeder never makes a login, and needs a coach to own
+    # the demo plan (spec 04, Phase 5).
+    command: sh -c "python manage.py ensure_demo_coach --i-know-this-is-a-demo-box && python manage.py seed_active_session"
     # No mosquitto: seeding writes rows, it publishes nothing.
     depends_on:
       postgres:
