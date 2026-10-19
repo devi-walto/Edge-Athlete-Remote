@@ -60,6 +60,7 @@ from .permissions import (
 from .roles import role_of
 from . import athlete_logins
 from .services.rack_checkin import record_check_in
+from .services.virtual_racks import end_open_sets_on_rack
 from .serializers import (SetSerializer, SetCompleteSerializer, RackScreenSerializer,
                           AthleteSerializer, TrainingSessionSerializer,
                           NodeSerializer, ExerciseSerializer, TrainingGroupSerializer,
@@ -163,6 +164,12 @@ def _controller_identity(request):
     return values
 
 
+def _caller_athlete_id(request):
+    """The signed-in athlete's record id, or None for anyone else."""
+    athlete = getattr(getattr(request, 'user', None), 'athlete', None)
+    return athlete.pk if athlete is not None else None
+
+
 def _require_controller(request, runtime, now=None):
     now = now or timezone.now()
     identity = _controller_identity(request)
@@ -173,10 +180,18 @@ def _require_controller(request, runtime, now=None):
     token_matches = hmac.compare_digest(
         runtime.controller_token_digest, _token_digest(identity["controller_token"]),
     )
+    if runtime.owner_athlete_id:
+        # An online athlete's own rack has no tablet bolted to it: the holder is
+        # the owner's login, in the same tab, with the same token (spec 04).
+        holder = bool(runtime.owner_athlete_id == _caller_athlete_id(request))
+    else:
+        holder = bool(
+            runtime.controller_screen_id
+            and runtime.controller_screen.device_id == identity["device_id"]
+            and runtime.controller_screen.rack_number == runtime.rack_number
+        )
     holder_matches = bool(
-        runtime.controller_screen_id
-        and runtime.controller_screen.device_id == identity["device_id"]
-        and runtime.controller_screen.rack_number == runtime.rack_number
+        holder
         and runtime.client_instance_id == identity["client_instance_id"]
         and runtime.controller_epoch == identity["controller_epoch"]
         and token_matches
@@ -513,33 +528,9 @@ def _bluetooth_rack_numbers(rack_numbers=None):
     return sorted(query.values_list("rack_number", flat=True))
 
 
-def _end_open_sets_on_rack(rack_number):
-    """End every unfinished set on this rack as a FALSE set.
-
-    PROTECT on Set.session means we never delete; ending is the only legal way to
-    close work, and false is the honest label for work that was started and
-    abandoned. A set is "on this rack" when its node is assigned here — that's
-    the physical truth, and the sensor is what ties a set to a rack.
-
-    The CALLER owns the transaction.
-    """
-    open_sets = Set.objects.select_for_update().filter(
-        ended_at=None,
-        node__rack_number=rack_number,
-    )
-    ended = 0
-    for s in open_sets:
-        s.ended_at = timezone.now()
-        s.is_false_set = True
-        s.reps_completed = 0
-        s.avg_velocity = None
-        s.peak_velocity = None
-        s.save(update_fields=[
-            "ended_at", "is_false_set", "reps_completed",
-            "avg_velocity", "peak_velocity",
-        ])
-        ended += 1
-    return ended
+# Ending a rack's unfinished sets lives in services/virtual_racks.py now, so the
+# end-of-session release can use it too; same function, same name here.
+_end_open_sets_on_rack = end_open_sets_on_rack
 
 
 def _reset_runtime_to_idle(runtime):
@@ -555,7 +546,8 @@ def _reset_runtime_to_idle(runtime):
     runtime.controller_epoch += 1
     runtime.lease_expires_at = None
     runtime.phase = RackRuntime.PHASE_IDLE
-    runtime.selected_athlete = None
+    # An online athlete's own rack never loses them (spec 04): back to idle, still theirs.
+    runtime.selected_athlete = runtime.owner_athlete
     runtime.selected_exercise = None
     runtime.current_set = None
     runtime.rep_count = 0
@@ -1110,6 +1102,10 @@ def rack_state(request, rack_number):
             athlete = None if athlete_id is None else Athlete.objects.filter(id=athlete_id, is_active=True).first()
             if athlete_id is not None and athlete is None:
                 return Response({"code": "athlete_not_found", "detail": "athlete not found"}, status=404)
+            # An online athlete's own rack never loses them, whoever asks (spec 04).
+            if runtime.owner_athlete_id and (athlete is None or athlete.id != runtime.owner_athlete_id):
+                return Response({"code": "owned_rack",
+                                 "detail": "this rack belongs to its athlete"}, status=409)
             session = _active_session()
             if athlete is not None and (session is None or not session.athletes.filter(id=athlete.id).exists()):
                 return Response({
@@ -1219,6 +1215,10 @@ def rack_controller_acquire(request, rack_number):
         }, status=400)
 
     with transaction.atomic():
+        owned = RackRuntime.objects.select_for_update().filter(
+            rack_number=rack_number, owner_athlete__isnull=False).first()
+        if owned is not None:
+            return _acquire_owned_rack(request, owned, client_instance_id, token)
         screen = RackScreen.objects.select_for_update().filter(device_id=device_id).first()
         if screen is None or screen.rack_number != rack_number:
             return Response({
@@ -1298,6 +1298,45 @@ def rack_controller_acquire(request, rack_number):
             "snapshot": _runtime_snapshot(runtime, now),
         }
     return Response(body)
+
+
+def _acquire_owned_rack(request, runtime, client_instance_id, token):
+    """Take control of an online athlete's own rack (spec 04, Phase 2).
+
+    Only its owner may, and nobody else can ever hold it, so there is nothing to
+    contest: the owner's newest tab simply takes over. That is what makes a reload
+    safe. The new tab gets the rack back with its open set still open and running,
+    with no recovery prompt (the gym's recovery ends the set as false, because there
+    a different person might be at the rack; here it can only be the owner). No
+    registered tablet is needed, and neither is a sensor: an athlete without one can
+    still lift. The CALLER holds the transaction; runtime is locked.
+    """
+    if runtime.owner_athlete_id != _caller_athlete_id(request):
+        return Response({"code": "owned_rack", "detail": "this rack belongs to an athlete"}, status=403)
+    now = timezone.now()
+    digest = _token_digest(token)
+    same_tab = bool(
+        runtime.client_instance_id == client_instance_id
+        and hmac.compare_digest(runtime.controller_token_digest, digest)
+        and runtime.lease_expires_at and runtime.lease_expires_at > now
+    )
+    if not same_tab:
+        runtime.controller_screen = None
+        runtime.client_instance_id = client_instance_id
+        runtime.controller_token_digest = digest
+        runtime.controller_epoch += 1
+        runtime.state_version += 1
+    runtime.lease_expires_at = now + CONTROLLER_LEASE
+    runtime.save()
+    if not same_tab:
+        MonitoringEvent.objects.create(reason="controller_acquired")
+    return Response({
+        "controller_epoch": runtime.controller_epoch,
+        "lease_expires_at": runtime.lease_expires_at,
+        "state_version": runtime.state_version,
+        "server_time": now,
+        "snapshot": _runtime_snapshot(runtime, now),
+    })
 
 
 @api_view(["POST"])
@@ -1421,6 +1460,10 @@ def rack_checkin(request, rack_number):
         athlete = Athlete.objects.filter(id=request.data.get("athlete"), is_active=True).first()
         if athlete is None:
             return Response({"error": "athlete not found"}, status=404)
+        # An online athlete's own rack: nobody else can be checked in on it (spec 04).
+        if runtime.owner_athlete_id and athlete.id != runtime.owner_athlete_id:
+            return Response({"code": "owned_rack",
+                             "detail": "this rack belongs to its athlete"}, status=409)
         if not session.athletes.filter(id=athlete.id).exists():
             return Response({"error": "athlete is not in the active session"}, status=404)
         if runtime.selected_athlete_id == athlete.id:

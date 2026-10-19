@@ -134,13 +134,38 @@ def _asks_about_own_athlete(request, view):
 
 
 def _owns_the_rack(request, view):
-    """Is this athlete the one a hosted rack was made for?
+    """Is this athlete using their OWN rack, for themselves? (spec 04, Phase 2)
 
-    Always False until spec 04 records which athlete a hosted rack belongs to
-    (`RackRuntime.owner_athlete`). Refusing is the safe answer meanwhile: only a
-    coach gets through on these routes when hosted.
+    Online, an athlete may use the rack routes only for the rack made for them when
+    they joined a session (`RackRuntime.owner_athlete`), may check in only
+    themselves, and may start or finish a set only for themselves. Anything else is
+    refused; a coach is let through earlier and never reaches this.
     """
-    return False
+    from .models import RackRuntime, Set   # here, not at the top: models import this file's neighbours
+
+    athlete = getattr(request.user, 'athlete', None)
+    if athlete is None:
+        return False
+    kwargs = getattr(request, 'parser_context', {}).get('kwargs', {}) or {}
+    data = request.data if isinstance(request.data, dict) else {}
+
+    def is_me(value):
+        return value is None or str(value) == str(athlete.pk)
+
+    def owns(rack_number):
+        return RackRuntime.objects.filter(rack_number=rack_number, owner_athlete=athlete).exists()
+
+    if 'rack_number' in kwargs:
+        # Their own rack, and only ever checking in themselves on it.
+        return owns(kwargs['rack_number']) and is_me(data.get('athlete'))
+    if 'set_id' in kwargs:
+        # Finishing a set: only one of their own.
+        return Set.objects.filter(pk=kwargs['set_id'], athlete=athlete).exists()
+    # Starting a set: for themselves, and on their own rack if it names one.
+    if data.get('athlete') is None or not is_me(data.get('athlete')):
+        return False
+    rack_number = data.get('rack_number')
+    return rack_number is None or owns(rack_number)
 
 
 class OpenOnLocal(BasePermission):
