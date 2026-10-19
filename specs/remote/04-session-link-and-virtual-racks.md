@@ -336,6 +336,12 @@ their login.
 - `/` online: an athlete → `/athlete`, anyone else → `/coach`; a saved device role is
   ignored; nothing shows until the deployment is known.
 
+**Browser check passed (Devin, 2026-10-19, the remote-mode copy on his Mac):** the session
+link signed out → sign in → straight back to the athlete's own rack, named after them
+with no list of names; a set runs with a simulated sensor; a reload mid-set keeps the
+rack and the open set; the coach ending the session shows "Session ended"; `/` lands on
+`/athlete` or `/coach`.
+
 **Left for later, on purpose:**
 - **R4's plan list and R10's summary** need athlete routes that spec 10 builds; for now
   those pages say what happened and what to do.
