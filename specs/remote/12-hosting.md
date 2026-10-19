@@ -389,9 +389,27 @@ database dropped `WITH (FORCE)`, the request cancelled, then the namespace with 
   `main` forward to match `SprintBranch`** (a fast-forward only: everything on
   `SprintBranch` already passed CI in a pull request). Devin **tags the commits on `main`**
   he wants released. This is the only way `main` moves.
-- **A tag must be on `main`.** The release workflow checks it and refuses otherwise.
-  (`v0.3.1` was tagged on `feature-hosting` for the Oct 16 demo, before this check
-  existed.)
+- **A tag releases once it is on `main`** (Devin, 2026-10-19; was "refuses otherwise").
+  `release.yml` starts on a tag **and** when `main` moves:
+  - a tag pushed on a commit already on `main` releases now; one that isn't on `main`
+    yet finishes green and waits ("will release when it reaches main");
+  - when `main` moves, every plain version tag (`v1.2.3`) that just arrived is
+    **built**, so each can be rolled back to, and only the **newest is deployed**;
+  - test tags (`v0.6.0-test.1`) never release by themselves, because they sort after
+    the version they test; one pushed on a commit already on `main` still releases;
+  - one release at a time (`concurrency: release`), each built and deployed from
+    exactly its tag.
+
+  So the habit is: merge into `SprintBranch` (with the normal Merge button, which keeps
+  the tagged commit), tag the merge, and it releases when it reaches `main`. The rule is
+  `scripts/remote/release-version.sh`, tested by `scripts/remote/tests/release-version.sh`
+  in CI and before every release. It works because `promote-main.yml` pushes with a
+  deploy key, whose pushes start workflows; a push made with a run's own login can't.
+  (`v0.3.1` was tagged on `feature-hosting` for the Oct 16 demo, before any check existed.)
+- **Only the 3-day job can move `main`** (Devin, 2026-10-18). The "protect main" ruleset
+  restricts updates to deploy keys; `promote-main.yml` pushes with the write deploy key
+  `promote-main` (secret `PROMOTE_MAIN_KEY`). A pull request into `main` can't be merged,
+  by anyone. Steps in `scripts/remote/README.md`.
 - **Rolling back checks the database first** (Devin, 2026-10-16). Before moving a school
   to an **older** release, `eactl update`:
   1. asks the school's database which migrations it has applied (`django_migrations`);
@@ -415,8 +433,9 @@ database dropped `WITH (FORCE)`, the request cancelled, then the namespace with 
   it automatically**, so a deliberate rollback isn't undone by the next deploy. A held
   canary is skipped too; the other schools still update. Updating a held school by name
   still works. `eactl list` shows which schools are held.
-- **A deploy only happens on a tag.** The 3-day job only moves `main`; it never deploys.
-  A school already on the tagged release isn't restarted (`already on vX`).
+- **A deploy only happens for a tag.** Moving `main` deploys only when a version tag came
+  with it; the 3-day job itself never deploys. A school already on the release isn't
+  restarted (`already on vX`).
 
 **Done when:**
 

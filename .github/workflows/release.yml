@@ -1,76 +1,148 @@
-# release.yml — turn a version tag on main into the app's images, then deploy them.
+# release.yml — release a version once its tag is on main: build its images, then deploy it.
 #
 # Why this file exists: Kubernetes never builds images; it runs images that already
-# exist in a registry. When Devin tags a release on main (v0.4.0, v0.4.1, ...):
-#   1. images  (GitHub's machines): build the django and react images from the SAME
-#      Dockerfiles a local install uses, name them with the tag, and store them
-#      privately in GitHub's container registry (ghcr.io).
-#   2. deploy  (the runner on the server): move every school to that release with
-#      eactl, the demo school first (spec 12, Phase 3).
+# exist in a registry. A version (v0.6.0, v0.6.1, ...) is released only once its
+# tagged commit is on main, because main holds only work that already passed CI in
+# a pull request and was moved forward by promote-main.yml.
 #
-# This is a GitHub Actions file: GitHub reads it, not Docker or k3s. Only a tag
-# starts it, and a tag that isn't on main is refused.
+# It starts in two ways (spec 12, Phase 3):
+#   - A TAG is pushed. If its commit is already on main, that version releases now.
+#     If not, this run finishes green and does nothing: the tag waits.
+#   - MAIN MOVES (promote-main.yml, every 3 days or by hand). Every plain version tag
+#     that just arrived on main is built, and the newest is deployed. So a tag can be
+#     placed on SprintBranch right after a merge, and it releases when it reaches main.
+#
+# Three jobs, in order:
+#   1. decide  (GitHub's machines): which versions to build, and which one to deploy.
+#              The rule is scripts/remote/release-version.sh, tested on its own.
+#   2. images  (GitHub's machines): for each version, build the django and react images
+#              from the SAME Dockerfiles a local install uses, from exactly that tag,
+#              and store them privately in GitHub's container registry (ghcr.io).
+#              Every version that arrived is built, so each can be rolled back to.
+#   3. deploy  (the runner on the server): move every school to the newest one with
+#              eactl, the demo school first.
+#
+# This is a GitHub Actions file: GitHub reads it, not Docker or k3s.
 
 name: Release images
 
 on:
   push:
     tags: ['v*.*.*']
+    # A push to main made by promote-main.yml's deploy key starts this; a push made
+    # with a run's own login (GITHUB_TOKEN) never would, which is why that job uses a key.
+    branches: [main]
 
 permissions:
   contents: read
   packages: write   # lets this run store images in the registry, and nothing more
 
+# One release at a time, in the order they started, so an older version can never
+# finish last and move schools backwards. (GitHub keeps one waiting in line; if a
+# third arrives while one waits, the waiting one is replaced by the newer one.)
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
-  images:
-    name: build and store the images
+  decide:
+    name: which versions to release
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      REGISTRY: ghcr.io/devi-walto
-      VERSION: ${{ github.ref_name }}   # the tag that started this run, e.g. v0.4.0
+    timeout-minutes: 5
+    outputs:
+      versions: ${{ steps.pick.outputs.versions }}   # e.g. ["v0.6.0","v0.6.1"], or []
+      deploy: ${{ steps.pick.outputs.deploy }}       # e.g. v0.6.1, or empty: nothing to do
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0   # the whole history, to check where the tag is
+          fetch-depth: 0   # the whole history and every tag, to see what is on main
 
-      # Releases come from main only. main holds work that already passed CI in a
-      # pull request (promote-main.yml moves it forward); a tag anywhere else would
-      # release something that never went through that. So refuse it.
-      - name: Check the tag is on main
+      # The rule's own test first: if it fails, nothing is released.
+      - name: Check the release rule
+        run: ./scripts/remote/tests/release-version.sh
+
+      - name: Pick the versions
+        id: pick
+        env:
+          BEFORE: ${{ github.event.before }}   # main before it moved (main pushes only)
         run: |
-          git fetch origin main
-          if git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
-            echo "$VERSION is on main."
+          git fetch --force --tags origin main
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            list="$(./scripts/remote/release-version.sh tag "$GITHUB_REF_NAME" origin/main)"
+            [ -n "$list" ] || echo "::notice::$GITHUB_REF_NAME is not on main yet. It will release when it reaches main."
           else
-            echo "::error::$VERSION is not on main. Tag a commit on main instead."
-            exit 1
+            list="$(./scripts/remote/release-version.sh moved "$BEFORE" "$GITHUB_SHA")"
+            [ -n "$list" ] || echo "::notice::main moved, but no new version tag came with it. Nothing to release."
           fi
+          # Nothing to release: leave both outputs unset, and the next two jobs skip.
+          [ -n "$list" ] || exit 0
+          echo "versions=$(printf '%s\n' "$list" | jq -R -s -c 'split("\n") | map(select(length > 0))')" >> "$GITHUB_OUTPUT"
+          echo "deploy=$(printf '%s\n' "$list" | tail -n 1)" >> "$GITHUB_OUTPUT"
+          echo "Build: ${list//$'\n'/ }"
+          echo "Deploy: $(printf '%s\n' "$list" | tail -n 1)"
+
+  images:
+    name: build and store ${{ matrix.version }}
+    needs: decide
+    # success() keeps GitHub's usual "only if the jobs before succeeded" check, which
+    # a job's own if: would otherwise replace.
+    if: success() && needs.decide.outputs.deploy != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      # One machine per version, side by side.
+      matrix:
+        # (The fallback only stops GitHub refusing an empty list; the if: above has
+        # already skipped this job when there is nothing to release.)
+        version: ${{ fromJSON(needs.decide.outputs.versions || '["none"]') }}
+    env:
+      REGISTRY: ghcr.io/devi-walto
+      VERSION: ${{ matrix.version }}
+    steps:
+      # Exactly the tagged commit, never newer code that happens to be on main.
+      - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ matrix.version }}
 
       # Sign in to the registry as this workflow run. GitHub makes the token for this
       # run only and it expires when the run ends; nothing is stored in the repo.
       - name: Sign in to the registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
+      # A version already in the registry (a run started again) is not built twice.
+      - name: Already stored?
+        id: stored
+        run: |
+          if docker manifest inspect "$REGISTRY/edge-athlete-django:$VERSION" >/dev/null 2>&1 \
+             && docker manifest inspect "$REGISTRY/edge-athlete-react:$VERSION" >/dev/null 2>&1; then
+            echo "$VERSION is already in the registry. Not building it again."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
       # --build-arg stamps the version inside the image, so the running app can say
       # which release it is at /api/system/info/.
       - name: Build the django image
+        if: steps.stored.outputs.skip != 'true'
         run: docker build --build-arg EA_VERSION="$VERSION" -t "$REGISTRY/edge-athlete-django:$VERSION" ./django
 
       - name: Build the react image
+        if: steps.stored.outputs.skip != 'true'
         run: docker build -t "$REGISTRY/edge-athlete-react:$VERSION" ./react
 
       - name: Check the django image reports its own version
+        if: steps.stored.outputs.skip != 'true'
         run: test "$(docker run --rm "$REGISTRY/edge-athlete-django:$VERSION" printenv EA_VERSION)" = "$VERSION"
 
       - name: Store both images in the registry
+        if: steps.stored.outputs.skip != 'true'
         run: |
           docker push "$REGISTRY/edge-athlete-django:$VERSION"
           docker push "$REGISTRY/edge-athlete-react:$VERSION"
 
   deploy:
-    name: move every school to this release
-    needs: images            # only once both images are stored
+    name: move every school to ${{ needs.decide.outputs.deploy }}
+    needs: [decide, images]   # only once every version's images are stored
+    if: success() && needs.decide.outputs.deploy != ''
     # The runner on the server, which only does deploys (its label, given when it
     # was registered). It reaches out to GitHub for this job; nothing is opened
     # inward. Its cluster login can update schools and nothing else
@@ -78,15 +150,18 @@ jobs:
     runs-on: [self-hosted, ea-deploy]
     timeout-minutes: 30
     env:
-      VERSION: ${{ github.ref_name }}
+      VERSION: ${{ needs.decide.outputs.deploy }}
     steps:
       # This release's own eactl and templates, so a release deploys exactly what
       # it contains.
       - uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ needs.decide.outputs.deploy }}
 
-      # The demo school (labelled ea/canary=true) goes first; if it fails, no other
-      # school is touched. --yes: no questions; a release that would need database
-      # changes undone stops here and waits for a person.
+      # The demo school (labelled ea/canary=true) goes first; if it fails, it is put
+      # back as it was and no other school is touched. Held schools are skipped.
+      # --yes: no questions; a release that would need database changes undone
+      # stops here and waits for a person.
       - name: Update every school
         run: ./scripts/remote/eactl.sh update --all --version "$VERSION" --yes
 

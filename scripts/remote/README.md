@@ -119,9 +119,11 @@ upgraded without losing them.
 
 ## The deploy runner (automatic deploys on a version tag)
 
-Once set up, tagging a release on `main` builds its images on GitHub's machines, then
-a **runner on this server** moves every school to it (`eactl update --all --version
-<tag> --yes`), the demo school first. The runner reaches out to GitHub for its jobs;
+Once set up, a version releases when its tag is on `main`: tag the merge on
+`SprintBranch`, and when "Move main forward" brings it to `main` (every 3 days, or the
+button) its images are built on GitHub's machines, then a **runner on this server**
+moves every school to it (`eactl update --all --version <tag> --yes`), the demo school
+first. A tag on a commit already on `main` releases straight away. The runner reaches out to GitHub for its jobs;
 nothing is opened inward. It runs as its own user, with a cluster login that can
 update schools and nothing else (`k8s/cluster/deployer.yaml`, applied by
 `eactl apply-cluster`). Set up once per server:
