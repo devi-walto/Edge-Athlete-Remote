@@ -159,6 +159,27 @@ else
     git -C "$PROJECT_DIR" config --unset core.sshCommand 2>/dev/null || true
 fi
 
+# Keep this copy at the newest release from now on, without anyone re-running this
+# script: an hourly timer runs update-clone.sh (see that file). The script is
+# copied to /usr/local/sbin, so root runs this copy, not the one it updates.
+echo "[2b] the hourly update of this copy..."
+mkdir -p /etc/edgeathlete
+printf 'EDGE_BRANCH=%s\n' "$EDGE_BRANCH" > /etc/edgeathlete/clone.env
+install -m 755 -o root -g root "$PROJECT_DIR/scripts/remote/update-clone.sh" \
+    /usr/local/sbin/edgeathlete-update-clone
+if command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]; then
+    install -m 644 -o root -g root "$PROJECT_DIR"/scripts/remote/systemd/edgeathlete-update-clone.* \
+        /etc/systemd/system/
+    systemctl daemon-reload
+    systemctl enable --now edgeathlete-update-clone.timer >/dev/null
+    echo "    on: checks hourly for a newer release (systemctl list-timers edgeathlete-*)"
+else
+    echo "    [i] no systemd here: run 'sudo edgeathlete-update-clone' to update by hand"
+fi
+if [ "$EDGE_BRANCH" != main ]; then
+    echo "    [i] following $EDGE_BRANCH: the hourly update leaves this copy alone"
+fi
+
 # Hand off to `eactl init` as YOU, not root: it uses your copy of the cluster key
 # and asks for sudo itself where it needs it. SUDO_USER is who ran `sudo`.
 echo "[3] handing off to eactl init..."

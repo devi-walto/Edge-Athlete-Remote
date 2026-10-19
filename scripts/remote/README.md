@@ -8,6 +8,7 @@ box's scripts are in `../basestation/` and `../rack-screen/`; nothing here touch
 |---|---|
 | `bootstrap.sh` | copied to a new server and run once; gets the code there and hands off to `eactl init`. Re-running it is the update |
 | `eactl.sh` | the server's commands (`eactl new`, `eactl list`, …). Runs **on** the server: SSH in, then type `eactl` |
+| `update-clone.sh` + `systemd/` | an hourly timer (installed by `bootstrap.sh`) that moves the server's copy of the code to the newest released version, so the `eactl` you type matches what the schools run. Re-running `bootstrap.sh` is only needed for a new machine or new settings. `sudo edgeathlete-update-clone` updates now |
 
 ## Before you start: the machine
 

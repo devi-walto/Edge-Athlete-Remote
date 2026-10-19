@@ -115,3 +115,5 @@ jobs:
       - uses: actions/checkout@v7
       - name: Check which versions a release would pick
         run: ./scripts/remote/tests/release-version.sh
+      - name: Check the server's copy follows only released versions
+        run: ./scripts/remote/tests/update-clone.sh
