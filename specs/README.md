@@ -120,6 +120,7 @@ then. Business plans (pricing, billing) are kept out of this repository.
 |---|---|---|
 | **The registry of schools and the operator's console** | Two schools (real and demo) are manageable with `eactl list`; a console is for many | [spec 13](later/13-registry-and-console.md) |
 | An installation's name on the sign-in card (reads "Coach workspace") | Read from the registry | spec 13 |
+| **Usage history, a cloud cost estimate, and when to scale** | Not in the Definition of Done. Phase 0 (recording) can start any time, because history can't be collected later | [spec 15](later/15-usage-and-cost.md) |
 | Moving a database between a gym box and hosted, both directions | Not in the Definition of Done; "if there is time" in spec 12 | spec 12, `docs/remote/databases.md` |
 | Browser logins to the broker | Online it is open to read, accepted while the data is test data; needed before a real program's athletes use it | spec 12, Phase 4 and Non-goals |
 | Un-archiving an athlete from a screen | The server rule exists (spec 02); the button belongs with archived athletes in Analytics | spec 09 |
