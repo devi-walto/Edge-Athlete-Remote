@@ -90,6 +90,7 @@ The Django suite had 447 tests on 2026-10-06 and **491 after spec 01** (2026-10-
 | 03 | [Athlete login links](remote/03-athlete-login-links.md) | 4 | 02, 05 | **Done 2026-10-18** on `feature-login_links` (Phases 0–4, browser-checked). Coach login codes moved to spec 11, Phase 4 |
 | 04 | [Session link and virtual racks](remote/04-session-link-and-virtual-racks.md) | 3, 4, 5 | 02, 03, 05 | Built 2026-10-19: Phases 0–3 and 5 (demo data, `eactl seed` / `eactl sim`). Phase 4 (coach's side) moved to the end of the UI redesign; Phase 6 (rehearsal) skipped |
 | 10 | [The athlete's home page](remote/10-athlete-pages.md) | 4 | 03, 04, 05 | Written. Phase 4 (opening a past session) is built last, if time |
+| 14 | [Sensors online](remote/14-sensors-online.md) | 6, 7 | 03, 04, 12 | Written 2026-10-19. Shared one-time secrets (Phase 0), the broker's sensors door on 443, claim codes, then firmware (needs the sensor) |
 | 06 | [Design rules for the coach interface](ui/06-design-rules.md) | 11 | — | Written |
 | 07 | [Planning](ui/07-planning.md) | 11 | 06, 01 | Written |
 | 08 | [Session](ui/08-session.md) | 11 | 06 | Written |
@@ -105,9 +106,7 @@ overlaps are called out inside each spec.
 
 ### Not specced yet
 
-| Work | Form item | Why not yet |
-|---|---|---|
-| Sensors over the internet, and MQTT over TLS on 8883 | 6 | Design is in `docs/remote/sensors.md`; hardware chosen (XIAO ESP32-C6 + BNO085); firmware not started. The firmware rewrite also moves reps to QoS 1 (ESP-MQTT) and the rack screen ignores repeated reps: "Getting every rep through" in that doc |
+Nothing in the Definition of Done. The last piece, sensors, became spec 14 on 2026-10-19.
 
 Moved into [spec 12](remote/12-hosting.md) on 2026-10-14: hosting on k3s, the demo
 installation, and (as "if there is time") moving a database between a gym box and hosted.

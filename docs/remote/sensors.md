@@ -38,10 +38,10 @@ athlete**, because every athlete's home Wi-Fi is different.
 | | Gym box (unchanged) | Hosted |
 |---|---|---|
 | Broker address | the box's IP | a **hostname** — the installation's own address |
-| Transport | plain MQTT, 1883 | **MQTT over TLS, 8883** |
+| Transport | plain MQTT, 1883 | **MQTT over WebSockets with TLS, on 443** (`wss://<school>/sensors`; was 8883 until 2026-10-19) |
 | Who may connect | anyone on the box's Wi-Fi | **one username and password per sensor** |
 | What a sensor may publish | any topic | **only its own** `edgeathlete/node/<its id>/…` |
-| Registering a sensor | open route | **requires a coach or athlete login** |
+| Registering a sensor | open route | **claimed with a one-time code from the athlete's page** (spec 14) |
 | A sensor belongs to | a rack | **an athlete** |
 
 **A sensor belongs to an athlete, not a rack**, once it leaves the gym. When the
@@ -230,9 +230,11 @@ publishing and maintaining an app to do one job the captive portal does from a w
 means a rebuild for every athlete and every change of Wi-Fi — and settings stored on
 the device cost about the same to build now as compiled-in ones.
 
-**MQTT over WebSockets from the sensor**, to share one door with the browsers. More
-code and memory on the device, to save one port on the cluster. Browsers need
-WebSockets; sensors do not.
+**MQTT over WebSockets from the sensor** (rejected 2026-10-08, **reversed 2026-10-19**,
+spec 14). It was rejected as more code and memory on the device to save one port. Once
+the firmware moved to ESP-MQTT, WebSockets became one setting, and 443 needs no router
+change and gets through networks that block other ports. Sensors still get their own
+door, not the browsers' listen-only one.
 
 **One shared credential for all sensors.** Simpler to build, and one extracted sensor
 would then speak for every sensor. Per-sensor credentials mean a lost sensor is revoked
