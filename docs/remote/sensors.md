@@ -39,7 +39,7 @@ athlete**, because every athlete's home Wi-Fi is different.
 |---|---|---|
 | Broker address | the box's IP | a **hostname** — the installation's own address |
 | Transport | plain MQTT, 1883 | **MQTT over WebSockets with TLS, on 443** (`wss://<school>/sensors`; was 8883 until 2026-10-19) |
-| Who may connect | anyone on the box's Wi-Fi | **one username and password per sensor** |
+| Who may connect | anyone on the box's Wi-Fi | **each sensor with its own ID and sensor token** |
 | What a sensor may publish | any topic | **only its own** `edgeathlete/node/<its id>/…` |
 | Registering a sensor | open route | **claimed with a one-time code from the athlete's page** (spec 14) |
 | A sensor belongs to | a rack | **an athlete** |
@@ -47,6 +47,121 @@ athlete**, because every athlete's home Wi-Fi is different.
 **A sensor belongs to an athlete, not a rack**, once it leaves the gym. When the
 athlete joins a session, their sensor is pointed at the rack slot the server gave them
 ({doc}`access`). The reps, sets and topics downstream do not change.
+
+### Sensors use the web's own port, 443, not 8883
+
+Decided 2026-10-19 (spec 14, `specs/remote/14-sensors-online.md` in the repo).
+
+**What forced it.** The first plan gave sensors the usual port for encrypted MQTT,
+8883, and rejected WebSockets for sensors because the old firmware library would have
+needed extra code. Two things changed that:
+
+- The firmware is moving to **ESP-MQTT** anyway (see "Getting every rep through"
+  below), and ESP-MQTT speaks MQTT over WebSockets with TLS as one setting, including
+  QoS 1. The extra-code reason was gone.
+- 8883 would have needed **a second port opened on the home router**, a second kind of
+  route in Traefik (raw connections rather than web traffic), and it is **blocked on
+  many networks** an athlete might lift on: hotels, guest Wi-Fi, some apartments.
+
+**What we chose.** Sensors connect to `wss://<school>/sensors` on 443, the port the
+site already uses. The connection starts like an ordinary HTTPS request and then
+switches to WebSockets; it is encrypted with the school's own certificate, which renews
+by itself. It is still MQTT, with QoS 1 for reps.
+
+**Sensors get their own door on the broker**, not the screens' one. The screens' door
+(`/mqtt`) is listen-only: anyone may listen, nobody may send. A sensor's whole job is
+sending, so the sensors' door is the opposite: nobody gets in without a sensor token,
+and each sensor may send only under its own `edgeathlete/node/<its id>/`.
+
+| Door | Address | Who | May |
+|---|---|---|---|
+| Programs | inside the cluster only (1883) | django and the workers | everything |
+| Screens | `wss://<school>/mqtt` | any browser | listen only |
+| Sensors | `wss://<school>/sensors` | each sensor, with its own token | send its own reps only |
+
+**What we rejected.**
+
+- **8883, MQTT over TLS without WebSockets.** Slightly less work for the sensor on
+  each message, at the cost of a router port, a new kind of Traefik route, and sensors
+  that can't connect from networks that block it.
+- **Sharing the screens' door.** It would have to allow sending, for everyone on it.
+
+**What it cost.** A little more memory and a few more bytes per message on the sensor
+for the WebSocket layer. The router keeps only 80 and 443 open.
+
+### Setting a sensor up, and why it's safe
+
+Decided 2026-10-19 (spec 14). Three words are kept apart on purpose:
+
+- the **account password**: what a person signs in with;
+- the **one-time code**: what an athlete types once, to claim a sensor;
+- the **sensor token**: a long random secret the server makes for one sensor, which
+  the sensor keeps and sends each time it connects (in MQTT's password field).
+
+**What forced it.** A sensor's ID is printed on its label and appears in every message
+it sends, so anyone can learn it. An ID alone would let anyone send reps as that
+sensor; something secret has to prove it. And the athlete should be able to set their
+sensor up alone, then just switch it on.
+
+**What we chose: the athlete claims their sensor with a one-time code.**
+
+![Setting up a sensor, once](images/sensor-setup-once.svg)
+
+1. On their athlete page, the athlete presses **Add my sensor** and gets a code like
+   `K7MQ-2XPR`. It works once, for 15 minutes, and the server keeps only a one-way hash
+   of it, so a copy of the database can't use it.
+2. The athlete gives the sensor their Wi-Fi and the code (over USB for now, the
+   sensor's own setup page later).
+3. The sensor sends its ID and the code to the school, encrypted. The school checks
+   the code, refuses a sensor someone else already owns, records the athlete as the
+   owner, and makes the sensor's token.
+4. The school tells the broker: this ID, with this token, may send only under its own
+   topics. It uses the broker's built-in dynamic security plugin, so this takes effect
+   at once, with no restart. (Checked against Mosquitto 2.0.22 with the remote
+   settings: the right token connects and can send only its own reps; a wrong token, no
+   login and a removed sensor are refused.)
+5. The token goes to the sensor once, and the code is used up.
+
+![A sensor every day after, and a lost one](images/sensor-every-day.svg)
+
+From then on the sensor joins its saved Wi-Fi, checks that the server really is the
+school (against the root certificate it carries), and connects with its ID and token.
+The broker checks the token when it connects and every message after. When the athlete
+joins a session, the server points their sensor at their rack (spec 04). A lost sensor
+is removed by its athlete or a coach: its token is deleted at the broker and it is
+disconnected; nothing else changes and its past sets are kept.
+
+**Why a code and not the athlete's account password,** typed into the sensor during
+setup:
+
+- **The account password never passes through the sensor.** A sensor can be taken
+  apart and read, and a fake "sensor" network could put up a page that collects
+  whatever is typed. A code can only add a sensor, once, for 15 minutes.
+- **The sensor's setup page can't have the padlock a website has.** The sensor serves
+  it itself, on its own small Wi-Fi network, so it should never ask for a real
+  password.
+- **For the athlete it is the same effort**: type 8 characters instead of a username
+  and password. It is the same idea as a login link.
+
+**The coach no longer links remote sensors.** Claiming does it. The coach can see an
+athlete's sensor and remove a lost one. Gym sensors are unchanged: a coach links them to
+racks.
+
+**What we rejected.**
+
+- **The ID alone, or the chip's network (MAC) address, as proof.** Both are public.
+- **The athlete's account password, or its stored hash, on the sensor.** A stored hash
+  works as a password: whoever copies it out of the sensor can sign in as the athlete.
+  Changing the account password would also break the sensor.
+- **A certificate per sensor** (a private key on each sensor, like an SSH key). Strong,
+  but checked at Traefik, where the broker can't see which sensor connected, and it
+  needs a small certificate authority per school.
+- **Tokens made by hand and kept in a file on the broker.** Simple, but only the
+  operator could add a sensor, so athletes couldn't set themselves up.
+
+**What it cost.** Django becomes the broker's administrator on the sensors' door, with
+its own login kept in the school's secret. Sensor logins live on the broker's disk; if
+that disk were lost, every sensor would claim again with a fresh code.
 
 ### Settings live on the sensor, per network — built now
 
@@ -59,7 +174,7 @@ flash, and each entry carries everything needed to use that network:
 | Wi-Fi name and password | the gym box's network | the athlete's home Wi-Fi |
 | Server | the gym box | the installation's hostname |
 | Encryption | off | TLS, validated against the stored root |
-| Sensor's credential | none | its own username and password |
+| Sensor's credential | none | its own ID and sensor token |
 
 A saved network is not just a password — **it is a password paired with the server it
 leads to.** In the gym, the base station's network is simply another saved entry.
@@ -92,8 +207,8 @@ No app to install, and it works the same on every phone.
 - The sensor runs its access point and joins other networks **at the same time**, so
   the page can list nearby networks, try the chosen one live, and report success or a
   wrong password on the spot.
-- **The same page takes the athlete's pairing code**, so one screen sets up Wi-Fi and
-  links the sensor to the athlete.
+- **The same page takes the athlete's one-time code**, so one screen sets up Wi-Fi and
+  links the sensor to the athlete (see "Setting a sensor up, and why it's safe" above).
 
 Plan around:
 
@@ -245,8 +360,9 @@ every renewal.
 
 ## What it cost
 
-- **A credential lives in each sensor's flash.** Anyone holding the sensor can extract
-  it — which is exactly why it is one credential per sensor.
+- **A sensor token lives in each sensor's flash.** Anyone holding the sensor can extract
+  it — which is exactly why each sensor has its own, and why it unlocks nothing but that
+  sensor.
 - **TLS costs the sensor memory and a slower connect.** Fine on the ESP32-C6, but worth
   watching as the firmware grows.
 - **Until the setup page exists, settings are written over USB.** Fine for a handful of
