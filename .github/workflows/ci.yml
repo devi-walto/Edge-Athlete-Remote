@@ -36,6 +36,9 @@ jobs:
       fail-fast: false
       matrix:
         mode: [local, remote]
+    env:
+      # The sensors door's administrator password, for this throwaway broker only.
+      SENSORS_ADMIN: ci-throwaway-sensors-admin
     steps:
       - uses: actions/checkout@v7
 
@@ -44,14 +47,20 @@ jobs:
         run: docker build -t ea-django:ci ./django
 
       # A throwaway database and broker beside it, under the names the app expects.
+      # The remote run gets a broker set up exactly like a school's (its settings,
+      # its sensors door), so the sensor-login tests run against the real thing.
       - name: Start a database and a broker
         run: |
           docker network create ci
           docker run -d --name postgres --network ci --network-alias postgres \
             --env-file ci/${{ matrix.mode }}.env postgres:15
-          docker run -d --name mosquitto --network ci --network-alias mosquitto \
-            -v "$PWD/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro" \
-            eclipse-mosquitto
+          if [ "${{ matrix.mode }}" = remote ]; then
+            ./scripts/remote/tests/start-remote-broker.sh mosquitto ci "$SENSORS_ADMIN"
+          else
+            docker run -d --name mosquitto --network ci --network-alias mosquitto \
+              -v "$PWD/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro" \
+              eclipse-mosquitto
+          fi
           for i in $(seq 1 30); do
             docker exec postgres pg_isready -U ci -d ci >/dev/null 2>&1 && break
             sleep 2
@@ -65,8 +74,15 @@ jobs:
 
       - name: Run the backend tests as ${{ matrix.mode }}
         run: >
-          docker run --rm --network ci --env-file ci/${{ matrix.mode }}.env ea-django:ci
-          python manage.py test event_handler --noinput
+          docker run --rm --network ci --env-file ci/${{ matrix.mode }}.env
+          -e MQTT_SENSORS_ADMIN_PASSWORD="${{ matrix.mode == 'remote' && env.SENSORS_ADMIN || '' }}"
+          ea-django:ci python manage.py test event_handler --noinput
+
+      # The step that gets a school's sensors door ready, each time its broker starts:
+      # locked without the secret, opened when it arrives, never wiped on a restart.
+      - name: Check the sensors door's start-up step
+        if: matrix.mode == 'remote'
+        run: ./scripts/remote/tests/sensors-door.sh ea-django:ci
 
   frontend:
     name: frontend

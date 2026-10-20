@@ -193,6 +193,28 @@ both modes.
 - [ ] The school's files pass the strict schema check; no password in the repo.
 - [ ] A local install's broker settings are unchanged.
 
+**Built (2026-10-20).** Port 9002 is the broker's own door inside the cluster, never
+opened on the router: sensors reach it as `wss://<school>/sensors` on 443, and Traefik
+passes it on, the way `/mqtt` reaches the screens door on 9001.
+- `mosquitto-remote.conf`: the sensors door, with the dynamic security plugin on that
+  door only. `sensors-door-init.sh` runs before the broker (an init step in
+  `mosquitto.yaml`, as the broker's user): makes the login file once, locked while the
+  school has no `broker-admin` secret, replaced when it arrives, never wiped on a
+  restart or a changed password. The file is private to the broker's user (600).
+- `services/sensor_logins.py`: `add` (also replaces: the old token stops working and a
+  connected sensor is dropped) and `remove`. A sensor's role allows sending under its
+  own `edgeathlete/node/<id>/#` and nothing else.
+- `eactl update` makes `broker-admin` for a school that has none, when the person
+  running it may make secrets (the release robot can't, and skips it), and restarts the
+  broker and django if nothing else restarted them. A new school gets it the same way.
+- Tests: `test_sensor_logins.py` (9; 7 need the real broker and run in CI's remote
+  check) and `scripts/remote/tests/sensors-door.sh` (11 checks: locked, opened,
+  restart, changed password, file permissions), both against a broker started exactly
+  like a school's (`start-remote-broker.sh`). Checked too: a command sent on the
+  programs door can't make a login, and a deleted sensor is disconnected at once. The
+  school's files pass the strict schema check (13 valid). Full suite: 689 pass in both
+  modes.
+
 **Stop. Devin reviews.**
 
 ## Phase 2 — Claiming a sensor

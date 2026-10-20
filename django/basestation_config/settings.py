@@ -154,6 +154,10 @@ DATABASES = {
 # Used by event_handler to subscribe to motion events from ESP32 nodes
 MQTT_HOST = os.environ.get('MQTT_HOST', 'mosquitto')
 MQTT_PORT = int(os.environ.get('MQTT_PORT', 1883))
+# The broker's sensors door (remote only, spec 14): where django adds and removes
+# each sensor's login. Empty password = the door isn't set up on this server.
+MQTT_SENSORS_PORT = int(os.environ.get('MQTT_SENSORS_PORT', 9002))
+MQTT_SENSORS_ADMIN_PASSWORD = os.environ.get('MQTT_SENSORS_ADMIN_PASSWORD', '')
 
 # The host Agent is reachable only through this provisioned local socket. This is
 # intentionally not configurable by a request or environment-provided URL.
