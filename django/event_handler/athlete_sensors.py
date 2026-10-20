@@ -10,6 +10,7 @@ live in services/sensor_claims.py; these handlers are just the doors to them.
 
 The athlete's side, signed in as the athlete:
   POST   /api/athlete/sensor-code/           a one-time code for "Add my sensor"
+  GET    /api/athlete/sensor-code/           has it been used yet, and by which sensor"
   GET    /api/athlete/sensors/               my sensors
   DELETE /api/athlete/sensors/<sensor id>/   remove one of my sensors
 The sensor's side, open to anyone, because a sensor has no login yet: the code is
@@ -48,10 +49,14 @@ def _remove(sensor):
 
 # ───────────────── the athlete's side ─────────────────
 
-@api_view(['POST'])
+@api_view(['GET', 'POST'])
 @permission_classes([RemoteOnly, IsAthlete])
 def sensor_code(request):
-    """A one-time code to give a new sensor. Shown once; works once, for 15 minutes."""
+    """POST: a one-time code to give a new sensor (shown once; works once, for 15
+    minutes). GET: how the newest code is doing: waiting, used (and by which sensor),
+    or expired."""
+    if request.method == 'GET':
+        return Response(sensor_claims.latest_code(request.user.athlete))
     code, expires_at = sensor_claims.issue_code(request.user.athlete)
     response = Response({'code': code, 'expires_at': expires_at}, status=201)
     response['Cache-Control'] = 'no-store'

@@ -143,6 +143,33 @@ class ClaimTests(ClaimTestCase):
         self.assertEqual(self.claim(code).data['code'], 'code_does_not_work')
 
 
+class CodeStatusTests(ClaimTestCase):
+    def status(self):
+        self.client.force_authenticate(self.riley.user)
+        return self.client.get('/api/athlete/sensor-code/').data
+
+    def test_the_page_can_tell_when_its_code_is_used_and_by_which_sensor(self):
+        self.assertEqual(self.status()['status'], 'none')
+        code = self.code_for(self.riley)
+        self.assertEqual((self.status()['status'], self.status()['sensor']), ('waiting', None))
+        self.claim(code)
+        self.assertEqual((self.status()['status'], self.status()['sensor']), ('used', 'ea-3f9c'))
+
+    def test_a_re_setup_of_the_same_sensor_shows_too(self):
+        self.claim(self.code_for(self.riley))
+        self.code_for(self.riley)
+        self.assertEqual(self.status()['status'], 'waiting')
+        self.claim(self.code_for(self.riley))
+        self.assertEqual(self.status()['status'], 'used')
+
+    def test_an_expired_code_says_so_and_the_code_itself_is_never_sent_back(self):
+        self.code_for(self.riley)
+        SensorClaimCode.objects.update(expires_at=timezone.now() - datetime.timedelta(seconds=1))
+        data = self.status()
+        self.assertEqual(data['status'], 'expired')
+        self.assertNotIn('code', data)
+
+
 class RemoveTests(ClaimTestCase):
     def setUp(self):
         super().setUp()

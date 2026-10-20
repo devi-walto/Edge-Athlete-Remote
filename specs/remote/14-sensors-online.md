@@ -251,6 +251,30 @@ passes it on, the way `/mqtt` reaches the screens door on 9001.
 - [ ] *(Frontend test)* **Add my sensor** shows on remote only.
 - [ ] Full suite passes in both modes.
 
+**Built (2026-10-20).**
+- `SensorClaimCode` (migration 0029) on the shared one-time rows; it also remembers
+  which sensor used it, so the athlete's page can tell the moment it happens.
+- Routes (`athlete_sensors.py`, logic in `services/sensor_claims.py`):
+  `POST /api/athlete/sensor-code/` (a code), `GET` on the same address (waiting, used
+  and by which sensor, or expired; never the code), `GET /api/athlete/sensors/`,
+  `DELETE /api/athlete/sensors/<sensor id>/`, `DELETE /api/athletes/<id>/sensors/<sensor
+  id>/` (coach), and `POST /api/sensors/claim/`. **Changed from the list above:** the
+  remove routes name the sensor, so an athlete with two sensors removes the right one.
+- The claim checks the code first (so only a working code learns whether an ID is
+  taken), refuses a sensor someone else owns, and tells the broker last: if the broker
+  can't be reached, nothing is saved and the code still works. A claimed sensor is made
+  active, so joining a session attaches it (spec 04).
+- The athlete's page (`MySensor.jsx`), built to Final designs F_Ath_S1 to S5 (approved
+  2026-10-20): "My sensor" on the signed-in page (the full home is spec 10), the code
+  page that checks every 3 seconds and changes by itself, and Remove with a confirm.
+- Tests: 20 backend (`test_sensor_claims.py`, one against the real broker) and 5
+  frontend (`mySensor.test.jsx`). The route walk now expects 404 from online-only
+  routes on a local install. Full suite: 709 pass in both modes; frontend 343.
+- **Checked on the review copy** (its broker set up like a school's): a code from the
+  page claimed a sensor typed loosely (`u54j f8k5`); the page changed to "added" by
+  itself; the token connected and could send only its own messages; a reused or wrong
+  code got the same refusal; after Remove, the token was refused.
+
 **Stop. Devin reviews.**
 
 ## Phase 3 — The simulator as a remote sensor

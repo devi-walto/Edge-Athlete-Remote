@@ -54,6 +54,24 @@ def issue_code(athlete):
     return text, row.expires_at
 
 
+def latest_code(athlete):
+    """How the athlete's newest code is doing, for their page while it waits:
+    {"status": waiting | used | expired | none, "expires_at", "sensor": its ID or None}.
+    The code itself isn't here: only its hash is stored."""
+    code = (SensorClaimCode.objects.filter(athlete=athlete).select_related('sensor')
+            .order_by('-created_at', '-pk').first())
+    if code is None:
+        return {"status": "none", "expires_at": None, "sensor": None}
+    if code.used_at:
+        status = "used"
+    elif code.still_works():
+        status = "waiting"
+    else:
+        status = "expired"   # ran out, or a newer one cancelled it
+    return {"status": status, "expires_at": code.expires_at,
+            "sensor": code.sensor.node_id if code.sensor else None}
+
+
 def claim(code_text, sensor_id):
     """A sensor claims itself with an athlete's code. Returns its login:
     {"username": its ID, "token": its new sensor token, "path": "/sensors"}.
@@ -83,6 +101,8 @@ def claim(code_text, sensor_id):
         sensor.owner_id = code.athlete_id
         sensor.is_active = True   # claimed means ready to use (spec 04 attaches active ones)
         sensor.save(update_fields=['owner', 'is_active'])
+        code.sensor = sensor
+        code.save(update_fields=['sensor'])
         one_time_secrets.mark_used(code)
         # Last, so a broker that can't be reached undoes everything above.
         try:

@@ -1369,6 +1369,7 @@ A one-time code an athlete gives their sensor, so the sensor can claim itself. T
 | `used_at` | date + time | optional |
 | `cancelled_at` | date + time | optional |
 | `athlete` | link → | → `Athlete`, on delete: `CASCADE`, reverse: `sensor_claim_codes` |
+| `sensor` | link → | → `Node`, on delete: `SET_NULL`, optional, reverse: `+` |
 <!-- schema:SensorClaimCode:end -->
 
 **Why it exists.** Online, an athlete adds their own sensor without anyone's help. The

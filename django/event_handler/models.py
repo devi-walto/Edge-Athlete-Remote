@@ -376,6 +376,9 @@ class SensorClaimCode(OneTimeSecret):
     what happened.
     """
     athlete = models.ForeignKey(Athlete, on_delete=models.CASCADE, related_name='sensor_claim_codes')
+    # The sensor that used it, so the athlete's page can say "ea-3f9c is added" the
+    # moment it happens. SET_NULL: the record outlives a sensor row, if one is ever deleted.
+    sensor = models.ForeignKey(Node, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
 
     def still_works(self):
         # An archived athlete can't add a sensor.

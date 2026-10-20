@@ -438,7 +438,7 @@ An athlete's own sensor: a one-time code to add it, the sensor claiming itself w
 <!-- routes:sensors-online:start -->
 | Route | Methods | Access | What it does | Handler |
 |---|---|---|---|---|
-| `/api/athlete/sensor-code/` | `POST` | remote only · athlete | A one-time code to give a new sensor | `sensor_code` |
+| `/api/athlete/sensor-code/` | `GET,POST` | remote only · athlete | POST: a one-time code to give a new sensor (shown once; works once, for 15 minutes) | `sensor_code` |
 | `/api/athlete/sensors/` | `GET` | remote only · athlete | The sensors that belong to the signed-in athlete | `my_sensors` |
 | `/api/athlete/sensors/<str:node_id>/` | `DELETE` | remote only · athlete | Remove one of my sensors | `my_sensor` |
 | `/api/sensors/claim/` | `POST` | remote only · open | A sensor claims itself with an athlete's code and gets its own login | `SensorClaimView` |
