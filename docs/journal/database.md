@@ -1322,14 +1322,14 @@ A one-time link a coach sends an athlete, to make (or remake) their login. Treat
 <!-- schema:AthleteLoginLink:start -->
 | Column | Type | Notes |
 |---|---|---|
-| `athlete` | link → | → `Athlete`, on delete: `CASCADE`, reverse: `login_links` |
 | `token_hash` | text | max 128 |
 | `lookup` | text | **unique**, max 16 |
-| `created_by` | link → | → `settings.AUTH_USER_MODEL`, on delete: `SET_NULL`, optional, reverse: `+` |
 | `created_at` | date + time | — |
 | `expires_at` | date + time | — |
 | `used_at` | date + time | optional |
 | `cancelled_at` | date + time | optional |
+| `athlete` | link → | → `Athlete`, on delete: `CASCADE`, reverse: `login_links` |
+| `created_by` | link → | → `settings.AUTH_USER_MODEL`, on delete: `SET_NULL`, optional, reverse: `+` |
 <!-- schema:AthleteLoginLink:end -->
 
 **Why it exists.** Athletes never create their own logins. A coach sends a personal
@@ -1346,37 +1346,10 @@ link, and using it makes the athlete's login. This table records each link (spec
   athlete's login back on.
 - Rejected: storing the link itself; a separate "forgot password" path (a new link
   does both).
-
-:::::
-
-### `OneTimeSecret`
-
-How a secret that works once is stored: login links, sensor claim codes, and any later kind. Not a table of its own: each kind is its own table with these fields (abstract). Made, found and used up in services/one_time_secrets.py. (The first-run setup code keeps its own single row, InstallationSetup, and uses the same helpers.) The secret itself is never stored, only a one-way hash, the same way Django stores passwords: whoever holds the secret can claim what it gives, so a copy of the database must not be enough to do that.
-
-:::::{dropdown} Schema
-
-<!-- schema:OneTimeSecret:start -->
-| Column | Type | Notes |
-|---|---|---|
-| `token_hash` | text | max 128 |
-| `lookup` | text | **unique**, max 16 |
-| `created_at` | date + time | — |
-| `expires_at` | date + time | — |
-| `used_at` | date + time | optional |
-| `cancelled_at` | date + time | optional |
-
-**Table rules**
-
-- `abstract = True`
-<!-- schema:OneTimeSecret:end -->
-
-<!-- TO FILL IN: move these two lines out of this comment, then retitle
-     the dropdown above from 'Schema' to 'Schema and decisions'.
-
-**Why it exists.** (what this table is for, in one or two sentences)
-
-**Decisions.** (what was chosen here, and what was rejected)
--->
+- **Built on the shared one-time rows** (2026-10-19, spec 14). The first six columns
+  come from `OneTimeSecret`, an abstract model with no table of its own; making,
+  finding and using up the link follow `services/one_time_secrets.py`, which the
+  first-run setup code and sensor claim codes use too. Nothing in this table changed.
 
 :::::
 <!-- SCHEMA SECTION END -->
