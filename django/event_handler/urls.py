@@ -14,6 +14,7 @@ from django.urls import path
 
 from . import views
 from . import athlete_logins
+from . import athlete_sensors
 from . import remote_sessions
 from . import deployment
 from . import health
@@ -87,6 +88,15 @@ urlpatterns = [
     path('athletes/<int:athlete_id>/login-link/', athlete_logins.athlete_login_link,
          name='athlete_login_link'),
     path('athletes/<int:athlete_id>/login/', athlete_logins.athlete_login, name='athlete_login'),
+    # Remote only: an athlete's own sensor (spec 14; athlete_sensors.py). The athlete
+    # gets a one-time code, the sensor claims itself with it, and either the athlete
+    # or a coach can remove a sensor.
+    path('athletes/<int:athlete_id>/sensors/<str:node_id>/', athlete_sensors.athlete_sensor,
+         name='athlete_sensor'),
+    path('athlete/sensor-code/', athlete_sensors.sensor_code, name='athlete_sensor_code'),
+    path('athlete/sensors/', athlete_sensors.my_sensors, name='my_sensors'),
+    path('athlete/sensors/<str:node_id>/', athlete_sensors.my_sensor, name='my_sensor'),
+    path('sensors/claim/', athlete_sensors.SensorClaimView.as_view(), name='sensor_claim'),
 
     # exercise catalog
     path('exercises/', views.exercises_list, name='exercises_list'),

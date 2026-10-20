@@ -366,6 +366,25 @@ class AthleteLoginLink(OneTimeSecret):
         return f"login link for {self.athlete}"
 
 
+class SensorClaimCode(OneTimeSecret):
+    """A one-time code an athlete gives their sensor, so the sensor can claim itself.
+
+    The athlete gets it on their athlete page ("Add my sensor"); the sensor sends it to
+    the school with its ID, and gets its own sensor token back (spec 14). Treated like
+    a password (see OneTimeSecret). It works once, for 15 minutes, and a newer code
+    cancels the older. Checked in services/sensor_claims.py; this table only records
+    what happened.
+    """
+    athlete = models.ForeignKey(Athlete, on_delete=models.CASCADE, related_name='sensor_claim_codes')
+
+    def still_works(self):
+        # An archived athlete can't add a sensor.
+        return super().still_works() and self.athlete.is_active
+
+    def __str__(self):
+        return f"sensor claim code for {self.athlete}"
+
+
 class Tag(models.Model):
     """A label for grouping movements (e.g. 'lower', 'push'). Just a name for now;
     a coach hangs these on Exercises so they can be filtered later."""

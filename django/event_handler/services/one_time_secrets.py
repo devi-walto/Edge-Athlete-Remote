@@ -65,6 +65,12 @@ def new_link_secret() -> str:
     return secrets.token_urlsafe(24)
 
 
+def new_token() -> str:
+    """A long random secret that is kept and used again, not once: a sensor's token
+    (spec 14). Made here too, so every random secret in the app comes from this file."""
+    return secrets.token_urlsafe(32)
+
+
 def seal(secret) -> str:
     """The one-way hash to store instead of the secret."""
     return make_password(secret)

@@ -19,7 +19,8 @@ from rest_framework.test import APITestCase
 
 from . import permissions
 from .models import Athlete, CoachProfile, Node, RackScreen
-from .permissions import IsCoach, IsInstallationAdmin
+from .deployment import is_hosted
+from .permissions import IsCoach, IsInstallationAdmin, RemoteOnly
 
 User = get_user_model()
 PASSWORD = 'Unique-roles-2026!safe'
@@ -97,7 +98,12 @@ class RouteWalk(APITestCase):
         for route in routes_guarded_by(permission_class):
             for method in route['methods']:
                 with self.subTest(route=route['name'], method=method.upper()):
-                    check(method, route['url'])
+                    if RemoteOnly in route['classes'] and not is_hosted():
+                        # An online-only route doesn't exist on a local install: 404
+                        # for everyone, before any question of who is asking.
+                        self.assertEqual(self.status(self.coach, method, route['url']), 404)
+                    else:
+                        check(method, route['url'])
 
 
 class CoachRoutesTests(RouteWalk):
