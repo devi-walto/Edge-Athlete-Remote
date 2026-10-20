@@ -291,6 +291,25 @@ software stand-in for a real sensor at home.
 - [ ] The same simulated sensor trying to send as another sensor gets nothing through.
 - [ ] Removing it from the athlete stops its reps at once.
 
+**Done on the review copy first (2026-10-20); Demo U waits** (Devin: the Dell stays on
+v0.6.0 for a demo, so this branch isn't released yet). Demo U and the phone on mobile
+data come with the release that carries spec 14.
+- **Changed from the plan:** not `simulate_node --claim` but a standalone
+  `scripts/sensor/fake_sensor.py`. A sensor at home can't see the school's database,
+  and `simulate_node` reads it to know when a set is running, so the stand-in knows
+  only what a real sensor knows: its ID, the school's address and the code. It sends a
+  pulse every 5 s and reps on a steady rhythm; the rack screen records only those that
+  arrive during a set. Its token is saved in a small file, like a sensor's memory. The
+  message shapes moved to `event_handler/sensor_messages.py` (plain Python), shared
+  with `simulate_node`.
+- **Checked on the review copy**, with its broker set up like a school's and a
+  `/sensors` route in front, like Traefik's: a code from Riley's page claimed
+  `ea-fake-01`; it connected through `/sensors`; its pulses showed it as connected; Riley
+  joined session 4 and got her own rack with `ea-fake-01` on it; a set recorded 8 of its
+  reps and saved them; reps it sent posing as `sim-jordan-lee` arrived zero times;
+  restarted, it reconnected from its saved token with no new code; removing it from
+  Riley disconnected it at once and its token was refused.
+
 **Stop. Devin reviews.**
 
 ## Phase 4 — The rack screen ignores a repeated rep

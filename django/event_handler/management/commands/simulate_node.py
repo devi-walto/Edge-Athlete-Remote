@@ -26,15 +26,15 @@
 
 import json
 import os
-import random
 import signal
 import threading
 import time
-from datetime import datetime, timezone
 
 import paho.mqtt.client as mqtt
 from django.core.management.base import BaseCommand, CommandError
 from django.db import close_old_connections, connection
+
+from ...sensor_messages import build_pulse_payload, build_rep_payload
 
 MQTT_HOST = os.getenv("MQTT_HOST", "mosquitto")
 MQTT_PORT = int(os.getenv("MQTT_PORT", "1883"))
@@ -49,34 +49,6 @@ GATE_POLL_SECONDS = 2.0
 MODE_LIFTING = "lifting"
 MODE_CHECKIN = "checkin"
 MODE_ALWAYS = "always"
-
-
-def build_pulse_payload(node_id):
-    """One fake heartbeat, battery/signal jitter within a realistic range."""
-    return {
-        "node_id": node_id,
-        "event_type": "pulse",
-        "battery_level": random.randint(80, 100),
-        "signal_strength": random.randint(-70, -40),
-        "firmware_version": "sim-1",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
-
-
-def build_rep_payload(node_id, rep_number):
-    """One fake rep, peak velocity is always a bit above mean, like a real lift."""
-    mean_velocity = round(random.uniform(0.4, 1.1), 3)
-    peak_velocity = round(mean_velocity + random.uniform(0.1, 0.3), 3)
-    duration_ms = random.randint(600, 1100)
-
-    return {
-        "node_id": node_id,
-        "rep_number": rep_number,
-        "mean_velocity": mean_velocity,
-        "peak_velocity": peak_velocity,
-        "duration_ms": duration_ms,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
 
 
 # ── the gate ────────────────────────────────────────────────────────────────
