@@ -61,6 +61,7 @@ def sensor_code(request):
 @api_view(['GET'])
 @permission_classes([RemoteOnly, IsAthlete])
 def my_sensors(request):
+    """The sensors that belong to the signed-in athlete."""
     sensors = Node.objects.filter(owner=request.user.athlete).order_by('node_id')
     return Response({'sensors': [_sensor_row(s) for s in sensors]})
 
@@ -68,6 +69,7 @@ def my_sensors(request):
 @api_view(['DELETE'])
 @permission_classes([RemoteOnly, IsAthlete])
 def my_sensor(request, node_id):
+    """Remove one of my sensors. Its sets stay."""
     sensor = Node.objects.filter(owner=request.user.athlete, node_id=node_id).first()
     if sensor is None:
         return Response({'detail': 'sensor not found'}, status=404)

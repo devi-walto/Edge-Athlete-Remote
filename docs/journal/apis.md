@@ -261,7 +261,7 @@ never return to that list. See the deadlock in {doc}`rack-tablet`.
 
 Athletes, the groups they train in, and the staff who run those groups.
 
-:::::{dropdown} 9 routes
+:::::{dropdown} 10 routes
 
 <!-- routes:people:start -->
 | Route | Methods | Access | What it does | Handler |
@@ -270,6 +270,7 @@ Athletes, the groups they train in, and the staff who run those groups.
 | `/api/athletes/<int:athlete_id>/` | `GET,PATCH,DELETE` | 🔒 coach | Coach-only: read or update one lifter | `athlete_detail` |
 | `/api/athletes/<int:athlete_id>/login-link/` | `POST,DELETE` | 🔒 coach | POST: make a new link for this athlete | `athlete_login_link` |
 | `/api/athletes/<int:athlete_id>/login/` | `DELETE` | 🔒 coach | Remove this athlete's login | `athlete_login` |
+| `/api/athletes/<int:athlete_id>/sensors/<str:node_id>/` | `DELETE` | remote only · 🔒 coach | Remove an athlete's sensor (lost, stolen, or passed on) | `athlete_sensor` |
 | `/api/training-groups/` | `GET,POST` | 🔒 coach | Coach-only: list or create TrainingGroups | `training_groups_view` |
 | `/api/training-groups/<int:group_id>/athletes/` | `GET,POST,DELETE` | 🔒 coach | Coach-only: who is in this TrainingGroup | `training_group_athletes_view` |
 | `/api/training-groups/<int:group_id>/coaches/` | `GET,POST,PATCH,DELETE` | 🔒 coach | Coach-only: who runs this TrainingGroup | `training_group_coaches_view` |
@@ -425,6 +426,23 @@ Sign-in, first-run setup, coach accounts, and athletes using a login link.
 | `/api/auth/login/` | `POST` | open | Sign in with a username and password, coach or athlete; wrong tries are slowed down | `CoachTokenObtainPairView` |
 | `/api/auth/refresh/` | `POST` | open | Renew a sign-in, refused for a login that was switched off or lost its role | `CheckedTokenRefreshView` |
 <!-- routes:signing-in-and-accounts:end -->
+
+:::::
+
+## Sensors online
+
+An athlete's own sensor: a one-time code to add it, the sensor claiming itself with it, and removing it (spec 14). Remote only.
+
+:::::{dropdown} 4 routes
+
+<!-- routes:sensors-online:start -->
+| Route | Methods | Access | What it does | Handler |
+|---|---|---|---|---|
+| `/api/athlete/sensor-code/` | `POST` | remote only · athlete | A one-time code to give a new sensor | `sensor_code` |
+| `/api/athlete/sensors/` | `GET` | remote only · athlete | The sensors that belong to the signed-in athlete | `my_sensors` |
+| `/api/athlete/sensors/<str:node_id>/` | `DELETE` | remote only · athlete | Remove one of my sensors | `my_sensor` |
+| `/api/sensors/claim/` | `POST` | remote only · open | A sensor claims itself with an athlete's code and gets its own login | `SensorClaimView` |
+<!-- routes:sensors-online:end -->
 
 :::::
 <!-- ROUTES SECTION END -->

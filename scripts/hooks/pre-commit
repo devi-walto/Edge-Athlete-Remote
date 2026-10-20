@@ -34,7 +34,7 @@ STAGED="$(git diff --cached --name-only)"
 # refresher | doc it maintains | regex of source paths that should trigger it
 JOBS=(
   "docs/refresh-schema.py|docs/journal/database.md|django/event_handler/(models\.py|migrations/)"
-  "docs/refresh-routes.py|docs/journal/apis.md|django/(event_handler/(urls|views|health|system_status|wifi_config|deployment|coach_auth|coach_accounts|athlete_logins|remote_sessions)\.py|basestation_config/urls\.py)"
+  "docs/refresh-routes.py|docs/journal/apis.md|django/(event_handler/[a-z_]+\.py|basestation_config/urls\.py)"
 )
 
 for job in "${JOBS[@]}"; do
