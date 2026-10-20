@@ -6,6 +6,9 @@
 # eactl: the server's own settings (domain, certificate email), asked once by
 # `eactl init`. Real values never enter the repo; the k8s files hold placeholders.
 eactl.env
+
+# review/: this machine's review copy run like a remote school (docker-compose.review.yml)
+review/
 # what eactl writes after filling the placeholders in, just before applying
 .eactl-out/
 
