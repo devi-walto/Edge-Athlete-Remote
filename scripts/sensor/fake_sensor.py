@@ -74,6 +74,9 @@ def main():
     parser.add_argument("--reps-per-set", type=int, default=5, help="reps before a rest (default 5)")
     parser.add_argument("--rest", type=float, default=20.0, help="seconds of rest between sets (default 20)")
     parser.add_argument("--pose-as", metavar="OTHER_ID", help="also send reps as another sensor (the school must drop them)")
+    parser.add_argument("--send-twice", action="store_true",
+                        help="send every rep twice, as happens now and then when a 'got it' is lost "
+                             "(the rack screen must count it once)")
     args = parser.parse_args()
 
     saved = SAVED / f"{args.id}.json"
@@ -120,11 +123,14 @@ def main():
                 next_pulse = now + PULSE_SECONDS
             if now >= next_rep:
                 rep += 1
-                client.publish(f"{topic}/rep", json.dumps(build_rep_payload(args.id, rep)), qos=1)
+                message = json.dumps(build_rep_payload(args.id, rep))
+                client.publish(f"{topic}/rep", message, qos=1)
+                if args.send_twice:
+                    client.publish(f"{topic}/rep", message, qos=1)
                 if args.pose_as:
                     client.publish(f"edgeathlete/node/{args.pose_as}/rep",
                                    json.dumps(build_rep_payload(args.pose_as, rep)), qos=1)
-                print(f"rep {rep}")
+                print(f"rep {rep}" + (" (sent twice)" if args.send_twice else ""))
                 if rep >= args.reps_per_set:
                     rep, next_rep = 0, now + args.rest
                     print(f"resting {args.rest:g}s")

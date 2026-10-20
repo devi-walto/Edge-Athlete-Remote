@@ -322,6 +322,15 @@ whose sensor rep number is already stored for the open set (`repBuffer.js`).
 - [ ] *(Frontend test)* The same rep arriving twice is counted once; two different reps
       are both counted; a new set starts counting again.
 
+**Built (2026-10-20).** `addRep` in `db/repBuffer.js` skips a rep whose sensor, rep
+number and time match one already stored for the set, inside one transaction so two
+copies arriving together can't both get in; the rack screen then changes nothing for
+it. The rule is `isRepeat`, tested on its own (5 tests: also the same number at another
+moment is a new rep, and another sensor's rep is never a repeat). Frontend: 348 pass.
+**Checked on the review copy:** `fake_sensor.py --send-twice` sent every rep twice
+during a set; the screen counted 11 and the saved set holds 11 different reps, none
+doubled.
+
 **Stop. Devin reviews.**
 
 ## Phase 5 — Firmware: settings on the sensor, and the claim

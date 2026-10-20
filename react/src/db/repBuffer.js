@@ -36,10 +36,25 @@ import Dexie from 'dexie'
 const db = new Dexie('edgeathlete')
 db.version(1).stores({ reps: '++id' })
 
-// Save one rep immediately on arrival. Returns a promise that resolves once the
-// rep is durably stored (Dexie assigns the `id` for us).
+// The same rep arriving twice. Sensors send reps "at least once" (MQTT QoS 1, spec
+// 14): if the broker's thank-you for a rep is lost, the sensor sends it again, so now
+// and then one rep arrives twice. It is the same rep when the same sensor sent the
+// same rep number at the same moment; two real reps always differ in at least one.
+export function isRepeat(rep, stored) {
+  return stored.some((row) => row.node_id === rep.node_id
+    && row.rep_number === rep.rep_number && row.timestamp === rep.timestamp)
+}
+
+// Save one rep immediately on arrival, unless it is a repeat of one already saved for
+// this set. Resolves to true once the rep is durably stored (Dexie assigns the `id`
+// for us), or false for a repeat, which is not stored or counted. One transaction,
+// so two copies arriving at the same instant can't both get in.
 export function addRep(rep) {
-  return db.reps.add(rep)
+  return db.transaction('rw', db.reps, async () => {
+    if (isRepeat(rep, await db.reps.toArray())) return false
+    await db.reps.add(rep)
+    return true
+  })
 }
 
 // Every buffered rep, in arrival order — read at set-end to build the batch POST.
