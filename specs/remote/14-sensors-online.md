@@ -155,6 +155,15 @@ works once:
       `login_links.py` keep only what is theirs).
 - [ ] Full suite passes in both modes.
 
+**Built (2026-10-19).** `services/one_time_secrets.py` and the abstract
+`OneTimeSecret` model; `AthleteLoginLink` is built on it (its own rule: an archived
+athlete's link stops working) and the setup code uses the code helpers. No migration.
+13 new tests (`test_one_time_secrets.py`), including two uses at once and a check that
+no hashing or random-secret code is left in `coach_auth.py` or `login_links.py`. One
+addition beyond the list: an unknown lookup is still checked against a stand-in hash,
+so the time a refusal takes doesn't reveal which lookups exist. Full suite: 680 pass in
+both modes.
+
 **Stop. Devin reviews.**
 
 ## Phase 1 — The broker's sensors door

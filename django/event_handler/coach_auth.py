@@ -5,11 +5,9 @@ administrator is claimed with a short code that only someone standing at the
 machine can obtain (`manage.py setup_code` prints it to the local terminal).
 Every later account is created by an administrator (see coach_accounts.py).
 """
-import secrets
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.password_validation import validate_password
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
@@ -27,6 +25,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .models import CoachProfile, InstallationSetup
+from .services import one_time_secrets
 from .deployment import is_hosted
 from .roles import ATHLETE, role_of
 
@@ -36,7 +35,8 @@ from .roles import ATHLETE, role_of
 SETUP_CODE_TTL = timedelta(hours=24)
 
 # No 0/O/1/I/L: the code is read off a terminal and typed on a phone or tablet.
-SETUP_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+# The code itself is made and checked by the shared one-time secrets helpers.
+SETUP_CODE_ALPHABET = one_time_secrets.CODE_ALPHABET
 
 
 def must_change_password(user) -> bool:
@@ -50,10 +50,10 @@ def issue_setup_code(ttl=SETUP_CODE_TTL):
     Returns (code, expires_at). Any previously issued code stops working, so a
     re-run is also a safe way to revoke a code that leaked.
     """
-    code = ''.join(secrets.choice(SETUP_CODE_ALPHABET) for _ in range(8))
+    code = one_time_secrets.new_code()
     now = timezone.now()
     setup, _ = InstallationSetup.objects.get_or_create(pk=1)
-    setup.setup_code_hash = make_password(normalize_setup_code(code))
+    setup.setup_code_hash = one_time_secrets.seal(code)
     setup.setup_code_created_at = now
     setup.setup_code_expires_at = now + ttl
     setup.save(update_fields=['setup_code_hash', 'setup_code_created_at', 'setup_code_expires_at'])
@@ -62,7 +62,7 @@ def issue_setup_code(ttl=SETUP_CODE_TTL):
 
 def normalize_setup_code(raw) -> str:
     """Accept the code however someone types it: case, spaces, and dashes drop."""
-    return ''.join(ch for ch in str(raw or '').upper() if ch in SETUP_CODE_ALPHABET)
+    return one_time_secrets.normalize_code(raw)
 
 
 def setup_code_is_valid(raw):
@@ -72,7 +72,7 @@ def setup_code_is_valid(raw):
         return False
     if setup.setup_code_expires_at is None or setup.setup_code_expires_at <= timezone.now():
         return False
-    return check_password(normalize_setup_code(raw), setup.setup_code_hash)
+    return one_time_secrets.opens(normalize_setup_code(raw), setup.setup_code_hash)
 
 
 def setup_is_required() -> bool:

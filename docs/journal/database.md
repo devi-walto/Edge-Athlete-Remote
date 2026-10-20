@@ -1348,5 +1348,36 @@ link, and using it makes the athlete's login. This table records each link (spec
   does both).
 
 :::::
+
+### `OneTimeSecret`
+
+How a secret that works once is stored: login links, sensor claim codes, and any later kind. Not a table of its own: each kind is its own table with these fields (abstract). Made, found and used up in services/one_time_secrets.py. (The first-run setup code keeps its own single row, InstallationSetup, and uses the same helpers.) The secret itself is never stored, only a one-way hash, the same way Django stores passwords: whoever holds the secret can claim what it gives, so a copy of the database must not be enough to do that.
+
+:::::{dropdown} Schema
+
+<!-- schema:OneTimeSecret:start -->
+| Column | Type | Notes |
+|---|---|---|
+| `token_hash` | text | max 128 |
+| `lookup` | text | **unique**, max 16 |
+| `created_at` | date + time | — |
+| `expires_at` | date + time | — |
+| `used_at` | date + time | optional |
+| `cancelled_at` | date + time | optional |
+
+**Table rules**
+
+- `abstract = True`
+<!-- schema:OneTimeSecret:end -->
+
+<!-- TO FILL IN: move these two lines out of this comment, then retitle
+     the dropdown above from 'Schema' to 'Schema and decisions'.
+
+**Why it exists.** (what this table is for, in one or two sentences)
+
+**Decisions.** (what was chosen here, and what was rejected)
+-->
+
+:::::
 <!-- SCHEMA SECTION END -->
 

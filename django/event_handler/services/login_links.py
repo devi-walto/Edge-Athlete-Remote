@@ -9,26 +9,27 @@ A link is treated like a password:
   - it works once, and expires after LINK_LIFETIME;
   - a newer link cancels any older unused one;
   - using it signs the athlete's old login out everywhere;
-  - only a one-way hash of its secret is stored (make_password, as for passwords).
+  - only a one-way hash of its secret is stored.
 
 A link looks like `<lookup>.<secret>`. The lookup finds the row; the secret proves
 the holder received the link. Every way a link can fail gives the same answer
 (None), so nobody can learn whether a link expired, was used, or never existed.
+Making, finding and using up the link follow the shared rules in
+one_time_secrets.py; this file adds what is a login link's own: the login.
 
 The data never changes hands here: sets, reps, maxes and reports belong to the
 athlete record, and a link only replaces the login attached to it.
 """
-import secrets
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
 from ..models import Athlete, AthleteLoginLink
+from . import one_time_secrets
 
 LINK_LIFETIME = timedelta(days=3)
 
@@ -39,19 +40,10 @@ def issue(athlete, coach):
     The full link is returned this one time and stored nowhere. Any unused link
     the athlete already had stops working.
     """
-    now = timezone.now()
-    secret = secrets.token_urlsafe(24)
-    with transaction.atomic():
-        _cancel_unused(athlete, now)
-        link = AthleteLoginLink.objects.create(
-            athlete=athlete,
-            token_hash=make_password(secret),
-            lookup=_new_lookup(),
-            created_by=coach,
-            created_at=now,
-            expires_at=now + LINK_LIFETIME,
-        )
-    return f"{link.lookup}.{secret}", link.expires_at
+    text, link = one_time_secrets.issue(
+        AthleteLoginLink, one_time_secrets.LINK, LINK_LIFETIME,
+        owner={'athlete': athlete}, created_by=coach)
+    return text, link.expires_at
 
 
 def cancel(athlete):
@@ -61,13 +53,7 @@ def cancel(athlete):
 
 def find(link_text):
     """The link row if this link still works, otherwise None, whatever the reason."""
-    lookup, _, secret = str(link_text or '').partition('.')
-    if not lookup or not secret:
-        return None
-    link = AthleteLoginLink.objects.filter(lookup=lookup).select_related('athlete').first()
-    if link is None or not _still_works(link) or not check_password(secret, link.token_hash):
-        return None
-    return link
+    return one_time_secrets.find(AthleteLoginLink, one_time_secrets.LINK, link_text)
 
 
 def redeem(link_text, username, password):
@@ -85,8 +71,8 @@ def redeem(link_text, username, password):
             raise LinkDoesNotWork()
         # Lock the row, then check again: two people using one link at the same
         # moment must not both get a login.
-        link = AthleteLoginLink.objects.select_for_update().select_related('athlete').get(pk=found.pk)
-        if not _still_works(link):
+        link = one_time_secrets.lock_if_still_works(AthleteLoginLink, found)
+        if link is None:
             raise LinkDoesNotWork()
         athlete = Athlete.objects.select_for_update().get(pk=link.athlete_id)
 
@@ -105,8 +91,7 @@ def redeem(link_text, username, password):
 
         athlete.user = new_login
         athlete.save(update_fields=['user'])
-        link.used_at = timezone.now()
-        link.save(update_fields=['used_at'])
+        one_time_secrets.mark_used(link)
     return new_login
 
 
@@ -125,16 +110,11 @@ class LinkDoesNotWork(Exception):
 # ───────────────────────────── helpers ─────────────────────────────
 
 def _still_works(link):
-    # An archived athlete's link stops working too: archiving switches the login
-    # off (Athlete.save), and a link must not quietly switch one back on.
-    return (link.used_at is None and link.cancelled_at is None
-            and link.expires_at > timezone.now() and link.athlete.is_active)
+    return link.still_works()   # the rule lives on the model (AthleteLoginLink)
 
 
 def _cancel_unused(athlete, now):
-    AthleteLoginLink.objects.filter(
-        athlete=athlete, used_at__isnull=True, cancelled_at__isnull=True,
-    ).update(cancelled_at=now)
+    one_time_secrets.cancel_unused(AthleteLoginLink, {'athlete': athlete}, now)
 
 
 def _retire_login(athlete):
@@ -154,9 +134,3 @@ def _retire_login(athlete):
     athlete.user = None
     athlete.save(update_fields=['user'])
 
-
-def _new_lookup():
-    while True:
-        lookup = secrets.token_urlsafe(9)   # 12 characters
-        if not AthleteLoginLink.objects.filter(lookup=lookup).exists():
-            return lookup

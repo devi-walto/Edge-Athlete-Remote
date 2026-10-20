@@ -41,6 +41,7 @@ import uuid
 from django.conf import settings
 from django.contrib.postgres.indexes import GinIndex
 from django.db import models
+from django.utils import timezone
 
 
 class Node(models.Model):
@@ -315,28 +316,51 @@ class Athlete(models.Model):
         return self.name
 
 
-class AthleteLoginLink(models.Model):
-    """A one-time link a coach sends an athlete, to make (or remake) their login.
+class OneTimeSecret(models.Model):
+    """How a secret that works once is stored: login links, sensor claim codes, and any
+    later kind. Not a table of its own: each kind is its own table with these fields
+    (abstract). Made, found and used up in services/one_time_secrets.py. (The first-run
+    setup code keeps its own single row, InstallationSetup, and uses the same helpers.)
 
-    Treated like a password: the link itself is never stored, only a one-way hash
-    of its secret part, the same way Django stores passwords. It works once,
-    expires after 3 days, and a newer link cancels it. All of that is checked in
-    services/login_links.py; this table only records what happened.
+    The secret itself is never stored, only a one-way hash, the same way Django stores
+    passwords: whoever holds the secret can claim what it gives, so a copy of the
+    database must not be enough to do that.
     """
-    athlete = models.ForeignKey(Athlete, on_delete=models.CASCADE, related_name='login_links')
-    # The secret half of the link, hashed. Whoever holds the link can claim the
-    # athlete's login, so a copy of the database must not be enough to do that.
+    # The secret part, hashed.
     token_hash = models.CharField(max_length=128)
-    # The public half: lets the server find this row straight away, without
-    # checking the secret against every row's hash.
+    # The public part: lets the server find the row straight away, without checking
+    # the secret against every row's hash.
     lookup = models.CharField(max_length=16, unique=True)
-    # The coach who sent it. SET_NULL: removing a coach keeps the record.
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-                                   null=True, blank=True, related_name='+')
     created_at = models.DateTimeField()
     expires_at = models.DateTimeField()
     used_at = models.DateTimeField(null=True, blank=True)
     cancelled_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        abstract = True
+
+    def still_works(self):
+        """Not used, not cancelled, not expired. A kind can add its own rule."""
+        return (self.used_at is None and self.cancelled_at is None
+                and self.expires_at > timezone.now())
+
+
+class AthleteLoginLink(OneTimeSecret):
+    """A one-time link a coach sends an athlete, to make (or remake) their login.
+
+    Treated like a password (see OneTimeSecret). It works once, expires after 3 days,
+    and a newer link cancels it. All of that is checked in services/login_links.py;
+    this table only records what happened.
+    """
+    athlete = models.ForeignKey(Athlete, on_delete=models.CASCADE, related_name='login_links')
+    # The coach who sent it. SET_NULL: removing a coach keeps the record.
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                                   null=True, blank=True, related_name='+')
+
+    def still_works(self):
+        # An archived athlete's link stops working too: archiving switches the login
+        # off (Athlete.save), and a link must not quietly switch one back on.
+        return super().still_works() and self.athlete.is_active
 
     def __str__(self):
         return f"login link for {self.athlete}"
