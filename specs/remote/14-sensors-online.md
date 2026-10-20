@@ -36,13 +36,16 @@ and to be able to switch off a lost one.
 
 ## Decisions (Devin, 2026-10-19)
 
-1. **Each sensor has its own password, made by the server.** The ID on its label says
-   which sensor it claims to be; the password proves it. Anyone can read an ID, so an
+1. **Each sensor has its own token, made by the server.** The ID on its label says
+   which sensor it claims to be; the token proves it. (Words used in this spec: the
+   **account password** is what a person signs in with; the **one-time code** is what
+   an athlete types once to claim a sensor; the **sensor token** is the long random
+   secret the sensor keeps and sends each time it connects, in MQTT's password field.) Anyone can read an ID, so an
    ID alone would let anyone send reps as that sensor.
 2. **The athlete claims their sensor with a one-time code**, not their account password.
    On their athlete page they press **Add my sensor** and get a code like `K7MQ-2XPR`
    that works once, for 15 minutes. The sensor sends the code to the school, and the
-   school answers with the sensor's own password and records the athlete as its owner.
+   school answers with the sensor's own token and records the athlete as its owner.
    - The sensor never sees the athlete's account password, so a sensor taken apart, or
      a fake setup page, can't give anyone the athlete's account.
    - The setup page (Phase 8) is served by the sensor over its own small Wi-Fi network,
@@ -60,7 +63,7 @@ and to be able to switch off a lost one.
    image we already use). Django is the broker's administrator on the sensors' door
    only. Checked on 2026-10-19 against Mosquitto 2.0.22 with the remote settings'
    per-door rules: a login made by the server connects; it can send under its own
-   `edgeathlete/node/<id>/` and nothing else; a wrong password, no login and a removed
+   `edgeathlete/node/<id>/` and nothing else; a wrong token, no login and a removed
    sensor are refused; the programs door (1883) is unaffected.
 5. **One shared piece of code for one-time secrets** (Devin). Three parts of the project
    hand out something that works once and expires: the first-run setup code (spec 01),
@@ -107,7 +110,7 @@ and to be able to switch off a lost one.
 ## Non-goals
 
 - Certificates per sensor (a private key on each sensor, like SSH keys). The check would
-  happen at Traefik, where the broker can't see which sensor it was; a password is
+  happen at Traefik, where the broker can't see which sensor it was; a token is
   checked by the broker itself.
 - Sensors over TLS on a local install. The gym box keeps plain MQTT on its own Wi-Fi.
 - The coach's sensor screens (spec 04 Phase 4, in the UI redesign).
@@ -174,7 +177,7 @@ works once:
 
 - [ ] *(Against a real Mosquitto 2.0.22, with the remote settings)* A login made through
       `sensor_logins` connects; it delivers under its own topic and not another's; a
-      wrong password and no login are refused; after removal it is disconnected and
+      wrong token and no login are refused; after removal it is disconnected and
       cannot reconnect.
 - [ ] The screens' door is still listen-only and the programs door still works.
 - [ ] The broker restarting keeps every sensor login.
@@ -193,8 +196,8 @@ works once:
   login yet), counted by the wrong-attempt limit, remote only. In one step:
   - the code must work;
   - the sensor record is made or found, and its owner becomes the code's athlete;
-  - a new password is made and the broker told; any older password stops working;
-  - the reply is `{username, password, path: "/sensors"}`, shown this one time.
+  - a new sensor token is made and the broker told; any older token stops working;
+  - the reply is `{username, token, path: "/sensors"}`, shown this one time.
   - **A sensor already owned by someone else is refused** ("Ask your coach to remove
     it first"). Otherwise anyone with a code of their own could take over another
     athlete's sensor by typing its ID.
@@ -207,10 +210,10 @@ works once:
 **Done when:**
 
 - [ ] A code claims a sensor: the athlete owns it, the broker knows its login, and the
-      password works on the sensors door.
+      token works on the sensors door.
 - [ ] A used, expired, cancelled or wrong code all get the same refusal; 10 wrong ones
       in a minute are turned away.
-- [ ] Claiming again (a re-setup) replaces the password; the old one stops working.
+- [ ] Claiming again (a re-setup) replaces the token; the old one stops working.
 - [ ] A sensor owned by another athlete is refused and nothing changes.
 - [ ] Removing a sensor disconnects it, keeps its sets, and a fresh code can claim it.
 - [ ] A coach and a gym box get no code; the claim route is `404` on a gym box.
@@ -256,7 +259,7 @@ Needs the sensor.
 - **The sensor's ID comes from its chip**, so one firmware build serves every sensor.
 - **The USB settings tool** (`scripts/sensor/`): add a Wi-Fi network; add a school with
   its address and a claim code. The sensor itself sends the code and keeps the
-  password, so the password never leaves the sensor.
+  token, so the token never leaves the sensor.
 - **ESP-MQTT over `wss` at QoS 1** for reps, with an outbox long enough to outlast a
   Wi-Fi drop; pulses and motion stay at QoS 0. A gym server stays plain MQTT on 1883.
 - **TLS checked against the stored root certificates** (Let's Encrypt's ISRG Root X1
@@ -307,7 +310,7 @@ address without typing it is decided here.
 
 ## Acceptance criteria
 
-- [ ] A sensor reaches its school only with its own password, over an encrypted
+- [ ] A sensor reaches its school only with its own token, over an encrypted
       connection, and can send only its own reps.
 - [ ] An athlete claims their own sensor with a one-time code; their account password
       never touches the sensor.
