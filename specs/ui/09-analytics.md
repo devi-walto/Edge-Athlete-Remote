@@ -247,6 +247,40 @@ Build it with whichever phase of this spec reworks the athlete picker:
       a plan.
 - [ ] No picker in PLANNING or SESSION lists an archived athlete.
 
+## Carried in from spec 14 — each movement is judged by mean or peak velocity
+
+Decided 2026-10-21. Every rep the sensor sends carries both its **mean velocity** (its
+average on the way up: how far the bar rose ÷ how long it took) and its **peak
+velocity** (the fastest instant), and every saved set keeps both (`avg_velocity`,
+`peak_velocity`). For squats, presses and pulls, mean is the reliable measure and
+tracks the load closely. For Olympic lifts (cleans, snatches, jerks) and jumps, the
+lift isn't a steady push, and practitioners and studies use **peak**. Today every
+screen shows mean.
+
+- **One field on `Exercise`: the velocity it is judged by, mean or peak**, defaulting to
+  mean.
+- **Set by us for the built-in catalog** (migration `0009`'s starter list and any added
+  to it later): peak for Hang Clean and Power Clean, and for Olympic-style movements and
+  jumps added later; mean for the rest. Coaches don't see or edit it. A movement a coach
+  or an import creates starts as mean.
+- **Everything that judges or compares velocity uses that movement's metric:** the
+  big number on the rack screen and the set summary, the target zones and "in zone",
+  velocity records, the Athlete tab's numbers and trends, and "Behind" (slower than
+  the session before means slower by that movement's metric).
+- **Both values stay saved**, so changing a movement's metric later recalculates
+  nothing and loses nothing.
+- Needs no change to the sensor or its messages.
+
+Build it with Phase 1 (Behind is computed on the server, so it can read the metric
+there) or Phase 5 (the Athlete tab's numbers), whichever comes first.
+
+**Done when:**
+
+- [ ] A Power Clean set shows and compares its peak velocity everywhere; a Back Squat
+      set its mean.
+- [ ] Changing a movement's metric changes what screens show, with no data rewritten.
+- [ ] *(Frontend test)* A movement with no metric set is treated as mean.
+
 ## Acceptance criteria
 
 - [ ] ANALYTICS has three tabs and one picker.
