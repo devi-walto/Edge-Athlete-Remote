@@ -8,7 +8,7 @@
   the other per-movement setting kept in our catalog (mean or peak velocity)
 - Mockup: `F_Rack_Plates1` to `F_Rack_Plates5` (the athlete's phone) and
   `F_Rack_Plates6` (the gym rack tablet) on the canvas's Final designs page (approved
-  2026-10-21). The proposals they came from are on the "Remote athlete view
+  2026-10-21). The two flows' Ready boards, `F_Rack_L2` and `F_Ath_R5`, show it too. The proposals they came from are on the "Remote athlete view
   (proposed)" page.
 
 ## Why
