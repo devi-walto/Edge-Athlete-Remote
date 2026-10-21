@@ -365,6 +365,24 @@ Needs the sensor.
 
 ## Phase 6 — Firmware: the BNO085
 
+**Hardware brought up (2026-10-21).** XIAO ESP32-C6 + a generic purple BNO085 board on
+a breadboard: VCC to 3.3V-OUT, GND, SCL to D5, SDA to D4, INT to D2, RST to D1. Two
+sketches check a newly wired sensor (`esp32/bringup_check/`, `esp32/motion_test/`).
+- **The headers must be soldered.** Unsoldered, every line read as unconnected (the
+  check's voltmeter on D0 showed the sensor's VCC floating); soldered, the BNO085
+  answers at `0x4B` with its own pull-ups.
+- **Measuring:** SparkFun's BNO08x library 1.0.6, linear acceleration and game rotation
+  vector at 100 per second each, at 100 kHz I2C. Lying still it reads about 0 m/s²;
+  tilting moves roll and pitch while movement stays near 0 (gravity taken out).
+- **The library is given neither INT nor RST.** With INT it restarted the sensor
+  whenever INT was slow and no reading got through; with RST it started but sent
+  nothing. The sketch pulses RST once at start and holds it high (left floating, the
+  sensor can sit half-reset), then the library reads it directly. Why the library's pin
+  handling misbehaves on this board is left to find out; both pins stay wired.
+- **The sensor's ID** is `ea-` plus the last 3 bytes of the chip's Wi-Fi address
+  (`ESP.getEfuseMac()` returns a padded address on the C6 and can't be used for it).
+
+
 Needs the sensor. The motion code reads the BNO085's movement with gravity already
 removed and its orientation, in the mode that ignores the compass (`sensors.md`).
 Speed is still reset whenever the bar is still. The messages don't change.
