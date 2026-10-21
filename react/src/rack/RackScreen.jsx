@@ -551,7 +551,8 @@ export default function RackScreen({ rackNumber, session, node, controller }) {
     if (phase !== 'active' || !node || !controller.canControl || !agent.ready) return
     const onRep = (rep) => {
       repQueueRef.current = repQueueRef.current.then(async () => {
-        await addRep(rep)
+        // A repeat of a rep already stored (QoS 1 can deliver one twice) changes nothing.
+        if ((await addRep(rep)) === false) return
         const rows = await getBufferedReps()
         const color = velocityColor(rep.mean_velocity, zoneMin)
         await controller.updateState({

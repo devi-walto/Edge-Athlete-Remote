@@ -507,6 +507,12 @@ health check fails (Django and React update side by side, so the old copy keeps 
   above, Cloudflare DNS for the new domain, and Demo U's real address. Done then as a
   test of the whole setup from scratch (new accounts, certificates, DNS), alongside
   Phase 7. Until then schools stay on the current domain. The `wss` part ships now.
+  - **Launched together with spec 13's school picker** (Devin, 2026-10-19), because
+    the picker lives at the domain's own address.
+  - **A wildcard certificate does not cover the domain's own address:**
+    `*.<domain>` matches `demo-u-k7m2qx.<domain>` but not `<domain>`. The certificate
+    must name both, and the plain domain needs its own DNS record (and hairpin rule)
+    pointing at the server.
 - **The plain-HTTP workarounds stay for the gym and go unused online.** A gym box serves
   plain HTTP, so the app carries two patches: `polyfills.js` fills in browser features
   that plain HTTP switches off, and the rack screen's kiosk script launches Chromium

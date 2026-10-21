@@ -13,9 +13,12 @@
 #   the broker's user     the Linux user the broker switches to after starting.
 #                         It comes with the broker's image: user "mosquitto"
 #                         (number 1883) in group "mosquitto" (number 1883).
-#   the programs door     port 1883, the standard MQTT port: django, the workers,
-#                         and later the sensors. Not reachable from outside.
+#   the programs door     port 1883, the standard MQTT port: django and the
+#                         workers. Not reachable from outside.
 #   the screens door      port 9001: browsers, through the site's /mqtt address.
+#                         Anyone may listen, nobody may send.
+#   the sensors door      port 9002: sensors, through the site's /sensors address.
+#                         Only with a sensor's own login; it sends only its own.
 # The user's number and the programs door's number are both 1883 only because
 # the image's makers chose them to match. They have nothing to do with each other.
 
@@ -66,6 +69,32 @@ spec:
         fsGroup: 1883   # group "mosquitto", the broker's user's group (not the port)
         # Only change the locker's group if it's wrong, instead of on every start.
         fsGroupChangePolicy: OnRootMismatch
+      # A step that must finish before the broker starts: make the sensors door's
+      # login file the first time (sensors-door-init.sh explains it). Runs as the
+      # broker's user, so the file belongs to the broker.
+      initContainers:
+        - name: sensors-door
+          image: eclipse-mosquitto:2.0.22
+          command: ["sh", "/mosquitto/config/sensors-door-init.sh"]
+          securityContext:
+            runAsUser: 1883    # the broker's user
+            runAsGroup: 1883
+          env:
+            # The administrator password django uses on the sensors door. From the
+            # school's broker-admin secret (made by eactl). optional: a school that
+            # doesn't have it yet still starts, with its sensors door locked.
+            - name: SENSORS_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: broker-admin
+                  key: password
+                  optional: true
+          volumeMounts:
+            - name: config
+              mountPath: /mosquitto/config/sensors-door-init.sh
+              subPath: sensors-door-init.sh
+            - name: data
+              mountPath: /mosquitto/data
       containers:
         - name: mosquitto
           # Pinned, so a rebuild months from now gets exactly this broker.
@@ -80,6 +109,10 @@ spec:
             # Online, Traefik adds the encryption (wss) in front of this.
             - name: screens
               containerPort: 9001
+            # The sensors door: MQTT in WebSockets too, with a login per sensor.
+            # Online, Traefik adds the encryption (wss) in front of this.
+            - name: sensors
+              containerPort: 9002
           volumeMounts:
             # The settings file, placed exactly where the broker looks for it.
             # subPath puts in just that one file and leaves the rest of the
@@ -91,7 +124,8 @@ spec:
             - name: config
               mountPath: /mosquitto/config/browser.acl
               subPath: browser.acl
-            # The locker, where mosquitto.conf says to keep held messages.
+            # The locker, where mosquitto.conf says to keep held messages, and
+            # where the sensors door keeps its logins.
             - name: data
               mountPath: /mosquitto/data
           # "Ready?" Is the programs door accepting connections yet? Until it
@@ -141,8 +175,8 @@ metadata:
   name: mosquitto
 spec:
   # Inside the server only. Browsers reach the screens door through the site's
-  # /mqtt address (ingress.yaml); sensors over the internet come with the
-  # sensors spec.
+  # /mqtt address and sensors the sensors door through /sensors (ingress.yaml).
+  # Django reaches the sensors door here too, to add and remove sensor logins.
   type: ClusterIP
   selector:
     app: mosquitto
@@ -153,3 +187,6 @@ spec:
     - name: screens
       port: 9001
       targetPort: screens
+    - name: sensors
+      port: 9002
+      targetPort: sensors

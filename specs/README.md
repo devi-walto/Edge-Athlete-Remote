@@ -90,11 +90,13 @@ The Django suite had 447 tests on 2026-10-06 and **491 after spec 01** (2026-10-
 | 03 | [Athlete login links](remote/03-athlete-login-links.md) | 4 | 02, 05 | **Done 2026-10-18** on `feature-login_links` (Phases 0–4, browser-checked). Coach login codes moved to spec 11, Phase 4 |
 | 04 | [Session link and virtual racks](remote/04-session-link-and-virtual-racks.md) | 3, 4, 5 | 02, 03, 05 | Built 2026-10-19: Phases 0–3 and 5 (demo data, `eactl seed` / `eactl sim`). Phase 4 (coach's side) moved to the end of the UI redesign; Phase 6 (rehearsal) skipped |
 | 10 | [The athlete's home page](remote/10-athlete-pages.md) | 4 | 03, 04, 05 | Written. Phase 4 (opening a past session) is built last, if time |
+| 14 | [Sensors online](remote/14-sensors-online.md) | 6, 7 | 03, 04, 12 | Written 2026-10-19. Shared one-time secrets (Phase 0), the broker's sensors door on 443, claim codes, then firmware (needs the sensor) |
 | 06 | [Design rules for the coach interface](ui/06-design-rules.md) | 11 | — | Written |
 | 07 | [Planning](ui/07-planning.md) | 11 | 06, 01 | Written |
 | 08 | [Session](ui/08-session.md) | 11 | 06 | Written |
 | 09 | [Analytics](ui/09-analytics.md) | 11 | 06 | Written |
 | 11 | [Mine first](ui/11-mine-first.md) | 11, 2 | 02, 06 | Written. A coach's own groups, programs, sessions and athletes come first; coaches on a group can be edited; coaches shown by name. Phase 4 (last of the redesign): coach login codes, moved from spec 03 |
+| 16 | [The plate loader on the rack screen](ui/16-plate-loader.md) | 11 | 06 | Written 2026-10-21. Both versions: the plates for one side of the bar before a set, side view, tap to switch lb/kg (remembered per device), closest load with a warning. Mockups `F_Rack_Plates1`–`6` |
 
 **Build 05 before 03 and 04, and 10 after 04. Spec 12 (hosting) starts after 05 and runs alongside 03 and 04.** It is numbered 05 because it was listed fifth, but 03
 and 04 both need its "is this installation hosted?" switch.
@@ -105,9 +107,7 @@ overlaps are called out inside each spec.
 
 ### Not specced yet
 
-| Work | Form item | Why not yet |
-|---|---|---|
-| Sensors over the internet, and MQTT over TLS on 8883 | 6 | Design is in `docs/remote/sensors.md`; hardware chosen (XIAO ESP32-C6 + BNO085); firmware not started. The firmware rewrite also moves reps to QoS 1 (ESP-MQTT) and the rack screen ignores repeated reps: "Getting every rep through" in that doc |
+Nothing in the Definition of Done. The last piece, sensors, became spec 14 on 2026-10-19.
 
 Moved into [spec 12](remote/12-hosting.md) on 2026-10-14: hosting on k3s, the demo
 installation, and (as "if there is time") moving a database between a gym box and hosted.
@@ -121,6 +121,7 @@ then. Business plans (pricing, billing) are kept out of this repository.
 |---|---|---|
 | **The registry of schools and the operator's console** | Two schools (real and demo) are manageable with `eactl list`; a console is for many | [spec 13](later/13-registry-and-console.md) |
 | An installation's name on the sign-in card (reads "Coach workspace") | Read from the registry | spec 13 |
+| **Usage history, a cloud cost estimate, and when to scale** | Not in the Definition of Done. Phase 0 (recording) can start any time, because history can't be collected later | [spec 15](later/15-usage-and-cost.md) |
 | Moving a database between a gym box and hosted, both directions | Not in the Definition of Done; "if there is time" in spec 12 | spec 12, `docs/remote/databases.md` |
 | Browser logins to the broker | Online it is open to read, accepted while the data is test data; needed before a real program's athletes use it | spec 12, Phase 4 and Non-goals |
 | Un-archiving an athlete from a screen | The server rule exists (spec 02); the button belongs with archived athletes in Analytics | spec 09 |

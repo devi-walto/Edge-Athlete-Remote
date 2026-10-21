@@ -1322,14 +1322,14 @@ A one-time link a coach sends an athlete, to make (or remake) their login. Treat
 <!-- schema:AthleteLoginLink:start -->
 | Column | Type | Notes |
 |---|---|---|
-| `athlete` | link → | → `Athlete`, on delete: `CASCADE`, reverse: `login_links` |
 | `token_hash` | text | max 128 |
 | `lookup` | text | **unique**, max 16 |
-| `created_by` | link → | → `settings.AUTH_USER_MODEL`, on delete: `SET_NULL`, optional, reverse: `+` |
 | `created_at` | date + time | — |
 | `expires_at` | date + time | — |
 | `used_at` | date + time | optional |
 | `cancelled_at` | date + time | optional |
+| `athlete` | link → | → `Athlete`, on delete: `CASCADE`, reverse: `login_links` |
+| `created_by` | link → | → `settings.AUTH_USER_MODEL`, on delete: `SET_NULL`, optional, reverse: `+` |
 <!-- schema:AthleteLoginLink:end -->
 
 **Why it exists.** Athletes never create their own logins. A coach sends a personal
@@ -1346,6 +1346,49 @@ link, and using it makes the athlete's login. This table records each link (spec
   athlete's login back on.
 - Rejected: storing the link itself; a separate "forgot password" path (a new link
   does both).
+- **Built on the shared one-time rows** (2026-10-19, spec 14). The first six columns
+  come from `OneTimeSecret`, an abstract model with no table of its own; making,
+  finding and using up the link follow `services/one_time_secrets.py`, which the
+  first-run setup code and sensor claim codes use too. Nothing in this table changed.
+
+:::::
+
+### `SensorClaimCode`
+
+A one-time code an athlete gives their sensor, so the sensor can claim itself. The athlete gets it on their athlete page ("Add my sensor"); the sensor sends it to the school with its ID, and gets its own sensor token back (spec 14). Treated like a password (see OneTimeSecret). It works once, for 15 minutes, and a newer code cancels the older. Checked in services/sensor_claims.py; this table only records what happened.
+
+:::::{dropdown} Schema and decisions
+
+<!-- schema:SensorClaimCode:start -->
+| Column | Type | Notes |
+|---|---|---|
+| `token_hash` | text | max 128 |
+| `lookup` | text | **unique**, max 16 |
+| `created_at` | date + time | — |
+| `expires_at` | date + time | — |
+| `used_at` | date + time | optional |
+| `cancelled_at` | date + time | optional |
+| `athlete` | link → | → `Athlete`, on delete: `CASCADE`, reverse: `sensor_claim_codes` |
+| `sensor` | link → | → `Node`, on delete: `SET_NULL`, optional, reverse: `+` |
+<!-- schema:SensorClaimCode:end -->
+
+**Why it exists.** Online, an athlete adds their own sensor without anyone's help. The
+code is how the school knows the sensor that sends it belongs to that athlete (spec 14).
+
+**Decisions.**
+- A code, not the athlete's account password: the account password never passes
+  through the sensor, and a code can only add a sensor, once.
+- Built on the shared one-time rows (`OneTimeSecret`): only a hash is stored, every
+  failure gives the same answer, and wrong codes are slowed down.
+- 15 minutes: long enough to set a sensor up over USB, short enough that a code left
+  on a screen is worthless.
+- A sensor that already belongs to someone else is refused, and the code stays usable;
+  a coach removes the sensor from its owner first.
+- The sensor's token is not stored here or anywhere in the database. The broker keeps
+  only a salted hash of it (its dynamic security file), and the claim reply is the only
+  time the token itself exists outside the sensor.
+- Rejected: the athlete's account password or its hash on the sensor; the coach
+  typing sensor IDs on the roster (claiming does it).
 
 :::::
 <!-- SCHEMA SECTION END -->

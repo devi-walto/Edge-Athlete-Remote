@@ -17,9 +17,10 @@ from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
 from .management.commands.seed_active_session import (ATHLETES, BLOCK_NAME, GROUP_NAME,
+                                                       NFC_TAG_BY_ATHLETE, NODE_ID,
                                                        SESSION_LABEL, sensor_id)
-from .models import (Athlete, CoachProfile, Node, RackRuntime, TrainingBlock, TrainingGroup,
-                     TrainingSession)
+from .models import (Athlete, CoachProfile, Node, RackRuntime, Set, TrainingBlock,
+                     TrainingGroup, TrainingSession)
 from .services.session_join import join
 
 User = get_user_model()
@@ -121,6 +122,46 @@ class SeederAddsTests(TestCase):
         rack, sensor = join(session.pk, riley)
         seed('--reset')
         self.assertFalse(RackRuntime.objects.filter(pk=rack.pk).exists())
+
+
+class GymOnlyPiecesTests(TestCase):
+    """A gym box's demo has a sensor fixed to rack 1 and a wristband tag; a remote
+    school gets neither (nothing drives rack_1 online, and nobody taps a wristband at
+    home). Seen on Demo U: rack_1 sat in the live room as "pulse overdue"."""
+
+    def setUp(self):
+        make_admin()
+
+    @override_settings(EA_DEPLOYMENT='local')
+    def test_a_gym_box_gets_the_rack_sensor_and_the_tag(self):
+        seed()
+        self.assertEqual(Node.objects.get(node_id=NODE_ID).rack_number, 1)
+        for name, tag in NFC_TAG_BY_ATHLETE.items():
+            self.assertEqual(Athlete.objects.get(name=name).nfc_tag_id, tag)
+
+    @override_settings(EA_DEPLOYMENT='remote')
+    def test_a_remote_school_gets_neither(self):
+        seed()
+        self.assertFalse(Node.objects.filter(node_id=NODE_ID).exists())
+        self.assertFalse(Athlete.objects.filter(nfc_tag_id__isnull=False).exists())
+
+    @override_settings(EA_DEPLOYMENT='remote')
+    def test_online_the_finished_sets_name_each_athletes_own_sensor(self):
+        seed()
+        for a_set in Set.objects.all():
+            self.assertEqual(a_set.node.owner, a_set.athlete)
+
+    @override_settings(EA_DEPLOYMENT='remote')
+    def test_an_earlier_seeds_rack_sensor_is_removed_online(self):
+        Node.objects.create(node_id=NODE_ID, rack_number=1, is_simulated=True)
+        seed()
+        self.assertFalse(Node.objects.filter(node_id=NODE_ID).exists())
+
+    @override_settings(EA_DEPLOYMENT='remote')
+    def test_a_real_sensor_called_rack_1_is_left_alone(self):
+        Node.objects.create(node_id=NODE_ID, rack_number=1)   # not simulated: someone's real one
+        seed()
+        self.assertEqual(Node.objects.get(node_id=NODE_ID).rack_number, 1)
 
 
 class DemoCoachTests(TestCase):

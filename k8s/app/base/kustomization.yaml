@@ -34,3 +34,4 @@ configMapGenerator:
     files:
       - mosquitto.conf=mosquitto-remote.conf
       - browser.acl
+      - sensors-door-init.sh

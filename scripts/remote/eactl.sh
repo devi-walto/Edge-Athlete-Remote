@@ -300,12 +300,15 @@ update_school() {
         preview "$(school_info "$short" display-name) ($short) at $(school_info "$short" version)" "$school" || return 1
         echo
         if [ "$CHANGES" = 0 ]; then
+            ensure_broker_admin "$ns" && restart_for_broker_admin "$ns"
             echo "✓ $short already matches. Nothing to do."
             return 0
         fi
         read -r -p "Apply these changes to $short? (y/N) " answer
         [ "$answer" = y ] || { echo "nothing applied to $short"; return 0; }
     fi
+    # Made before applying, so the parts that restart below already get it.
+    ensure_broker_admin "$ns"
     # Each part's version number before the change, so a failed update can put
     # back exactly what was running (see undo_parts).
     local before
@@ -319,7 +322,40 @@ update_school() {
             undo_parts "$ns" "$before"
             return 1; }
     done
+    # Nothing restarted (the template didn't change), so a broker-admin secret made
+    # just now hasn't reached the broker or django yet.
+    [ "$before" = "$(part_revisions "$ns")" ] && restart_for_broker_admin "$ns"
     echo "✓ $short is up to date: $(school_info "$short" address), $(school_info "$short" version)"
+}
+
+# ensure_broker_admin <namespace> — make the school's broker-admin secret if it has
+# none: the password django uses on the broker's sensors door to add and remove
+# sensor logins (spec 14). Until it exists, the school runs normally with its sensors
+# door locked. Only someone allowed to make secrets can do this, so the release robot
+# (which can't read or make secrets) skips it; the next `eactl update` you run does it.
+BROKER_ADMIN_MADE=false
+ensure_broker_admin() {
+    local ns="$1"
+    BROKER_ADMIN_MADE=false
+    [ "$(kubectl auth can-i create secrets -n "$ns" 2>/dev/null)" = yes ] || return 0
+    kubectl -n "$ns" get secret broker-admin >/dev/null 2>&1 && return 0
+    echo "==> the sensors door's administrator password (secret broker-admin)"
+    echo "+ kubectl -n $ns create secret generic broker-admin (value hidden)" >&2
+    kubectl -n "$ns" create secret generic broker-admin \
+        --from-literal=password="$(openssl rand -hex 24)" >/dev/null || return 1
+    BROKER_ADMIN_MADE=true
+}
+
+# restart_for_broker_admin <namespace> — a secret just made reaches only parts that
+# start after it. When nothing else changed (so nothing restarts by itself), restart
+# the broker and django so the sensors door opens and django can use it.
+restart_for_broker_admin() {
+    local ns="$1"
+    [ "$BROKER_ADMIN_MADE" = true ] || return 0
+    echo "==> restarting the broker and django, so the sensors door opens"
+    kube -n "$ns" rollout restart deployment/mosquitto deployment/django >/dev/null || return 1
+    kube -n "$ns" rollout status deployment/mosquitto --timeout=180s >/dev/null
+    kube -n "$ns" rollout status deployment/django --timeout=300s >/dev/null
 }
 
 # part_revisions <namespace> — "mosquitto=3 django=7 …": the version number

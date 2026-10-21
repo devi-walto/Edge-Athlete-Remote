@@ -43,7 +43,7 @@ Adding a node later is still possible; nothing here depends on there being one.
 
 | What | How |
 |---|---|
-| Web traffic (80, 443) and sensors (8883) | The home router forwards those three ports to the Dell. Nothing else is forwarded |
+| Web traffic (80, 443) | The home router forwards those two ports to the Dell. Nothing else is forwarded. Sensors come in on 443 too (spec 14; 8883 was the earlier plan) |
 | The home address changing | Home internet addresses change now and then. A small job in the cluster checks the address and updates the domain's records through Porkbun's API when it moves |
 | The cluster's own control port (6443) | **Never forwarded.** It is managed from inside the home network only |
 
@@ -123,12 +123,16 @@ proves the domain is ours by fetching a file over port 80, which is why port 80 
 forwarded even though the site itself redirects to HTTPS. If port 80 ever cannot be
 opened, the same proof can be done through Porkbun's DNS API instead.
 
-### Two doors into one broker
+### Two doors into one broker, both on 443
 
-| Door | Port | Used by | Speaks |
+| Door | Address | Used by | Speaks |
 |---|---|---|---|
-| **Secure WebSockets** (`wss`) | 443, alongside the site | browsers — rack screens, coach screens, wall display | MQTT over WebSockets, over TLS |
-| **MQTT over TLS** | 8883 | sensors | plain MQTT, over TLS |
+| **Screens** | `wss://<school>/mqtt` | browsers — rack screens, coach screens, wall display | MQTT over WebSockets, over TLS; listen-only |
+| **Sensors** | `wss://<school>/sensors` | sensors, each with its own login | MQTT over WebSockets, over TLS; each sends only its own reps |
+
+*Changed 2026-10-19 (spec 14):* sensors were to use plain MQTT over TLS on 8883. They use
+443 with WebSockets instead: no extra router port, it gets through networks that block
+other ports, and the firmware's new MQTT library does WebSockets with one setting.
 
 The broker behind both doors is the same Mosquitto the gym box runs. It already has a
 WebSockets listener, which the browser uses today over plain `ws://`. **Encrypted
@@ -229,10 +233,11 @@ Hardware already on hand does the same job, and running the cluster on it — ro
 addresses and all — is part of what the directed study is for.
 
 **A tunnel service instead of forwarding ports.** It hides the home address and needs
-no router changes, and it handles websites well. It handles the sensors' raw MQTT
-connection on port 8883 poorly: most tunnels expect web traffic, or need their own
-software on the connecting device, which an ESP32 cannot run. Forwarding three ports
-keeps the sensors simple. The tunnel stays the fallback if the home connection cannot
+no router changes, and it handles websites well. It handled the sensors' raw MQTT
+connection on port 8883 poorly (the plan at the time): most tunnels expect web traffic,
+or need their own software on the connecting device, which an ESP32 cannot run. Since
+spec 14 sensors use 443 too, so that reason is gone; forwarding is kept because it
+works and is part of what the study is for. The tunnel stays the fallback if the home connection cannot
 take incoming traffic.
 
 ## What it cost

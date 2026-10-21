@@ -24,3 +24,32 @@
 .athlete-notice h1 { font-size: 20px; font-weight: 850; margin: 0 0 8px; }
 .athlete-notice p { color: #89969d; font-size: 15px; line-height: 1.5; margin: 0; }
 .athlete-signout { align-self: center; font-size: 15px; font-weight: 800; margin-top: 24px; }
+
+/* My sensor (spec 14, MySensor.jsx), built to F_Ath_S1 to S5. */
+.athlete-label { color: #89969d; font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.athlete-muted { color: #89969d; font-size: 13px; line-height: 1.5; }
+.athlete-sensors { display: flex; flex-direction: column; gap: 6px; }
+.athlete-row { align-items: center; background: #0b1114; border: 1px solid #263239; box-sizing: border-box; display: flex; gap: 12px; min-height: 58px; padding: 8px 14px; }
+.athlete-row.is-status { min-height: 48px; }
+.athlete-row b { font-size: 15px; font-weight: 750; }
+.athlete-row-text { display: flex; flex: 1; flex-direction: column; gap: 3px; min-width: 0; }
+.athlete-row-text span { color: #89969d; font-size: 12px; }
+.athlete-row-button { flex: none; min-height: 44px; padding: 0 14px; }
+.athlete-sensor-id { font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.athlete-dot { background: #5c6a72; border-radius: 50%; flex: none; height: 10px; width: 10px; }
+.athlete-dot.is-on { background: #a9f04d; }
+.athlete-dot.is-waiting { background: #f2b84b; }
+.athlete-bar.is-back { padding: 8px; }
+.athlete-back { font-size: 15px; }
+.athlete-title { font-size: 26px; font-weight: 850; letter-spacing: -.02em; margin: 2px 0 0; }
+.athlete-code-card { align-items: center; background: #121b14; border: 1px solid #a9f04d; display: flex; flex-direction: column; gap: 8px; padding: 22px 16px; text-align: center; }
+.athlete-code { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 40px; font-weight: 800; letter-spacing: .08em; }
+.athlete-code-card.is-used { border-color: #263239; }
+.athlete-code-card.is-used .athlete-code { color: #5d6a70; text-decoration: line-through; }
+.athlete-steps { color: #c9d1d5; display: flex; flex-direction: column; font-size: 14px; gap: 10px; line-height: 1.45; margin: 0; padding: 0 0 0 20px; }
+.athlete-wide { min-height: 52px; width: 100%; }
+.athlete-overlay { align-items: center; background: rgba(0, 0, 0, .6); display: flex; inset: 0; justify-content: center; padding: 16px; position: fixed; z-index: 10; }
+.athlete-dialog { background: #10171b; border: 1px solid #263239; border-radius: 10px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; max-width: 420px; padding: 22px 20px; width: 100%; }
+.athlete-dialog h2 { font-size: 20px; font-weight: 850; margin: 0; overflow-wrap: anywhere; }
+.athlete-dialog p { color: #c9d1d5; font-size: 14px; line-height: 1.5; margin: 0; }
+.athlete-danger { background: #e5484d; border: 0; border-radius: 6px; color: #ffffff; cursor: pointer; font: inherit; font-size: 16px; font-weight: 800; min-height: 52px; }

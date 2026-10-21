@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="660" viewBox="0 0 680 660" role="img">
+<title>Setting up a sensor, once</title><desc>The athlete gets a one-time code on their phone and gives it to the sensor with their Wi-Fi. The sensor sends its ID and the code to the school server, which checks the code, makes a sensor token, tells the broker the sensor may send only its own reps, and sends the token to the sensor once.</desc>
+<defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<rect width="680" height="660" fill="#FFFFFF"/>
+<text x="120" y="36" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="bold" fill="#2C2C2A">Athlete's phone</text>
+<text x="340" y="36" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="bold" fill="#2C2C2A">School server</text>
+<text x="560" y="36" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="bold" fill="#2C2C2A">Sensor</text>
+<rect x="20" y="70" width="200" height="56" rx="8" fill="#F1EFE8" stroke="#888780" stroke-width="0.75"/>
+<text x="120" y="89" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="bold" fill="#2C2C2A">Tap Add my sensor</text>
+<text x="120" y="109" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#5F5E5A">Signed in on athlete page</text>
+<rect x="240" y="150" width="200" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.75"/>
+<text x="340" y="169" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="bold" fill="#3C3489">Makes a one-time code</text>
+<text x="340" y="189" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#534AB7">Keeps only its hash</text>
+<rect x="20" y="230" width="200" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.75"/>
+<text x="120" y="249" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="bold" fill="#3C3489">Shows the code</text>
+<text x="120" y="269" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#534AB7">Works once, for 15 min</text>
+<rect x="460" y="310" width="200" height="56" rx="8" fill="#F1EFE8" stroke="#888780" stroke-width="0.75"/>
+<text x="560" y="329" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="bold" fill="#2C2C2A">Gets Wi-Fi and code</text>
+<text x="560" y="349" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#5F5E5A">Sends ID + code, encrypted</text>
+<rect x="240" y="390" width="200" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.75"/>
+<text x="340" y="409" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="bold" fill="#3C3489">Checks the code</text>
+<text x="340" y="429" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#534AB7">Refuses an owned sensor</text>
+<rect x="240" y="470" width="200" height="56" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.75"/>
+<text x="340" y="489" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="bold" fill="#085041">Makes the sensor token</text>
+<text x="340" y="509" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#0F6E56">Broker: own reps only</text>
+<rect x="460" y="550" width="200" height="56" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.75"/>
+<text x="560" y="569" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="bold" fill="#085041">Saves its token</text>
+<text x="560" y="589" text-anchor="middle" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#0F6E56">Code is now used up</text>
+<path d="M120 126 L120 178 L238 178" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M340 206 L340 258 L222 258" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M120 286 L120 338 L458 338" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M560 366 L560 418 L442 418" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M340 446 L340 468" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a)"/>
+<path d="M340 526 L340 578 L458 578" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="40" y="626" width="14" height="14" rx="3" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.75"/>
+<text x="62" y="633" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#5F5E5A">One-time code</text>
+<rect x="200" y="626" width="14" height="14" rx="3" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.75"/>
+<text x="222" y="633" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#5F5E5A">Sensor token</text>
+<rect x="350" y="626" width="14" height="14" rx="3" fill="#F1EFE8" stroke="#888780" stroke-width="0.75"/>
+<text x="372" y="633" dominant-baseline="central" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#5F5E5A">Other steps</text>
+</svg>

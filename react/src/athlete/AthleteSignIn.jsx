@@ -6,13 +6,15 @@
 // "forgot password" flow on purpose: the coach sends a new login link instead.
 //
 // Once signed in, this page says so and points at the session link, until the
-// athlete's own home page exists (spec 10).
+// athlete's own home page exists (spec 10). Online it also holds "My sensor", where
+// the athlete adds their own sensor (spec 14, MySensor.jsx).
 
 import { useEffect, useState } from 'react'
 import { Mark } from '../coach/SignIn.jsx'
-import { useInstallationName } from '../useDeployment.js'
+import useDeployment, { useInstallationName } from '../useDeployment.js'
 import { navigate } from '../router.js'
 import { RETURN_KEY, athleteSignIn, athleteSignOut, freshAthleteToken } from './athleteAuth.js'
+import { AddSensorPage, MySensorSection } from './MySensor.jsx'
 import '../coach/account.css'
 import './athlete.css'
 
@@ -31,6 +33,8 @@ export default function AthleteSignIn() {
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [addingSensor, setAddingSensor] = useState(false)
+  const online = useDeployment() === 'remote'
 
   useEffect(() => {
     let cancelled = false
@@ -63,12 +67,15 @@ export default function AthleteSignIn() {
 
   if (signedIn === null) return <main className="acct-screen" />
 
+  if (signedIn && addingSensor) return <AddSensorPage onDone={() => setAddingSensor(false)} />
+
   if (signedIn) {
-    return <main className="acct-screen">
+    return <main className="acct-screen athlete-screen">
       <section className="acct-card">
         <AthleteBrand />
         <h1>You're signed in</h1>
         <p className="acct-note athlete-lead">Open the session link your coach sent to join today's training.</p>
+        {online && <MySensorSection onAdd={() => setAddingSensor(true)} />}
         <button type="button" className="acct-solid"
           onClick={() => { athleteSignOut(); setSignedIn(false) }}>Sign out</button>
       </section>

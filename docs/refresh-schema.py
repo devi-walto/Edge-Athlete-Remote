@@ -105,13 +105,19 @@ def unparse(node):
 
 def read_models():
     """Pull every model, its docstring, its fields and its Meta options out of
-    models.py by reading the syntax tree. No Django import, so this runs anywhere."""
+    models.py by reading the syntax tree. No Django import, so this runs anywhere.
+
+    An ABSTRACT model (Meta: abstract = True, e.g. OneTimeSecret) is not a table, so
+    it gets no section of its own; a model built on one gets its fields first, then
+    its own, which is what its real table holds."""
     tree = ast.parse(MODELS.read_text())
-    models = []
+    models, abstract = [], {}
     for node in tree.body:
         if not isinstance(node, ast.ClassDef):
             continue
-        if not any("Model" in unparse(b) for b in node.bases):
+        bases = [unparse(b) for b in node.bases]
+        inherited = [abstract[b] for b in bases if b in abstract]
+        if not inherited and not any("Model" in b for b in bases):
             continue
         fields, meta = [], []
         for item in node.body:
@@ -130,10 +136,13 @@ def read_models():
                 for m in item.body:
                     if isinstance(m, ast.Assign):
                         meta.append(f"{m.targets[0].id} = {unparse(m.value)}")
+        if "abstract = True" in meta:
+            abstract[node.name] = [f for parent in inherited for f in parent] + fields
+            continue
         models.append({
             "name": node.name,
             "doc": " ".join((ast.get_docstring(node) or "").split()),
-            "fields": fields,
+            "fields": [f for parent in inherited for f in parent] + fields,
             "meta": meta,
         })
     return models

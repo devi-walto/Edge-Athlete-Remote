@@ -87,6 +87,17 @@ spec:
                 name: school-settings
             - secretRef:
                 name: school-secrets
+          env:
+            # Django's administrator password on the broker's sensors door, to add
+            # and remove sensor logins (spec 14). From the broker-admin secret,
+            # which eactl makes; optional, so a school without it still starts
+            # (its sensors door stays locked).
+            - name: MQTT_SENSORS_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: broker-admin
+                  key: password
+                  optional: true
           # "Ready?" asks the app's own health page, which also checks the
           # database. Until it says yes, no visitors are sent here.
           # The Host header: django only answers names it's told to trust

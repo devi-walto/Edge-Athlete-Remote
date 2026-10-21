@@ -84,6 +84,16 @@ spec:
                 name: mosquitto
                 port:
                   name: screens
+          # Sensors at home (spec 14). Like /mqtt, one lasting connection passed on
+          # to the broker, but to its sensors door, where each sensor needs its
+          # own login and may send only its own messages.
+          - path: /sensors
+            pathType: Prefix
+            backend:
+              service:
+                name: mosquitto
+                port:
+                  name: sensors
           # Everything else: the screens themselves.
           - path: /
             pathType: Prefix
