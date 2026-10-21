@@ -26,6 +26,13 @@
 # On a remote server it is run with `eactl seed "School"`. Each invented athlete gets
 # their own simulated sensor; `eactl sim` (simulate_node --seeded) wakes them.
 #
+# GYM-ONLY PIECES STAY ON A GYM BOX. A local install's demo also gets a sensor fixed to
+# rack 1 (`rack_1`, which `docker compose`'s simulator drives) and Jordan's wristband
+# tag. Online neither has a use: nothing drives rack_1 there, so it sat in the coach's
+# live room as "Rack 1 · pulse overdue" (seen on Demo U, 2026-10-20), and nobody taps a
+# wristband at home. So a remote server gets neither, and an earlier seed's rack_1 is
+# removed there.
+#
 # Re-runnable: pass --reset to remove just this command's own earlier rows (by the
 # simulated label and the demo names, never by an athlete's name) and rebuild.
 from datetime import timedelta
@@ -35,6 +42,8 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.text import slugify
+
+from event_handler.deployment import is_hosted
 
 from django.contrib.auth.models import User
 
@@ -128,9 +137,14 @@ class Command(BaseCommand):
             self._reset()
 
         # ── the rows (only ever added, or reused if they're already ours) ─────
-        node, _ = Node.objects.get_or_create(
-            node_id=NODE_ID, defaults={"rack_number": 1, "mount_type": Node.MOUNT_BAR,
-                                       "is_simulated": True})
+        gym = not is_hosted()
+        if gym:
+            node, _ = Node.objects.get_or_create(
+                node_id=NODE_ID, defaults={"rack_number": 1, "mount_type": Node.MOUNT_BAR,
+                                           "is_simulated": True})
+        else:
+            node = None
+            self._remove_gym_rack()
 
         squat, _ = Exercise.objects.get_or_create(name=SQUAT)
         bench, _ = Exercise.objects.get_or_create(name=BENCH)
@@ -143,7 +157,7 @@ class Command(BaseCommand):
         # athlete, so only assign when the row has none. (A coach may have
         # retagged someone by hand; never clobber that.) And never take a tag a
         # real athlete already has.
-        for name, tag in NFC_TAG_BY_ATHLETE.items():
+        for name, tag in (NFC_TAG_BY_ATHLETE.items() if gym else ()):
             athlete = athletes.get(name)
             if (athlete is not None and not athlete.nfc_tag_id
                     and not Athlete.objects.filter(nfc_tag_id=tag).exists()):
@@ -153,6 +167,7 @@ class Command(BaseCommand):
         # Each invented athlete owns one simulated sensor (spec 04, Phase 5). When
         # they join a session online it goes on their own rack; `eactl sim` (the
         # simulator with --seeded) makes them send reps. Marked simulated too.
+        own_sensor = {}
         for athlete in athletes.values():
             sensor, _ = Node.objects.get_or_create(
                 node_id=sensor_id(athlete.name),
@@ -164,6 +179,8 @@ class Command(BaseCommand):
                     sensor.is_simulated and sensor.owner_id == athlete.pk):
                 sensor.owner, sensor.is_simulated = athlete, True
                 sensor.save(update_fields=["owner", "is_simulated"])
+            if sensor.owner_id == athlete.pk:
+                own_sensor[athlete.name] = sensor
 
         group, _ = TrainingGroup.objects.get_or_create(name=GROUP_NAME)
         # Staff are a join table now, not a field — a group can have several.
@@ -229,8 +246,9 @@ class Command(BaseCommand):
 
         # Give TWO of the four a finished set already, so has_data is non-trivial
         # (Alex + Jordan read as has_data=true; Casey + Riley as false).
-        self._finish_a_set(session, node, athletes[ALEX], squat, 1, 205.0)
-        self._finish_a_set(session, node, athletes[JORDAN], squat, 1, 255.0)
+        # Measured by the gym's rack sensor on a gym box; online, by each athlete's own.
+        self._finish_a_set(session, node or own_sensor.get(ALEX), athletes[ALEX], squat, 1, 205.0)
+        self._finish_a_set(session, node or own_sensor.get(JORDAN), athletes[JORDAN], squat, 1, 255.0)
 
         # Recorded reference maxes, shaped to exercise the endpoint:
         #  - Alex gets an OLD squat ref then a NEWER one → endpoint must return 315.
@@ -292,6 +310,15 @@ class Command(BaseCommand):
         TrainingGroup.objects.filter(name=GROUP_NAME).delete()
         demo.delete()
         self.stdout.write("Reset: removed the earlier demo rows.")
+
+    def _remove_gym_rack(self):
+        """Online: take away a rack_1 an earlier seed made (simulated, nobody's). A real
+        sensor that happens to be called rack_1 is left alone. Its old sets keep their
+        data; they just no longer name a sensor."""
+        gone, _ = Node.objects.filter(node_id=NODE_ID, is_simulated=True, owner__isnull=True).delete()
+        if gone:
+            self.stdout.write("  removed the gym-style rack_1 sensor an earlier seed made "
+                              "(nothing drives it online)")
 
     def _finish_a_set(self, session, node, athlete, exercise, set_number, weight_lbs):
         """Create one already-completed set with a couple of reps, so the athlete

@@ -1280,6 +1280,7 @@ class NodeRegistrationTests(APITestCase):
         self.assertEqual(Node.objects.count(), 0)
 
 
+@LOCAL   # wristbands are a gym thing: a remote seed assigns no tag (spec 04, seeder fix)
 class SeederNfcTagTests(APITestCase):
     """A fresh seed must assign the demo wristband tag, or sign-in silently dies.
 
