@@ -96,6 +96,7 @@ The Django suite had 447 tests on 2026-10-06 and **491 after spec 01** (2026-10-
 | 08 | [Session](ui/08-session.md) | 11 | 06 | Written |
 | 09 | [Analytics](ui/09-analytics.md) | 11 | 06 | Written |
 | 11 | [Mine first](ui/11-mine-first.md) | 11, 2 | 02, 06 | Written. A coach's own groups, programs, sessions and athletes come first; coaches on a group can be edited; coaches shown by name. Phase 4 (last of the redesign): coach login codes, moved from spec 03 |
+| 16 | [The plate loader on the rack screen](ui/16-plate-loader.md) | 11 | 06 | Written 2026-10-21. Both versions: the plates for one side of the bar before a set, side view, tap to switch lb/kg (remembered per device), closest load with a warning. Mockups `F_Rack_Plates1`–`6` |
 
 **Build 05 before 03 and 04, and 10 after 04. Spec 12 (hosting) starts after 05 and runs alongside 03 and 04.** It is numbered 05 because it was listed fifth, but 03
 and 04 both need its "is this installation hosted?" switch.
