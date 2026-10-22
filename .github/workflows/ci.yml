@@ -132,4 +132,4 @@ jobs:
       - name: Check which versions a release would pick
         run: ./scripts/remote/tests/release-version.sh
       - name: Check the server's copy follows only released versions
-        run: ./scripts/remote/tests/update-clone.sh
+        run: ./scripts/remote/tests/self-update.sh
