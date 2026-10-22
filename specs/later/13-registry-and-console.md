@@ -36,6 +36,7 @@ each:
 | database, namespace | `school_lincoln`, `ea-lincoln` |
 | status | active · suspended · archived |
 | version | `v0.4.0` |
+| features | what this school may use, e.g. several sessions at once: off (spec 17) |
 | contact, created, notes | … |
 
 ```text
@@ -62,6 +63,25 @@ ever appear in the registry.**
   stored in the registry, not in any school's database, and they are not school
   administrators.
 
+### What a school may use: recorded here, applied to the school
+
+Some features are switched on per school: the first is running several sessions at once
+(spec 17). Whether a school has one is an **entitlement**, so nobody at the school may be
+able to change it: not its administrator, not its own app, not a restored safety copy.
+(Decided 2026-10-22: the registry way.)
+
+- **The registry is the record** of each school's features (the `features` field above).
+  A plan or payment change, later, updates the record.
+- **The console applies it** by writing the value into the school's own settings (the
+  `school-settings` ConfigMap, e.g. `EA_CONCURRENT_SESSIONS=on`) and restarting its
+  django. `eactl` does the same steps from the command line.
+- **A school only ever reads its own copy**, through one function per feature (spec 17:
+  `concurrent_sessions_allowed()`). **No school's app gets a login to the registry**, so
+  schools can't see each other or change their own record. A school's copy can't be
+  changed from inside the school either: its app has no rights to its settings.
+- **The registry and the copies must agree:** the console's school page shows both, and
+  an "apply again" action fixes a school whose copy was lost or edited by hand.
+
 ### What the console does
 
 | Action | What happens |
@@ -71,6 +91,7 @@ ever appear in the registry.**
 | Add a school | what `eactl new` does, from the console, and a registry row |
 | Change a school's status | suspended: the school's app is scaled to zero and its address shows a notice; its data is untouched. Active again: scaled back up. This is also how a school is kept closed: there is no private mode (decided 2026-10-16); during the class the `ea/status` label exists but only `active` is used |
 | Upgrade a school | set its version, through the same deploy path as CD |
+| Change a school's features | update its record, then apply it to the school's settings (above) |
 | Back up, restore | the same as `eactl backup` / `restore` |
 | First administrator | issue a setup code for a new school (spec 01), or recover an administrator |
 
@@ -79,8 +100,9 @@ ever appear in the registry.**
 - Spec 12's namespace labels (`ea/installation`, address, version, `ea/status`) are the
   registry's first rows: a one-time import.
 - `eactl` keeps working; the console calls the same steps.
-- The installation's name on the sign-in card (reads "Coach workspace" today) is read from
-  the registry by each school's app.
+- The installation's name on the sign-in card (reads "Coach workspace" today) comes from
+  the registry the same way as features: the console writes it into the school's
+  settings (`EA_INSTALLATION_NAME`, which already exists), and the school reads its copy.
 
 ### A school picker, not central logins (Devin, 2026-10-16)
 
@@ -117,7 +139,8 @@ landing page ─ search or scroll "Demo U" ─▶ remembered in this browser ─
 
 0. `ea_registry` and its import from the namespace labels; `eactl list` reads it.
 1. The console, read-only: list and detail pages, operator sign-in.
-2. Actions: add, suspend and reactivate, upgrade.
+2. Actions: add, suspend and reactivate, upgrade, and change a school's features
+   (record, then apply; spec 17's switch is the first).
 3. The installation's name on each school's sign-in card.
 4. The school picker landing page.
 

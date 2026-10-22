@@ -5,7 +5,9 @@
 - Status: **After the class.** Written so the design isn't lost; not scheduled, not part
   of the Definition of Done. Best built with or after the coach interface redesign
   (specs 06–11), because the coach's live room changes most.
-- Depends on: [04 Session link and virtual racks](../remote/04-session-link-and-virtual-racks.md),
+- Depends on: [13 Registry and console](13-registry-and-console.md), **built first**
+  (it records which schools have this feature and applies it),
+  [04 Session link and virtual racks](../remote/04-session-link-and-virtual-racks.md),
   [11 Mine first](../ui/11-mine-first.md) (a coach's own sessions come first)
 
 ## Why
@@ -52,18 +54,22 @@ session without touching another team's, and see only my own team in the live ro
 
 ## The switch
 
-The whole feature hangs on one per-school setting, read in one place:
+The whole feature hangs on one per-school switch. It's an entitlement, so it is kept
+where nobody at the school can change it: **recorded in the registry, applied to the
+school** (spec 13, "What a school may use"; decided 2026-10-22, with spec 13 built
+first).
 
-- **Where it lives:** the school's own settings, beside `EA_DEPLOYMENT` and the rest
-  (the `school-settings` ConfigMap `eactl` makes), as `EA_CONCURRENT_SESSIONS=on|off`.
-  Missing means off, so every existing school is unchanged.
-- **How it's read:** one function, `concurrent_sessions_allowed()` in
-  `services/active_session.py`. Nothing else reads the setting. A gym box answers no
-  whatever the setting says. If the setting later moves (to spec 13's registry, or a
-  console), only this function changes.
-- **How it's set:** `eactl sessions "School" on|off` (and `eactl list` shows it). It
-  restarts the school's django so the new value is read; nothing about the school's
-  data changes in either direction.
+- **The record:** the school's row in `ea_registry` (spec 13), `features`: several
+  sessions at once, on or off. Off unless set.
+- **Applied to the school:** the console (or `eactl sessions "School" on|off`) updates
+  the record, then writes `EA_CONCURRENT_SESSIONS=on|off` into the school's own settings
+  (the `school-settings` ConfigMap) and restarts its django. Missing means off, so every
+  school is unchanged until someone turns it on. Nothing about the school's data changes
+  in either direction.
+- **Read in one place:** `concurrent_sessions_allowed()` in `services/active_session.py`
+  reads the school's copy. Nothing else reads it, and **the school never reads the
+  registry**. A gym box answers no whatever the setting says. If the source ever moves,
+  only this function changes.
 - **What it decides, and only that:** whether a session may be **started** while
   another is running. Everything else (each rack, coach and display finding its own
   session) works the same with it on or off; with one session running there's only one
@@ -91,9 +97,9 @@ above move to the "for this rack / coach / display" versions.
 
 ## Phases (outline; cut properly when scheduled)
 
-0. The switch: the setting, `concurrent_sessions_allowed()`, `eactl sessions on|off`,
-   and starting a second session allowed only when it's on. Every existing test passes
-   unchanged with it off.
+0. The switch: the feature in spec 13's registry and console, applied to the school's
+   settings; `concurrent_sessions_allowed()`; `eactl sessions on|off`; starting a second
+   session allowed only when it's on. Every existing test passes unchanged with it off.
 1. The rack routes and the athlete's room views find the session through the rack.
 2. The coach's live room and status: their own session first, a switch between running
    ones; room state per session.
@@ -109,6 +115,8 @@ above move to the "for this rack / coach / display" versions.
 - [ ] With the switch off, and on every gym box, nothing changes.
 - [ ] Turning the switch on or off needs no change to a school's data, and nothing but
       `concurrent_sessions_allowed()` reads it.
+- [ ] Nobody at the school can turn it on: not an administrator, not the school's app,
+      not a restored safety copy (checked by trying each).
 - [ ] Turning it off while two are running ends neither; a third can't start.
 - [ ] Each session gets its own daily report.
 
