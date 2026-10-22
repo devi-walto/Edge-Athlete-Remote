@@ -32,8 +32,10 @@ session without touching another team's, and see only my own team in the live ro
 - **Remote only.** A gym box keeps one running session at a time.
 - **After the class**, with the redesign. Until then, teams lifting together share one
   session (above).
-- **A switch per school, off by default**, set by the operator (`eactl`), so a school
-  that wants one session at a time keeps today's behaviour exactly.
+- **A switch per school, off by default, that the operator turns on or off at any time**
+  (Devin: the point of the spec is that this one switch decides it, so that offering it
+  to some schools and not others later needs no rewrite). Details in "The switch" below.
+
 
 ## What exists today
 
@@ -47,6 +49,27 @@ session without touching another team's, and see only my own team in the live ro
 - **Already per session online:** a virtual rack belongs to one session
   (`RackRuntime.session`); joining names its session (`/session/<id>`); ending names its
   session (`/api/sessions/<id>/`); a daily report belongs to one session.
+
+## The switch
+
+The whole feature hangs on one per-school setting, read in one place:
+
+- **Where it lives:** the school's own settings, beside `EA_DEPLOYMENT` and the rest
+  (the `school-settings` ConfigMap `eactl` makes), as `EA_CONCURRENT_SESSIONS=on|off`.
+  Missing means off, so every existing school is unchanged.
+- **How it's read:** one function, `concurrent_sessions_allowed()` in
+  `services/active_session.py`. Nothing else reads the setting. A gym box answers no
+  whatever the setting says. If the setting later moves (to spec 13's registry, or a
+  console), only this function changes.
+- **How it's set:** `eactl sessions "School" on|off` (and `eactl list` shows it). It
+  restarts the school's django so the new value is read; nothing about the school's
+  data changes in either direction.
+- **What it decides, and only that:** whether a session may be **started** while
+  another is running. Everything else (each rack, coach and display finding its own
+  session) works the same with it on or off; with one session running there's only one
+  to find.
+- **Turning it off while several are running** ends nothing: they carry on until each is
+  ended normally. Starting a new one is refused until only one is left running.
 
 ## The design
 
@@ -68,8 +91,9 @@ above move to the "for this rack / coach / display" versions.
 
 ## Phases (outline; cut properly when scheduled)
 
-0. The school's switch (`eactl`), off by default; starting a second session allowed only
-   when it's on. Every existing test passes unchanged with it off.
+0. The switch: the setting, `concurrent_sessions_allowed()`, `eactl sessions on|off`,
+   and starting a second session allowed only when it's on. Every existing test passes
+   unchanged with it off.
 1. The rack routes and the athlete's room views find the session through the rack.
 2. The coach's live room and status: their own session first, a switch between running
    ones; room state per session.
@@ -83,6 +107,9 @@ above move to the "for this rack / coach / display" versions.
 - [ ] With the switch on, two sessions run at once; each coach sees and ends only their
       own; each athlete's sets land in the session they joined.
 - [ ] With the switch off, and on every gym box, nothing changes.
+- [ ] Turning the switch on or off needs no change to a school's data, and nothing but
+      `concurrent_sessions_allowed()` reads it.
+- [ ] Turning it off while two are running ends neither; a third can't start.
 - [ ] Each session gets its own daily report.
 
 ## Risks
