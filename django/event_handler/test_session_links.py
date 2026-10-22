@@ -1,4 +1,4 @@
-"""Tests for session_links, what `eactl link "School"` prints (spec 04).
+"""Tests for session_links, what `eactl get-session-link "School"` prints (spec 04).
 
 WHY THESE EXIST: during a demo the running session's link couldn't be found anywhere.
 This prints it, ready to send: the running session first, or, with none running, the

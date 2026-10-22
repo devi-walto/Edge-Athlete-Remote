@@ -3,7 +3,7 @@
 # Why this exists: online, athletes join a session through its link,
 # https://<school>/session/<number>. The number isn't shown anywhere yet (the coach's
 # "Copy session link" button comes with the UI redesign, spec 04 Phase 4), and during a
-# demo there was no quick way to find it. `eactl link "School"` runs this inside the
+# demo there was no quick way to find it. `eactl get-session-link "School"` runs this inside the
 # school; it only reads.
 #
 # It prints the running session's link first. With none running, it says so and lists

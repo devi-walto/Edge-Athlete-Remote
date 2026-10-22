@@ -17,7 +17,7 @@ _eactl() {
 
     # The first word after eactl: the command.
     if [ "$COMP_CWORD" -eq 1 ]; then
-        COMPREPLY=( $(compgen -W "help init check apply-cluster apply-db new list update status link logs shell setup-code make-admin remove backup restore hold unhold seed sim" -- "$cur") )
+        COMPREPLY=( $(compgen -W "help init check apply-cluster apply-db new list update status get-session-link logs shell setup-code make-admin remove backup restore hold unhold seed sim" -- "$cur") )
         return
     fi
 
@@ -25,7 +25,7 @@ _eactl() {
     # read from the cluster each time, so a new school completes straight away.
     if [ "$COMP_CWORD" -eq 2 ]; then
         case "$cmd" in
-            update|status|link|logs|shell|setup-code|make-admin|remove|backup|restore|hold|unhold|seed|sim)
+            update|status|get-session-link|logs|shell|setup-code|make-admin|remove|backup|restore|hold|unhold|seed|sim)
                 local schools
                 schools="$(KUBECONFIG="${KUBECONFIG:-$HOME/.kube/config}" kubectl get namespaces -l ea/school \
                     -o jsonpath='{range .items[*]}{.metadata.labels.ea/school}{" "}{end}' 2>/dev/null)"

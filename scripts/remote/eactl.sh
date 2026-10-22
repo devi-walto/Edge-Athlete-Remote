@@ -47,7 +47,8 @@
 #     eactl restore "Name"        put one back (lists them)
 #
 #   LOOKING INSIDE A SCHOOL
-#     eactl link "Name"           the link athletes use to join the running
+#     eactl get-session-link "Name"
+#                                 the link athletes use to join the running
 #                                 session (and any set up, not started yet)
 #     eactl logs "Name" PART      what PART has been printing (django, react,
 #                                 mosquitto, mqtt-listener, monitoring-publisher,
@@ -933,7 +934,7 @@ shell)
     kube -n "ea-$short" exec -it deploy/django -- sh
     ;;
 
-link)
+get-session-link)
     # The session link to send athletes: https://<school>/session/<number>, for the
     # running session, plus any set up but not started yet (spec 04). Only reads.
     short="$(find_school "${1:-}")" || exit 1
