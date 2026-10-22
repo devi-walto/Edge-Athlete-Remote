@@ -12,6 +12,13 @@
 #     eactl apply-cluster         put the server-wide add-ons (k8s/cluster) on it
 #     eactl apply-db              put the shared database (k8s/db) on it
 #
+#   EACTL ITSELF  (the commands you're typing; they update themselves every hour)
+#     eactl version               eactl's release, the newest release, and each
+#                                 school's
+#     eactl self-update           bring eactl to the newest release now, instead of
+#                                 waiting for the hour (asks for your password).
+#                                 Not a school: eactl update "Name" is for schools
+#
 #   SCHOOLS
 #     eactl new "Name"            make a new school (public, HTTPS)
 #     eactl list                  every school: name, short name, status,
@@ -519,10 +526,110 @@ ask() {
 }
 
 
+# ── eactl's own release ─────────────────────────────────────────────────────
+# The commands you type (and the template schools are built from) come from this
+# server's copy of the code. update-clone.sh keeps that copy at the newest release,
+# every hour; `eactl self-update` does it now. These say which release it is, and
+# whether a newer one is out.
+
+# git, reading this copy. On a server the copy belongs to root (the hourly update runs
+# as root), and git refuses to read someone else's repository unless told the folder is
+# trusted ("dubious ownership"). This trusts exactly this folder, for this one command.
+repo_git() {
+    git -c safe.directory="$REPO_DIR" -C "$REPO_DIR" "$@"
+}
+
+# The release this copy is at, e.g. v0.7.1. Empty if it isn't at a release (a test
+# branch, say).
+eactl_release() {
+    repo_git describe --tags --exact-match HEAD 2>/dev/null \
+        | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' || true
+}
+
+# The newest release any school runs. A release goes to every school (the demo
+# first), so this is how eactl learns a newer one is out without asking GitHub.
+newest_school_release() {
+    kubectl get namespaces -l ea/school \
+        -o go-template='{{range .items}}{{index .metadata.labels "ea/version"}}{{"\n"}}{{end}}' \
+        2>/dev/null | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1
+}
+
+# older_release A B: true if release A comes before release B.
+older_release() {
+    [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n 1)" = "$1" ]
+}
+
+# A one-line notice when eactl is behind the schools: right after a release, for up
+# to an hour, until the timer moves it. Asks the cluster at most every 10 minutes
+# (remembered in ~/.cache), and says nothing if it can't tell.
+behind_notice() {
+    local mine newest cache="${XDG_CACHE_HOME:-$HOME/.cache}/eactl-newest-release"
+    mine="$(eactl_release)"
+    [ -n "$mine" ] || return 0
+    if [ -n "$(find "$cache" -mmin -10 2>/dev/null)" ]; then
+        newest="$(cat "$cache")"
+    else
+        newest="$(newest_school_release)"
+        mkdir -p "$(dirname "$cache")" 2>/dev/null && printf '%s\n' "$newest" > "$cache" 2>/dev/null
+    fi
+    if [ -n "$newest" ] && older_release "$mine" "$newest"; then
+        echo "[i] eactl is $mine; $newest is out. It updates itself within the hour, or now: eactl self-update" >&2
+    fi
+}
+
+
 CMD="${1:-help}"
 shift || true
 
 case "$CMD" in
+    help|-h|--help|version|self-update) ;;
+    *) behind_notice ;;
+esac
+
+case "$CMD" in
+
+version)
+    # Which release eactl is, the newest any school runs, and each school's.
+    mine="$(eactl_release)"
+    newest="$(newest_school_release)"
+    echo "eactl            ${mine:-$(repo_git describe --tags --always 2>/dev/null) (not a release: a test branch?)}"
+    echo "newest release   ${newest:-unknown (no schools found)}"
+    echo
+    echo "schools:"
+    kubectl get namespaces -l ea/school -o go-template='{{range .items}}  {{index .metadata.annotations "ea/display-name"}}	{{index .metadata.labels "ea/version"}}{{"\n"}}{{end}}' 2>/dev/null \
+        | column -t -s $'\t' || echo "  (couldn't read them)"
+    if [ -n "$mine" ] && [ -n "$newest" ] && older_release "$mine" "$newest"; then
+        echo
+        echo "eactl is behind. It updates itself within the hour, or now: eactl self-update"
+    fi
+    ;;
+
+self-update)
+    # Bring eactl itself to the newest release now: this server's copy of the code,
+    # which holds the commands and the school template. The hourly timer does the
+    # same; this is for not waiting. It runs the timer's own step as root
+    # (edgeathlete-update-clone, installed by bootstrap.sh), which reads from GitHub
+    # with the server's read-only key. A school is never touched.
+    if [ -n "${1:-}" ]; then
+        echo "self-update updates eactl itself, not a school."
+        echo "To update $1: eactl update \"$1\""
+        exit 1
+    fi
+    if ! command -v edgeathlete-update-clone >/dev/null 2>&1; then
+        echo "[!] this server doesn't have the hourly update yet. Run bootstrap.sh once (it installs it)."
+        exit 1
+    fi
+    before="$(eactl_release)"
+    echo "==> eactl is at ${before:-a test branch}; looking for a newer release (asks for your password)"
+    sudo edgeathlete-update-clone || exit 1
+    rm -f "${XDG_CACHE_HOME:-$HOME/.cache}/eactl-newest-release"
+    after="$(eactl_release)"
+    if [ "$before" = "$after" ]; then
+        echo "✓ eactl is already at the newest release, ${after:-(none)}"
+    else
+        echo "✓ eactl moved from ${before:-a test branch} to $after. New commands: eactl help"
+    fi
+    ;;
 
 init)
     # Load the saved answers, if any, so they show up as the defaults.
@@ -1129,7 +1236,9 @@ update)
         esac
     done
     if [ "$all" = no ] && [ -z "$target" ]; then
+        echo "Update which school? See them with: eactl list  (or --all for every school)"
         echo 'usage: eactl update "School Name" | --all   [--version 0.3.2] [--yes]'
+        echo "To update eactl itself: eactl self-update"
         exit 1
     fi
     require_cluster

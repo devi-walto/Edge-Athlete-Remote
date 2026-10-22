@@ -17,7 +17,7 @@ _eactl() {
 
     # The first word after eactl: the command.
     if [ "$COMP_CWORD" -eq 1 ]; then
-        COMPREPLY=( $(compgen -W "help init check apply-cluster apply-db new list update status get-session-link logs shell setup-code make-admin remove backup restore hold unhold seed sim" -- "$cur") )
+        COMPREPLY=( $(compgen -W "help version self-update init check apply-cluster apply-db new list update status get-session-link logs shell setup-code make-admin remove backup restore hold unhold seed sim" -- "$cur") )
         return
     fi
 
