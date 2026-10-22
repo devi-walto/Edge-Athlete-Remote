@@ -1,0 +1,11 @@
+# edgeathlete-self-update.service — move eactl (the server's copy of the code) to the
+# newest release (see scripts/remote/self-update.sh). Started by the timer of the same
+# name, or by `eactl self-update`. Installed by bootstrap.sh into /etc/systemd/system/.
+[Unit]
+Description=Edge Athlete: keep eactl (the server's code) at the newest release
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/edgeathlete-self-update

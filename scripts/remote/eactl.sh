@@ -528,7 +528,7 @@ ask() {
 
 # ── eactl's own release ─────────────────────────────────────────────────────
 # The commands you type (and the template schools are built from) come from this
-# server's copy of the code. update-clone.sh keeps that copy at the newest release,
+# server's copy of the code. self-update.sh keeps that copy at the newest release,
 # every hour; `eactl self-update` does it now. These say which release it is, and
 # whether a newer one is out.
 
@@ -614,20 +614,24 @@ self-update)
     # Bring eactl itself to the newest release now: this server's copy of the code,
     # which holds the commands and the school template. The hourly timer does the
     # same; this is for not waiting. It runs the timer's own step as root
-    # (edgeathlete-update-clone, installed by bootstrap.sh), which reads from GitHub
+    # (edgeathlete-self-update, installed by bootstrap.sh), which reads from GitHub
     # with the server's read-only key. A school is never touched.
     if [ -n "${1:-}" ]; then
         echo "self-update updates eactl itself, not a school."
         echo "To update $1: eactl update \"$1\""
         exit 1
     fi
-    if ! command -v edgeathlete-update-clone >/dev/null 2>&1; then
+    # Its name until v0.7.2 was edgeathlete-update-clone; a server not re-bootstrapped
+    # since still has that one.
+    step=edgeathlete-self-update
+    command -v "$step" >/dev/null 2>&1 || step=edgeathlete-update-clone
+    if ! command -v "$step" >/dev/null 2>&1; then
         echo "[!] this server doesn't have the hourly update yet. Run bootstrap.sh once (it installs it)."
         exit 1
     fi
     before="$(eactl_release)"
     echo "==> eactl is at ${before:-a test branch}; looking for a newer release (asks for your password)"
-    sudo edgeathlete-update-clone || exit 1
+    sudo "$step" || exit 1
     rm -f "${XDG_CACHE_HOME:-$HOME/.cache}/eactl-newest-release"
     after="$(eactl_release)"
     if [ "$before" = "$after" ]; then

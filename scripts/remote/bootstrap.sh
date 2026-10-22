@@ -159,23 +159,33 @@ else
     git -C "$PROJECT_DIR" config --unset core.sshCommand 2>/dev/null || true
 fi
 
-# Keep this copy at the newest release from now on, without anyone re-running this
-# script: an hourly timer runs update-clone.sh (see that file). The script is
-# copied to /usr/local/sbin, so root runs this copy, not the one it updates.
-echo "[2b] the hourly update of this copy..."
+# Keep eactl (this copy) at the newest release from now on, without anyone re-running
+# this script: an hourly timer runs self-update.sh (see that file); `eactl self-update`
+# runs it on demand. The script is copied to /usr/local/sbin, so root runs this copy,
+# not the one it updates.
+echo "[2b] eactl's self-update (hourly, and eactl self-update)..."
 mkdir -p /etc/edgeathlete
-printf 'EDGE_BRANCH=%s\n' "$EDGE_BRANCH" > /etc/edgeathlete/clone.env
-install -m 755 -o root -g root "$PROJECT_DIR/scripts/remote/update-clone.sh" \
-    /usr/local/sbin/edgeathlete-update-clone
+printf 'EDGE_BRANCH=%s\n' "$EDGE_BRANCH" > /etc/edgeathlete/self-update.env
+install -m 755 -o root -g root "$PROJECT_DIR/scripts/remote/self-update.sh" \
+    /usr/local/sbin/edgeathlete-self-update
 if command -v systemctl >/dev/null 2>&1 && [ -d /run/systemd/system ]; then
-    install -m 644 -o root -g root "$PROJECT_DIR"/scripts/remote/systemd/edgeathlete-update-clone.* \
+    # Before v0.7.2 the same job was called update-clone. Stop and remove it, so the
+    # two never both run.
+    if [ -e /etc/systemd/system/edgeathlete-update-clone.timer ]; then
+        systemctl disable --now edgeathlete-update-clone.timer >/dev/null 2>&1 || true
+        rm -f /etc/systemd/system/edgeathlete-update-clone.timer \
+              /etc/systemd/system/edgeathlete-update-clone.service
+        echo "    removed the old update-clone timer (renamed self-update)"
+    fi
+    install -m 644 -o root -g root "$PROJECT_DIR"/scripts/remote/systemd/edgeathlete-self-update.* \
         /etc/systemd/system/
     systemctl daemon-reload
-    systemctl enable --now edgeathlete-update-clone.timer >/dev/null
+    systemctl enable --now edgeathlete-self-update.timer >/dev/null
     echo "    on: checks hourly for a newer release (systemctl list-timers edgeathlete-*)"
 else
-    echo "    [i] no systemd here: run 'sudo edgeathlete-update-clone' to update by hand"
+    echo "    [i] no systemd here: run 'eactl self-update' to update by hand"
 fi
+rm -f /usr/local/sbin/edgeathlete-update-clone /etc/edgeathlete/clone.env
 if [ "$EDGE_BRANCH" != main ]; then
     echo "    [i] following $EDGE_BRANCH: the hourly update leaves this copy alone"
 fi

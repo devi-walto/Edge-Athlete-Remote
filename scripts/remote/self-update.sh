@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# update-clone.sh — keep the server's copy of the code at the newest release.
+# self-update.sh — keep eactl (the server's copy of the code) at the newest release.
 #
 # Why this file exists: the eactl you type on the server, and the templates it reads,
 # come from a copy of the repo at /srv/edge-athlete/Edge-Athlete-Remote. Releases
@@ -17,12 +17,19 @@
 #   - if bootstrap.sh was run for a branch other than main (testing one), it leaves
 #     the copy alone, so a test isn't undone an hour later.
 #
-# Run by hand, as root, to update now:   sudo edgeathlete-update-clone
+# Run by hand to update now:   eactl self-update   (it runs this as root:
+#                               sudo edgeathlete-self-update)
+#
+# Named update-clone.sh until v0.7.2, when it took the name of the command you type
+# (eactl self-update). bootstrap.sh replaces the old timer and file.
 
 set -euo pipefail
 
 PROJECT_DIR="${EDGE_PROJECT_DIR:-/srv/edge-athlete/Edge-Athlete-Remote}"
-SETTINGS="${EDGE_CLONE_SETTINGS:-/etc/edgeathlete/clone.env}"
+SETTINGS="${EDGE_SELF_UPDATE_SETTINGS:-/etc/edgeathlete/self-update.env}"
+# A server set up before v0.7.2 has the same setting under its old name.
+[ -r "$SETTINGS" ] || [ ! -r /etc/edgeathlete/clone.env ] || [ -n "${EDGE_SELF_UPDATE_SETTINGS:-}" ] \
+    || SETTINGS=/etc/edgeathlete/clone.env
 PLAIN='^v[0-9]+\.[0-9]+\.[0-9]+$'
 
 # Which branch bootstrap.sh was run for (written by bootstrap.sh). Default: main.
