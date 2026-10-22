@@ -30,9 +30,9 @@
 #
 #   RELEASES
 #     eactl update "Name"         bring a school up to date; --all for every
-#                                 school (the demo first); --version 0.3.2 to move
-#                                 to a release (or back to one, after checking
-#                                 its database changes)
+#                                 school (the demo first). Add a release to move
+#                                 to it, or back to it after checking its
+#                                 database changes: eactl update "Name" v0.3.2
 #     eactl hold "Name"           keep a school at its release: automatic deploys
 #                                 skip it (moving a school back holds it too)
 #     eactl unhold "Name"         let it follow releases again
@@ -559,6 +559,12 @@ older_release() {
     [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n 1)" = "$1" ]
 }
 
+# need_value OPTION VALUE: an option like --hours must have something after it. Without
+# this, "shift 2" with nothing left fails, and the option loop never ends.
+need_value() {
+    [ -n "$2" ] || { echo "$1 needs a value after it (see: eactl help)"; exit 1; }
+}
+
 # A one-line notice when eactl is behind the schools: right after a release, for up
 # to an hour, until the timer moves it. Asks the cluster at most every 10 minutes
 # (remembered in ~/.cache), and says nothing if it can't tell.
@@ -794,8 +800,8 @@ new)
     name="" version="" address="" canary=false
     while [ $# -gt 0 ]; do
         case "$1" in
-            --version) version="${2:-}"; shift 2 ;;
-            --address) address="${2:-}"; shift 2 ;;
+            --version) need_value "$1" "${2:-}"; version="$2"; shift 2 ;;
+            --address) need_value "$1" "${2:-}"; address="$2"; shift 2 ;;
             --canary) canary=true; shift ;;
             --*) echo "unknown option $1"; exit 1 ;;
             *) name="$1"; shift ;;
@@ -977,7 +983,7 @@ sim)
     hours=2 stop=no
     while [ $# -gt 0 ]; do
         case "$1" in
-            --hours) hours="${2:-}"; shift 2 ;;
+            --hours) need_value "$1" "${2:-}"; hours="$2"; shift 2 ;;
             --stop) stop=yes; shift ;;
             *) echo 'usage: eactl sim "School Name" [--hours 2] [--stop]'; exit 1 ;;
         esac
@@ -1218,9 +1224,11 @@ for app, name in sorted(MigrationLoader(None, ignore_no_migrations=True).disk_mi
 update)
     # Bring schools up to date with the template, or move them to a release.
     #   eactl update "Demo U"                    one school, at its current release
+    #   eactl update "Demo U" v0.3.1              one school to a release (forward, or a
+    #                                             rollback); "0.3.1" works too
     #   eactl update --all                        every school
-    #   eactl update --all --version 0.3.2        every school to a release (a deploy)
-    #   eactl update "Demo U" --version 0.3.1     one school to a release (a rollback)
+    #   eactl update --all v0.3.2                 every school to a release (a deploy)
+    #   --version 0.3.2                           the same as typing the version
     #   --yes                                     no questions (the automatic deploy)
     # With --all, schools labelled ea/canary=true (the demo) go first; if one of
     # them fails, no other school is touched. Before a school changes release, its
@@ -1229,15 +1237,18 @@ update)
     while [ $# -gt 0 ]; do
         case "$1" in
             --all) all=yes; shift ;;
-            --version) version="${2:-}"; shift 2 ;;
+            --version) need_value "$1" "${2:-}"; version="$2"; shift 2 ;;
             --yes) yes=--yes; shift ;;
             --*) echo "unknown option $1"; exit 1 ;;
-            *) target="$1"; shift ;;
+            # A word shaped like a release (v0.7.0 or 0.7.0) is the release, not a school.
+            v[0-9]*.[0-9]*.[0-9]*|[0-9]*.[0-9]*.[0-9]*) version="$1"; shift ;;
+            *) [ -z "$target" ] || { echo "one school at a time: got \"$target\" and \"$1\""; exit 1; }
+               target="$1"; shift ;;
         esac
     done
     if [ "$all" = no ] && [ -z "$target" ]; then
         echo "Update which school? See them with: eactl list  (or --all for every school)"
-        echo 'usage: eactl update "School Name" | --all   [--version 0.3.2] [--yes]'
+        echo 'usage: eactl update "School Name" | --all   [v0.3.2] [--yes]'
         echo "To update eactl itself: eactl self-update"
         exit 1
     fi
