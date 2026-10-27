@@ -42,7 +42,8 @@ Devin's convention, set 2026-10-06:
 Feature branch for each spec: `feature-coach_accounts` (01), `feature-roles` (02),
 `feature-deployment_switch` (05), `feature-login_links` (03), `feature-session_link`
 (04), `feature-athlete_home` (10), `feature-design_rules` (06), `feature-planning`
-(07), `feature-session` (08), `feature-analytics` (09), `feature-mine_first` (11).
+(07), `feature-session` (08), `feature-analytics` (09), `feature-mine_first` (11),
+`feature-shared_racks` (18).
 
 Spec and mockup edits that are not part of a feature are committed straight to
 `SprintBranch`. Release tags and the public docs are cut from `main`.
@@ -97,6 +98,7 @@ The Django suite had 447 tests on 2026-10-06 and **491 after spec 01** (2026-10-
 | 09 | [Analytics](ui/09-analytics.md) | 11 | 06 | Written |
 | 11 | [Mine first](ui/11-mine-first.md) | 11, 2 | 02, 06 | Written. A coach's own groups, programs, sessions and athletes come first; coaches on a group can be edited; coaches shown by name. Phase 4 (last of the redesign): coach login codes, moved from spec 03 |
 | 16 | [The plate loader on the rack screen](ui/16-plate-loader.md) | 11 | 06 | Written 2026-10-21. Both versions: the plates for one side of the bar before a set, side view, tap to switch lb/kg (remembered per device), closest load with a warning. Mockups `F_Rack_Plates1`–`6` |
+| 18 | [Shared racks online](remote/18-shared-racks-online.md) | — | 02, 04, 05, 14 | Written 2026-10-27. A login for rack tablets: the gym rack screen online, racks that name themselves, school sensors paired with one rep. In the class only if spec 14's firmware is done first; seven proposals still to settle |
 
 **Build 05 before 03 and 04, and 10 after 04. Spec 12 (hosting) starts after 05 and runs alongside 03 and 04.** It is numbered 05 because it was listed fifth, but 03
 and 04 both need its "is this installation hosted?" switch.
