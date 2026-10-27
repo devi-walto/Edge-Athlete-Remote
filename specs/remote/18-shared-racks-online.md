@@ -38,9 +38,11 @@ their own phone.
   2. **Set up this rack:** the rack's name, filled in with the next free one ("Rack 3")
      and editable, and the school's sensors to pick from; picking one starts the
      60-second check. "No sensor for now" skips it (the rack then shows Needs a sensor
-     in Room Layout). **While a coach is setting this rack up from Room Layout**, this
-     step shows "A coach is setting up this rack" and waits; when the coach picks a
-     sensor, its countdown appears here. Shown only when the device has no rack yet;
+     in Room Layout). This step is also where the tablet waits while a coach sets it
+     up from Room Layout: it simply stays here, and when either side starts the check
+     the same countdown (`F_Rack_Pairing`) appears; no separate waiting screen. This is
+     not the old `/rack/setup` (waiting for a coach to assign a slot number), which
+     isn't used online. Shown only when the device has no rack yet;
      signing in again on a set-up tablet goes straight to step 3.
   3. **The idle rack screen**, exactly as a rack works on remote.
 - **No role picker.** The idle rack screen gains one small button in its bottom-right
@@ -293,8 +295,8 @@ time (swipe, or arrows on a laptop, for more); the school sensors list shows six
 scrolls.
 
 **Proposed, not approved yet** (Proposed local UI page, row "a rack tablet on the common
-login"): `CS1_RackSetup`, `CS2_RackSetup_CoachEditing`, `CS3_RackIdle_Switch`,
-`CS4_Display_Switch`. The sign-in screen needs no new board. They are built after Devin
+login"): `CS1_RackSetup`, `CS3_RackIdle_Switch`, `CS4_Display_Switch` (the room display in
+its current landscape layout, in the solid colours; only the corner button is new). The sign-in screen needs no new board. They are built after Devin
 approves them (rule in `specs/README.md`). The rack screen and the room display
 themselves are the existing ones; online the check-in prompt drops the NFC line.
 
@@ -305,8 +307,8 @@ themselves are the existing ones; online the check-in prompt drops the NFC line.
       sensor, check an athlete in, finish a set.
 - [ ] *(Browser)* The corner button flips the tablet to the room display and back, and
       a reload keeps whichever it was showing.
-- [ ] *(Browser)* While a coach links a sensor from Room Layout, a tablet still on "Set
-      up this rack" shows the waiting message, then the countdown.
+- [ ] *(Browser)* While a tablet is on "Set up this rack", a coach starting the check
+      from Room Layout brings up the countdown on that tablet.
 - [ ] *(Browser)* A coach signs one device out; the others keep working.
 
 ## Phase 5 — Rehearsal and docs
