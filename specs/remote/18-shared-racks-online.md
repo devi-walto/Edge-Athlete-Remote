@@ -42,6 +42,14 @@ their own phone.
   a numbered slot. A tablet that replaces a dead one just makes a new rack: where an
   athlete is comes from their newest check-in, and the "at this rack" lists update on
   their own, so nothing is lost.
+  - The first time a tablet is picked as a rack it asks for a name, with the next free
+    one filled in ("Rack 3"), so tapping OK is enough. It can be renamed from the tablet.
+  - Behind the scenes the rack keeps an automatic number, because rack numbers run
+    through the rack tables, the sensor records, the room view, `/rack/<n>` and the
+    live-update topics.
+  - **Two racks may share a name.** When they do, the coach's screens show each one's
+    number after it, small and in brackets ("Platform A (12)"), so they can be told
+    apart. A rack whose name is its own shows no number.
 - **School sensors.** A sensor can be claimed for the school instead of for an athlete
   (same one-time code as spec 14). School sensors are offered on rack tablets as a list,
   by the name a coach gives them (also written on a sticker on the sensor).
@@ -50,34 +58,25 @@ their own phone.
   only when that sensor reports a rep before it ends. No rep, no link: if it can't count
   a rep, it isn't worth linking. There is no "link anyway".
 - **Sensors already on a working rack are not offered.**
+- **A dead tablet's sensor can be taken only when nothing is in progress on it**: its
+  tablet has been silent longer than the controller lease (20 seconds) **and its rack
+  has no set open**. Another rack tablet sees it in the list as "Rack 3, tablet offline"
+  and takes it with the usual one-rep pairing. While a set is open the sensor stays
+  put until the tablet comes back and finishes the set with the reps it kept, or a coach
+  force-clears the rack, as today. (Why: see "Reps kept on the tablet" below.)
+- **The risk of a shared password is accepted.** Anyone who knows it can read the
+  roster and the room, take an idle sensor, and check athletes in and log sets for them
+  while a session is running, from anywhere. If it is misused, a coach resets the common
+  login the same way as any other account (a fresh login link to set a new password);
+  every device is then signed out and signs in again with the new one. The sign-in's
+  wrong-password limit applies to it as to any login.
 - **Local works the same way later**, after the class: same naming and pairing in a
   gym, minus the login, which a gym doesn't need. The local flow works today and is what
   a gym demo uses.
 
-## Proposed, waiting for Devin
-
-1. **Racks are named at the rack, over an automatic number.** The first time a tablet
-   is picked as a rack, it asks for a name, with a suggestion already filled in ("Rack 3",
-   the next free one) so tapping OK is enough. The name can be changed later from the
-   tablet. Behind the scenes the rack keeps an automatic number, because rack numbers
-   run through the rack tables, the sensor records, the room view, `/rack/<n>` and the
-   live-update topics. Whether two racks may share a name is open.
-2. **A dead tablet's sensor can be taken only when nothing is in progress on it.** Its
-   tablet has been silent longer than the controller lease (20 seconds) **and its rack
-   has no set open**. Another rack tablet sees it in the list as "Rack 3, tablet offline"
-   and can take it with the usual one-rep pairing. While a set is open, the sensor
-   stays put: either the tablet comes back and finishes the set with the reps it kept,
-   or a coach force-clears the rack, as today. (Why: see "Reps kept on the tablet" below.)
-3. **What "everyone knows the password" allows.** Reading the roster and the room, and
-   taking an idle sensor, as Devin listed, **and also** checking athletes in and
-   logging sets for them while a session is running, from anywhere. The defences: an
-   administrator changes the password (every device is signed out), or signs out one
-   device; the sign-in's wrong-password limit applies. Devin to confirm that's
-   acceptable.
-
 ## Reps kept on the tablet
 
-How buffering works today, and why proposal 2 waits for an open set:
+How buffering works today, and why a dead tablet's sensor waits for an open set:
 
 - During a set, each rep the sensor sends reaches the tablet over live updates and is
   written to the tablet's own storage first (`db/repBuffer.js`). At the end of the set
@@ -89,7 +88,7 @@ How buffering works today, and why proposal 2 waits for an open set:
 - **A tablet that drops off the network and comes back is fine today**: its tab still
   holds its controller token, so it takes its rack back with the set still open and
   finishes it. Nothing in this spec changes that, as long as nobody takes the sensor
-  meanwhile, which is what proposal 2 guarantees.
+  meanwhile, which the rule above guarantees.
 - Reps the sensor sends while the tablet can't hear them are lost either way: the
   sensor doesn't keep them. That's unchanged.
 
@@ -142,10 +141,9 @@ How buffering works today, and why proposal 2 waits for an open set:
   signed in with it.
 - `role_of()` answers **common** for it. A login attached to it and to anything else is
   refused, like the existing two-attachment case.
-- An administrator sets its username and password (Coaches page, or `eactl` for the
-  first time) and can change the password: **a password change signs every device
-  out** (their renewals are refused from then on). An administrator can also sign out
-  one device.
+- Any coach sets it up and resets it the way they do an athlete's login: a login link
+  to set the password (spec 03). **A new password signs every device out** (their
+  renewals are refused from then on). A coach can also sign out one device.
 - Every coach route refuses the common login.
 
 **Done when:**
@@ -175,28 +173,27 @@ How buffering works today, and why proposal 2 waits for an open set:
 
 ## Phase 2 — Racks that make and name themselves
 
-Settles proposal 1 first.
-
 - A device signed in with the common login that picks Rack Tablet, with no rack yet,
   makes one: the next free number, and the name given at the rack. The name can be
   changed from the tablet.
 - A rack whose tablet has gone silent, and that has no sensor and nobody checked in,
   drops out of the room view and the coach's list.
 - The rack's name appears wherever its number does today (rack screen, room view, the
-  daily report's rack list).
+  daily report's rack list). On the coach's screens, a name two racks share is followed
+  by each rack's number in small brackets.
 
 **Done when:**
 
 - [ ] A new tablet's first pick makes a rack with the name given; a second tablet makes
       a second rack.
 - [ ] Renaming changes the name everywhere and nothing else.
+- [ ] Two racks with one name both show their number in brackets on the coach's
+      screens; a rack with a name of its own shows none.
 - [ ] A dead tablet's empty rack leaves the room view; its athletes' check-ins and sets
       are untouched.
 - [ ] Full suite passes in both modes.
 
 ## Phase 3 — School sensors and pairing
-
-Settles proposal 2 first.
 
 - A coach makes a claim code for the school (no athlete) and names the sensor.
   `SensorClaimCode.athlete` becomes optional; a school sensor has no owner.
@@ -231,7 +228,7 @@ Settles proposal 2 first.
 
 No Final design boards exist yet for: the common sign-in on a device, the two-choice
 role picker, naming the rack, the sensor list, the pairing countdown, and the coach's
-list of devices (sign one out, change the password). They go on a proposal page first
+list of devices (sign one out, reset the login). They go on a proposal page first
 and are built after Devin approves them (rule in `specs/README.md`). The rack screen and
 the room display themselves are the existing ones.
 
