@@ -2,7 +2,8 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-19
-- Status: Written — not started
+- Status: Phases 0–4 merged (PR #10). Phases 5, 6 and 8 in progress on
+  `feature-sensor_firmware` (2026-10-27)
 - Form items: Definition of Done #6 (sensors: MQTT over TLS, one credential each, publish
   only their own data, settings stored on the sensor) and #7 (end to end from a
   different network with a real sensor)
@@ -74,8 +75,12 @@ and to be able to switch off a lost one.
    no login; a school: 443, encrypted, its own login) and a list of **Wi-Fi networks**,
    each pointing at one server. On the gym's Wi-Fi it is a gym sensor, at home a remote
    one. No mode button.
-7. **USB for the class, the phone page if time** (unchanged). The USB tool and the
-   phone page write the same saved settings, so nothing is thrown away.
+7. **The phone page, no USB tool** (changed 2026-10-27). The first sensor ran online
+   for the 2026-10-27 demo with its Wi-Fi built in and the code typed over USB; the
+   faculty review asked to see setting a sensor up, and the phone page shows that
+   with no computer. So the phone page (Phase 8) is built now and the USB settings
+   tool is dropped. The USB console keeps `claim`, `forget`, `status` and `watch`
+   for development only.
 
 ## What exists
 
@@ -340,23 +345,32 @@ Needs the sensor.
 - **Saved settings in flash:** servers and Wi-Fi networks (decision 6). Tried in order;
   the first network found is used.
 - **The sensor's ID comes from its chip**, so one firmware build serves every sensor.
-- **The USB settings tool** (`scripts/sensor/`): add a Wi-Fi network; add a school with
-  its address and a claim code. The sensor itself sends the code and keeps the
-  token, so the token never leaves the sensor.
+- **~~The USB settings tool~~** dropped (decision 7): the phone page (Phase 8) writes the
+  settings. The sensor itself sends the code and keeps the token, so the token never
+  leaves the sensor.
 - **ESP-MQTT over `wss` at QoS 1** for reps, with an outbox long enough to outlast a
   Wi-Fi drop; pulses and motion stay at QoS 0. A gym server stays plain MQTT on 1883.
 - **TLS checked against the stored root certificates** (Let's Encrypt's ISRG Root X1
   and X2), never the server's own certificate. The clock is set from a public time
   server before connecting to a school.
-- **The setup button**: a long press clears nothing and opens setup (USB now; the phone
-  page later).
+- **The setup button** is the board's BOOT button: held 3 seconds it opens the phone
+  page (Phase 8). It clears nothing.
+
+**Done 2026-10-27 (firmware 2.0, `esp32/edge_athlete_node/`):** the ID from the chip
+(`ea-` + the last 3 bytes of its Wi-Fi address); ESP-MQTT over `wss` to
+`<school>/sensors` at QoS 1 for reps, sent at once and kept in the outbox while the
+connection is down; TLS checked against ISRG Root X1 and X2 (`roots.h`, from macOS's own
+trusted roots); the claim over HTTPS, the token kept in flash. The school's chain on
+2026-10-27 was leaf → YR1 → Root YR, cross-signed by X1, so X1 checks it; add Root YR
+before Let's Encrypt stops sending the cross-sign. Still to do here: the saved list of
+networks (Phase 8 writes it).
 
 **Done when:**
 
 - [ ] One build: a gym network entry talks to a gym box as today; a home entry talks to
       a school over `wss`.
-- [ ] A claim code given over USB claims the sensor; switching it off and on reconnects
-      with no further setup.
+- [x] A claim code claims the sensor (over USB, 2026-10-27; the phone page replaces it);
+      switching it off and on reconnects with no further setup.
 - [ ] Pulling the Wi-Fi mid-set and restoring it within a minute loses no rep.
 - [ ] A wrong Wi-Fi password, a wrong address and a used code each show a distinct
       status light and line on the USB console.
@@ -400,12 +414,69 @@ A real sensor on a network other than the Dell's, claimed with a code, an athlet
 joining from a phone, a set recorded with the sensor's reps, the coach's report showing
 it. Recorded.
 
-## Phase 8 — The phone setup page (if time)
+## Phase 8 — The phone setup page (built now, decision 7)
 
-The sensor's own small Wi-Fi network and page (`sensors.md`, "The setup flow"): pick
-the home network, type its password, test it live; enter the school and a claim code.
-Writes the same saved settings as the USB tool. How the page learns the school's
-address without typing it is decided here.
+The sensor's own small Wi-Fi network and page (`sensors.md`, "The setup flow"), so an
+athlete sets a sensor up from their phone with no computer. **Approved 2026-10-27 on
+Final designs**, the athlete sensor row after `F_Ath_S5`: `F_Setup1_Networks`,
+`F_Setup2_Password`, `F_Setup2b_WrongPassword`, `F_Setup3_Remote`, `F_Setup3_Local`,
+`F_Setup4_Code`, `F_Setup4b_CodeRefused`, `F_Setup5_DoneRemote`, `F_Setup5_DoneLocal`;
+`F_Ath_S2`'s steps now point at the phone instead of USB.
+
+**Decisions (Devin, 2026-10-27):**
+
+- **When setup opens:** by itself when nothing is saved (a new sensor, or one that was
+  never set up), and when the BOOT button is held 3 seconds. Nothing saved is erased
+  until new settings are saved. With saved settings, setup closes on its own after
+  10 minutes untouched and the sensor goes back to them.
+- **The setup network is open**, named `EdgeAthlete-<id>` (e.g. `EdgeAthlete-ab632c`).
+  Changes `sensors.md`'s "the setup network has a password". Kept small because setup
+  is only open on a new sensor or after the button, and linking to an account still
+  takes a one-time code.
+- **The page opens by itself.** The sensor answers every name lookup with its own
+  address and sends the phone's "am I online?" checks (Apple, Android, Windows) to the
+  page, so the phone's sign-in window pops it open.
+- **Steps:** Wi-Fi (the networks it can see, or type a name; the password tried live:
+  connected, wrong password, not found, or joined with no internet) → where reps go,
+  a switch **Remote server | Local install** → the code (remote only) → done.
+- **Remote: type only the school's subdomain.** The base domain is fixed per build (for
+  now one domain for every school); the athlete types `test` or `demo-u-fyig`, and the
+  page shows a login link's address with the domain greyed and the part to type in
+  lime. The sensor checks `https://<sub>.<domain>/api/health/` before going on. **The
+  domain is a build setting in a file git ignores** (`site.h`, beside `secrets.h`),
+  never in the firmware source, so it stays out of the public repo.
+- **Local: nothing to type.** On a local install the base station is the gym Wi-Fi's
+  own router (`192.168.4.1`), so the page fills it in from the network and checks
+  `http://<it>/api/health/`; "Change" is there in case. No code: the coach links the
+  sensor to a rack, as for every gym sensor, and the done screen says so.
+- **The time, on a local install, comes from the base station's own answers** (the
+  `Date` header of `/api/health/`): the gym Wi-Fi has no internet and the base station
+  runs no time server. Remote keeps `pool.ntp.org`.
+- **No cost once set up.** The setup network, the name answering and the page run only
+  in setup; finishing switches all three off. The page is one small file kept in the
+  firmware, with the phone's own font (no internet to load ours).
+- **Bigger program space:** the firmware moves to the board's "Huge APP" layout (3 MB
+  for the program; it used 91% of the default 1.2 MB before the page). Nothing used is
+  lost: sensors aren't updated over the air.
+- **Saved settings:** a short list of networks, each with its server (remote school or
+  local base station), tried in order, the first one found used. The token stays per
+  school, as now.
+
+**Done when:**
+
+- [ ] *(Phone)* A sensor with nothing saved opens `EdgeAthlete-<id>`; joining it pops the
+      page open on an iPhone and on an Android phone.
+- [ ] *(Phone)* Remote: pick Wi-Fi, a wrong password says so, the right one connects;
+      type `test`; a used code says so, a new one links the sensor; done; switching it
+      off and on connects with nothing typed.
+- [ ] *(Phone)* Local: on a base station's Wi-Fi the address fills itself in and no code
+      is asked for; the sensor's pulses reach the base station with the right time.
+- [ ] Holding BOOT 3 seconds reopens setup; leaving it untouched for 10 minutes goes
+      back to the saved settings, unchanged.
+- [ ] After setup, the sensor's own network is gone (not in the phone's Wi-Fi list).
+- [ ] The domain appears nowhere in the repo.
+
+**Stop. Devin reviews.**
 
 ---
 
