@@ -60,6 +60,15 @@ constexpr float STILLNESS_THRESHOLD_MPS2 = 0.4F;
 constexpr uint32_t MIN_REP_DURATION_MS = 250;
 constexpr uint32_t MAX_REP_DURATION_MS = 15000;
 constexpr float MIN_REP_PEAK_VELOCITY_MPS = 0.15F;
+// A rep also ends once the bar has slowed right down, even if it isn't quite still yet:
+// a hand (or a lifter) settling after a rep shakes at 0.4 to 2 m/s^2 for a couple of
+// seconds, and the next rep often starts before that, so waiting for stillness joined
+// reps together (seen 2026-10-27). Slowed = under a quarter of the rep's top speed,
+// moving under 1.5 m/s^2, for a quarter of a second. At the bottom of a squat the bar
+// turns round hard, well over 1.5, so a rep isn't cut in two there.
+constexpr float SETTLED_SPEED_FRACTION = 0.25F;
+constexpr float SETTLED_THRESHOLD_MPS2 = 1.5F;
+constexpr uint32_t SETTLED_DURATION_MS = 250;
 constexpr float MAX_CONTRACT_VELOCITY_MPS = 10.0F;
 constexpr int BATTERY_LEVEL_PERCENT = 100;  // USB-powered for now.
 
@@ -85,6 +94,7 @@ float verticalMps2 = 0.0F;
 bool repActive = false;
 uint32_t repStartedAt = 0;
 uint32_t stillnessStartedAt = 0;
+uint32_t settledStartedAt = 0;
 uint32_t previousReadingAt = 0;
 uint8_t repNumber = 0;
 float velocityMps = 0.0F;
@@ -348,6 +358,7 @@ void publishRep(uint32_t durationMs) {
 void resetRep() {
   repActive = false;
   stillnessStartedAt = 0;
+  settledStartedAt = 0;
   velocityMps = 0.0F;
   velocityTotal = 0.0F;
   peakVelocityMps = 0.0F;
@@ -397,7 +408,16 @@ void processReading(float x, float y, float z, uint32_t at) {
   }
   const uint32_t durationMs = at - repStartedAt;
   const bool stillLongEnough = stillnessStartedAt != 0 && at - stillnessStartedAt >= STILLNESS_DURATION_MS;
-  if (stillLongEnough && durationMs >= MIN_REP_DURATION_MS) {
+  const bool slowed = peakVelocityMps >= MIN_REP_PEAK_VELOCITY_MPS &&
+                      speed < peakVelocityMps * SETTLED_SPEED_FRACTION &&
+                      movementMps2 < SETTLED_THRESHOLD_MPS2;
+  if (slowed) {
+    if (settledStartedAt == 0) settledStartedAt = at;
+  } else {
+    settledStartedAt = 0;
+  }
+  const bool settledLongEnough = settledStartedAt != 0 && at - settledStartedAt >= SETTLED_DURATION_MS;
+  if ((stillLongEnough || settledLongEnough) && durationMs >= MIN_REP_DURATION_MS) {
     publishRep(durationMs);
     resetRep();
   } else if (durationMs >= MAX_REP_DURATION_MS) {
