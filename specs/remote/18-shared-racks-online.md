@@ -315,6 +315,34 @@ check-in prompt drops the NFC line.
       from Room Layout brings up the countdown on that tablet.
 - [ ] *(Browser)* A coach signs one device out; the others keep working.
 
+## Phase 4b — Demo data on the common login
+
+So a demo or a rehearsal has a shared rack without hardware (Devin, 2026-10-27). Today's
+seeder and simulator (spec 04 Phase 5: `seed_active_session` / `eactl seed`,
+`simulate_node --seeded` / `eactl sim`) make online athletes with their own sensors;
+they gain a shared rack.
+
+- **The seeder** also makes, on a remote server: one rack, made the way a tablet makes
+  it (the next free number, named "Demo rack"), and one **school sensor** (no owner,
+  simulated, named "Demo bar") linked to it. Like everything it makes, both are
+  labelled demo, so they're easy to find and wipe, and it refuses if a real rack or
+  sensor already has those names.
+- **The common login is not made by the seeder.** Spec 04 Phase 5's rule stands: the
+  seeder never makes a login, because a demo password on a real school's server is an
+  open door. If the school has no common login yet, the seeder says so and points to
+  the coach's setup link. (Proposed; Devin to confirm.)
+- **The simulator** drives the demo bar like any simulated sensor: reps during a set,
+  and the one rep that answers a pairing (Phase 3).
+
+**Done when:**
+
+- [ ] After `eactl seed`, Room Layout shows "Demo rack" with "Demo bar" on it, and the
+      school sensors list shows Demo bar.
+- [ ] A tablet signed in with the common login that picks Demo rack lifts a full set
+      with `eactl sim` running, and the set is saved with its reps.
+- [ ] Seeding twice changes nothing; wiping the demo data removes both.
+- [ ] The seeder still makes no login of any kind (test).
+
 ## Phase 5 — Rehearsal and docs
 
 - *(By hand)* Two tablets on a remote school, one sensor each: take one tablet offline
