@@ -296,12 +296,13 @@ card), and, the same in both, `F_LinkSensor_Pick`, `F_LinkSensor_Countdown`,
 time (swipe, or arrows on a laptop, for more); the school sensors list shows six rows and
 scrolls.
 
-**Proposed, not approved yet** (Proposed local UI page, row "a rack tablet on the common
-login"): `CS1_RackSetup`, `CS3_RackIdle_Switch`, `CS4_Display_Switch` (the room display in
-its current landscape layout, in the solid colours; only the corner button is new), and
-the switch's confirm both ways, `CS3b_RackIdle_SwitchConfirm`, `CS4b_Display_SwitchConfirm`. The sign-in screen needs no new board. They are built after Devin
-approves them (rule in `specs/README.md`). The rack screen and the room display
-themselves are the existing ones; online the check-in prompt drops the NFC line.
+**Also approved 2026-10-27, on Final designs:** `F_Rack_Setup` ("Set up this rack", in
+the Room Layout row, just before `F_Rack_Pairing`); the corner switch, added to
+`F_Rack_L1` with its confirm `F_Rack_SwitchToDisplay` beside it; and `F_Display` with its
+confirm `F_Display_SwitchToRack` at the end of the gym rack row (the room display in its
+current landscape layout, in the solid colours; only the corner button is new). The
+sign-in screen needs no new board. The rack screen itself is unchanged; online its
+check-in prompt drops the NFC line.
 
 **Done when:**
 
