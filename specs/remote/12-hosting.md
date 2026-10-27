@@ -245,9 +245,13 @@ image and printed `v0.3.1-test.1`; a pod without it got `ImagePullBackOff`.
   - **mqtt-listener**, **monitoring-publisher**: the django image with their commands,
     one each, `Recreate`.
   - **react**: the image.
-  - An **Ingress** that does what `nginx.conf` does: `/api/`, `/admin/` and the two
-    static paths to django, `/` to react, for the school's own host name. (The sign-in
+  - An **Ingress** that does what `nginx.conf` does: `/api/` and the browsable API's
+    static path to django, `/` to react, for the school's own host name. (The sign-in
     limit and `no-store` are already in the app when remote: spec 05 Phase 3.)
+    **`/admin/` and its static path were dropped on 2026-10-26:** an administrator's
+    password opened every table there, with no wrong-password limit, and nothing a
+    coach does needs it. A remote server doesn't have the page at all (`urls.py`);
+    local installs keep it for debugging.
   - **HTTPS for the school's address** (cert-manager, Let's Encrypt). **Every school is
     public** (Devin, 2026-10-16). A Tailscale-only guard was built and dropped: a school's
     address points at the public IP, so even a Tailscale device's browser arrives from the
