@@ -45,18 +45,21 @@ constexpr uint8_t BNO_ADDRESS = 0x4B;  // this board's address (found by bringup
 constexpr int PIN_RST = D1;            // restart line: pulsed once at start (see startImu)
 constexpr uint16_t REPORT_INTERVAL_MS = 10;  // 100 readings a second
 constexpr float REPORT_SECONDS = REPORT_INTERVAL_MS / 1000.0F;
-constexpr uint32_t STILLNESS_DURATION_MS = 750;
+constexpr uint32_t STILLNESS_DURATION_MS = 500;  // still this long = the rep is over
 constexpr uint32_t PULSE_INTERVAL_MS = 5000;
 constexpr uint32_t MOTION_INTERVAL_MS = 100;
 constexpr uint32_t WATCH_INTERVAL_MS = 200;
 constexpr uint32_t WIFI_RECONNECT_INTERVAL_MS = 10000;
 constexpr uint32_t READING_GAP_MS = 100;  // longer than this between readings: the rep is lost
-// Movement with gravity taken out, in m/s^2. Lying still the BNO085 reads about 0.
-constexpr float MOVEMENT_THRESHOLD_MPS2 = 0.35F;
-constexpr float STILLNESS_THRESHOLD_MPS2 = 0.15F;
+// Movement with gravity taken out, in m/s^2, smoothed over about 50 ms. Lying still the
+// BNO085 reads about 0.03; held in a hand (or at the top of a lift) it shakes to about
+// 0.3, which has to count as still or one rep never ends (seen 2026-10-27).
+constexpr float SMOOTHING = 0.2F;  // each reading moves the smoothed value 20% of the way
+constexpr float MOVEMENT_THRESHOLD_MPS2 = 0.8F;
+constexpr float STILLNESS_THRESHOLD_MPS2 = 0.4F;
 constexpr uint32_t MIN_REP_DURATION_MS = 250;
 constexpr uint32_t MAX_REP_DURATION_MS = 15000;
-constexpr float MIN_REP_PEAK_VELOCITY_MPS = 0.05F;
+constexpr float MIN_REP_PEAK_VELOCITY_MPS = 0.15F;
 constexpr float MAX_CONTRACT_VELOCITY_MPS = 10.0F;
 constexpr int BATTERY_LEVEL_PERCENT = 100;  // USB-powered for now.
 
@@ -276,13 +279,16 @@ bool formatUtcTimestamp(char *output, size_t outputSize) {
 
 // Reps are kept and sent again until the school says it has them (QoS 1), also across
 // a short drop of the connection. Pulses and live movement are only worth sending now.
+// Online, a rep goes out at once; queued, it waited up to a second for the connection's
+// next turn, so only a rep with no connection to go out on waits in the queue.
 void send(const char *kind, const char *payload, bool mustArrive) {
   if (mqtt == nullptr) return;
   char topic[96];
   snprintf(topic, sizeof(topic), "edgeathlete/node/%s/%s", sensorId, kind);
   if (mustArrive) {
-    esp_mqtt_client_enqueue(mqtt, topic, payload, 0, 1, 0, true);
-    Serial.printf("rep %u sent%s\n", repNumber, mqttConnected ? "" : " (kept until reconnected)");
+    const bool now = mqttConnected && esp_mqtt_client_publish(mqtt, topic, payload, 0, 1, 0) >= 0;
+    if (!now) esp_mqtt_client_enqueue(mqtt, topic, payload, 0, 1, 0, true);
+    Serial.printf("rep %u sent%s\n", repNumber, now ? "" : " (kept until reconnected)");
   } else if (mqttConnected) {
     esp_mqtt_client_publish(mqtt, topic, payload, 0, 0, 0);
   }
@@ -359,7 +365,7 @@ float upwardPart(float x, float y, float z) {
 
 // One movement reading, 100 a second.
 void processReading(float x, float y, float z, uint32_t at) {
-  movementMps2 = sqrtf(x * x + y * y + z * z);
+  movementMps2 += SMOOTHING * (sqrtf(x * x + y * y + z * z) - movementMps2);
   verticalMps2 = upwardPart(x, y, z);
   const uint32_t gap = at - previousReadingAt;
   previousReadingAt = at;
