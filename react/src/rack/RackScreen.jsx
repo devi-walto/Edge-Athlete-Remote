@@ -168,13 +168,18 @@ function SummaryPhase({ summary, onRest }) {
   )
 }
 
+// When rest runs out the rack goes back to idle once. Same reason as the countdown:
+// onDone is new every redraw, and the check-in list redraws the screen every 5 s, so
+// as a dependency it sent "back to idle" again on each redraw until the server answered.
 function RestPhase({ onDone, movementName, nextSetNumber, roster, hotList, groupName, statusMap, onSelectAthlete, owned }) {
   const [secs, setSecs] = useState(REST_SECONDS)
+  const onDoneRef = useRef(onDone)
+  onDoneRef.current = onDone
   useEffect(() => {
-    if (secs <= 0) { onDone(); return }
+    if (secs <= 0) { onDoneRef.current(); return }
     const t = setTimeout(() => setSecs((v) => v - 1), 1000)
     return () => clearTimeout(t)
-  }, [secs, onDone])
+  }, [secs])
   const mm = Math.floor(secs / 60)
   const ss = String(secs % 60).padStart(2, '0')
   return (

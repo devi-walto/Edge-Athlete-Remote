@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
-// Why this test exists: when the countdown reached GO and the server was slow to
-// answer (a remote server, a busy network), every redraw of the rack screen in the
-// meantime queued another set start. A BLE rack redraws every second, so a reply
-// slower than about a second sent two: the server refused the second, and the
-// athlete's finished set then showed a scary "The rack changed underneath this
-// screen". This pins that GO sends one start, however many redraws happen first.
+// Why these tests exist: the rack's two timers (the 3-2-1 countdown and the rest
+// timer) each do one thing when they run out: start the set, or send the rack back to
+// idle. Both used to do it again on every redraw of the screen while the server was
+// still answering. A second set start was refused by the server and left the
+// athlete's finished set showing a scary "The rack changed underneath this screen";
+// the extra "back to idle" messages were just noise. These pin that each timer acts
+// once, however many redraws happen before the server answers.
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
@@ -32,19 +33,25 @@ vi.mock('../db/repBuffer.js', () => ({ addRep: vi.fn(), clearBuffer: vi.fn(() =>
 const { default: RackScreen } = await import('./RackScreen.jsx')
 const { createSet } = await import('../api/client.js')
 
-const counting = { rack_number: 1, phase: 'countdown', state_version: 4, owner_athlete: null,
+const riley = { rack_number: 1, state_version: 4, owner_athlete: null,
   selected_athlete: { id: 1, name: 'Riley Brooks' }, selected_exercise: { id: 1 },
   current_set: null, rep_count: 0 }
-const controller = {
-  mode: 'controller', canControl: true, snapshot: counting,
-  runControlled: vi.fn(), updateState: vi.fn(() => Promise.resolve()),
-  runMutation: vi.fn((send) => send('capability', counting.state_version)),
+
+// The rack as the server last described it. updateState never answers, like a slow server.
+function controllerAt(phase) {
+  const snapshot = { ...riley, phase }
+  return {
+    mode: 'controller', canControl: true, snapshot,
+    runControlled: vi.fn(), updateState: vi.fn(() => new Promise(() => {})),
+    runMutation: vi.fn((send) => send('capability', snapshot.state_version)),
+  }
 }
 
 let container, root
 beforeEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true
   vi.useFakeTimers()
+  vi.mocked(createSet).mockClear()
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
@@ -55,24 +62,44 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-// A redraw from above, like the sensor-health check that lands every second.
-async function redraw() {
+// A redraw from above, the way the screen redraws on its own polls.
+async function redraw(controller) {
   await act(async () => {
     root.render(<RackScreen rackNumber={1} session={LIVE} node={{ id: 4 }} controller={controller} />)
   })
 }
+const tick = (ms) => act(async () => { vi.advanceTimersByTime(ms) })
 
 it('starts one set at GO while the server is still answering', async () => {
-  await redraw()
+  const controller = controllerAt('countdown')
+  await redraw(controller)
   // 3, 2, 1, GO, and the start goes out.
-  for (let i = 0; i < 4; i += 1) await act(async () => { vi.advanceTimersByTime(1000) })
+  for (let i = 0; i < 4; i += 1) await tick(1000)
   expect(createSet).toHaveBeenCalledTimes(1)
 
   // No reply yet, so the rack is still on GO. Five more seconds of redraws.
   for (let i = 0; i < 5; i += 1) {
-    await redraw()
-    await act(async () => { vi.advanceTimersByTime(1000) })
+    await redraw(controller)
+    await tick(1000)
   }
 
   expect(createSet).toHaveBeenCalledTimes(1)
+})
+
+it('sends the rack back to idle once when rest runs out', async () => {
+  const controller = controllerAt('rest')
+  await redraw(controller)
+  // The two-minute rest runs out.
+  for (let i = 0; i < 121; i += 1) await tick(1000)
+  const backToIdle = () => controller.updateState.mock.calls
+    .filter(([change]) => change?.phase === 'idle').length
+  expect(backToIdle()).toBe(1)
+
+  // No reply yet, so the rack is still resting at 0:00. Keep redrawing.
+  for (let i = 0; i < 5; i += 1) {
+    await redraw(controller)
+    await tick(1000)
+  }
+
+  expect(backToIdle()).toBe(1)
 })
