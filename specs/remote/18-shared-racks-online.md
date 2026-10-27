@@ -54,7 +54,8 @@ their own phone.
   (same one-time code as spec 14). School sensors are offered on rack tablets as a list,
   by the name a coach gives them (also written on a sticker on the sensor).
 - **Pairing confirms itself with one rep.** The tablet picks a sensor from the list, a
-  **20-second countdown** appears ("Do one rep with the bar"), and the link is saved
+  **60-second countdown** appears ("Do one rep with the bar"), with a **Cancel** button to stop
+  it any time (Devin, 2026-10-27: 60 s, not 20, because it can be cancelled), and the link is saved
   only when that sensor reports a rep before it ends. No rep, no link: if it can't count
   a rep, it isn't worth linking. There is no "link anyway".
 - **Sensors already on a working rack are not offered.**
@@ -63,7 +64,7 @@ their own phone.
   walking to each tablet. Only signing a tablet in has to happen on the tablet. From
   Room Layout a coach can rename a rack or a sensor, link a sensor to a rack, and clear
   or remove a rack. **Linking from Room Layout still needs someone at the bar**: the same
-  20-second countdown shows on the coach's screen and on that rack's tablet, and the link
+  60-second countdown shows on the coach's screen and on that rack's tablet, and the link
   is saved on a rep from that sensor. That walk is necessary friction.
 - **No separate "Identify" button** (Devin, 2026-10-27). The one time a coach needs to
   spot a tablet across the room is while pairing it, so the tablet's pairing countdown
@@ -239,7 +240,7 @@ devices and signing one out (Phase 0).
   only when its rack has no open set.
 - Linking a sensor to the tablet's rack, and taking an idle one from a dead tablet's
   rack. Taking one whose rack has a set open is refused.
-- **Pairing on the rack screen:** pick a sensor, a 20-second countdown appears ("Do one
+- **Pairing on the rack screen:** pick a sensor, a 60-second countdown, with Cancel, appears ("Do one
   rep with the bar"), the screen listens to that sensor's reps, and the link is saved on
   the first rep. When the countdown ends with no rep: "No rep from Bar 3. Is it switched
   on and on this bar?", and nothing is linked.
@@ -257,7 +258,7 @@ devices and signing one out (Phase 0).
 - [ ] A tablet that was offline mid-set comes back, takes its rack back and sends its
       kept reps; the set is saved with all of them.
 - [ ] *(Unit test)* Pairing saves the link on a rep from the chosen sensor; a rep from
-      another sensor does nothing; no rep within 20 seconds saves nothing.
+      another sensor does nothing; no rep within 60 seconds saves nothing; Cancel stops it and saves nothing.
 - [ ] *(Browser)* Pairing a simulated sensor on a rack tablet, start to finish.
 - [ ] Full suite passes in both modes.
 
