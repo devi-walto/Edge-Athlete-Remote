@@ -32,10 +32,22 @@ their own phone.
   attached to (`roles.py`). **One per school, shared by every tablet and TV** (a
   username and password the staff know). Each device signed in with it gets its own
   record, so a coach can see them and the racks they made.
-- **It can be a rack or the room display.** After signing in, the device shows the
-  role picker, offering **Rack Tablet** and **Base Station Display** (not Coach Admin).
-  The device remembers its pick, as a gym tablet does today. There is no rack setup
-  screen online: the login says it's a gym device, and the picker says which kind.
+- **The flow on a tablet (Devin, 2026-10-27), kept as simple as the rack screen is:**
+  1. **The normal sign-in screen, unchanged** (the athlete's, `F_Ath_R2`). Only where it
+     lands afterwards differs.
+  2. **Set up this rack:** the rack's name, filled in with the next free one ("Rack 3")
+     and editable, and the school's sensors to pick from; picking one starts the
+     60-second check. "No sensor for now" skips it (the rack then shows Needs a sensor
+     in Room Layout). **While a coach is setting this rack up from Room Layout**, this
+     step shows "A coach is setting up this rack" and waits; when the coach picks a
+     sensor, its countdown appears here. Shown only when the device has no rack yet;
+     signing in again on a set-up tablet goes straight to step 3.
+  3. **The idle rack screen**, exactly as a rack works on remote.
+- **No role picker.** The idle rack screen gains one small button in its bottom-right
+  corner, above the footer (which stays word for word), showing the room display's mark
+  (the rising bars): it switches the tablet to the room display. On the room display the
+  same corner shows the rack's mark (the barbell) to switch back. The tablet remembers
+  which it was showing. A tablet used only as a TV just stays on the display.
 - **The rack screen is the gym's rack screen**: check-in list, next lifter, the same
   flow. Not the athlete's own-rack view. **The display is the gym's room display.**
 - **A rack makes itself and is named at the rack.** A coach no longer links a tablet to
@@ -119,7 +131,7 @@ stays as it is**; only who may use it online changes.
 | Route | Online, with this spec | Local |
 |---|---|---|
 | `/rack/<n>` (the rack screen) | Same, `n` the rack's automatic number | Same |
-| `/rack/setup` (wait for a coach to assign a number) | Not used: picking Rack Tablet makes and names the rack, then goes to `/rack/<n>` | Same for now. After the class it becomes "name this rack, pair a sensor" instead of waiting |
+| `/rack/setup` (wait for a coach to assign a number) | Not used: signing in leads to "Set up this rack", which makes and names the rack, then goes to `/rack/<n>` | Same for now. After the class it becomes "name this rack, pair a sensor" instead of waiting |
 | `/api/racks/<n>/…` (state, the controller lease, check-in, check-ins, sensor health) and `set_create` / `set_complete` | Same routes, now also allowed for the common login on its own device's racks (Phase 1) | Unchanged |
 | `/api/racks/register/`, `/api/racks/racknumber/`, `/api/racks/<n>/nfc-tap/` | Still refused | Unchanged |
 | `/api/racks/unassigned/`, `PATCH /api/racks/<device_id>/` (give a tablet its number), `/api/racks/node-assignment/` (link a sensor) | Not used for shared racks: the tablet names its rack and pairs its own sensor | Unchanged for now; no longer needed once local moves over after the class |
@@ -207,7 +219,7 @@ devices and signing one out (Phase 0).
   `athlete_progress` allow it, the last two only for athletes checked in at its rack.
 - `room_state` (the room display) allows it.
 - Registering a rack, asking its number and the NFC tap stay refused: online a rack is
-  made by picking Rack Tablet (Phase 2).
+  made by signing in with the common login (Phase 2).
 
 **Done when:**
 
@@ -218,9 +230,10 @@ devices and signing one out (Phase 0).
 
 ## Phase 2 — Racks that make and name themselves
 
-- A device signed in with the common login that picks Rack Tablet, with no rack yet,
-  makes one: the next free number, and the name given at the rack. The name can be
-  changed from the tablet.
+- A device signed in with the common login, with no rack yet, makes one when it
+  finishes "Set up this rack": the next free number, and the name shown there (the
+  suggested one unless changed). The name can be changed later from the tablet or Room
+  Layout.
 - A rack whose tablet has gone silent, and that has no sensor and nobody checked in,
   drops out of the room view and the coach's list.
 - The rack's name appears wherever its number does today (rack screen, room view, the
@@ -277,17 +290,23 @@ differs: remote adds the common login strip and a Sign out tablet button on each
 card), and, the same in both, `F_LinkSensor_Pick`, `F_LinkSensor_Countdown`,
 `F_Rack_Pairing`, `F_ClearRack`, `F_RemoveRack`. Room Layout's rack screens show six at a
 time (swipe, or arrows on a laptop, for more); the school sensors list shows six rows and
-scrolls. Still without a board: the common sign-in on a device, the two-choice
-role picker, and the rack tablet's own sensor list. They go on a proposal page first
-and are built after Devin approves them (rule in `specs/README.md`). The rack screen and
-the room display themselves are the existing ones.
+scrolls.
+
+**Proposed, not approved yet** (Proposed local UI page, row "a rack tablet on the common
+login"): `CS1_RackSetup`, `CS2_RackSetup_CoachEditing`, `CS3_RackIdle_Switch`,
+`CS4_Display_Switch`. The sign-in screen needs no new board. They are built after Devin
+approves them (rule in `specs/README.md`). The rack screen and the room display
+themselves are the existing ones; online the check-in prompt drops the NFC line.
 
 **Done when:**
 
 - [ ] Each screen matches its approved board.
-- [ ] *(Browser)* A fresh tablet: sign in, pick Rack Tablet, name the rack, pair a
+- [ ] *(Browser)* A fresh tablet: sign in, keep or change the suggested name, pair a
       sensor, check an athlete in, finish a set.
-- [ ] *(Browser)* A fresh TV: sign in, pick Base Station Display, see the room live.
+- [ ] *(Browser)* The corner button flips the tablet to the room display and back, and
+      a reload keeps whichever it was showing.
+- [ ] *(Browser)* While a coach links a sensor from Room Layout, a tablet still on "Set
+      up this rack" shows the waiting message, then the countdown.
 - [ ] *(Browser)* A coach signs one device out; the others keep working.
 
 ## Phase 5 — Rehearsal and docs
