@@ -61,12 +61,14 @@ their own phone.
 - **Everything can be set up from the coach's Room Layout as well as at the rack**
   (Devin, 2026-10-27), so a coach can set up a whole room from one screen instead of
   walking to each tablet. Only signing a tablet in has to happen on the tablet. From
-  Room Layout a coach can rename a rack or a sensor, link a sensor to a rack, find a
-  tablet (**Identify** flashes its name full-screen, sent over the command channel the
-  tablets already listen to, `RackCommandListener` in `App.jsx`), and clear or remove a
-  rack. **Linking from Room Layout still needs someone at the bar**: the same 20-second
-  countdown shows on the coach's screen and on that rack's tablet, and the link is saved
-  on a rep from that sensor. That walk is necessary friction.
+  Room Layout a coach can rename a rack or a sensor, link a sensor to a rack, and clear
+  or remove a rack. **Linking from Room Layout still needs someone at the bar**: the same
+  20-second countdown shows on the coach's screen and on that rack's tablet, and the link
+  is saved on a rep from that sensor. That walk is necessary friction.
+- **No separate "Identify" button** (Devin, 2026-10-27). The one time a coach needs to
+  spot a tablet across the room is while pairing it, so the tablet's pairing countdown
+  shows its rack's name big, outlined in lime. Every other time, the rack's name is in
+  the tablet's header.
 - **A dead tablet's sensor can be taken only when nothing is in progress on it**: its
   tablet has been silent longer than the controller lease (20 seconds) **and its rack
   has no set open**. Another rack tablet sees it in the list as "Rack 3, tablet offline"
@@ -264,7 +266,7 @@ devices and signing one out (Phase 0).
 Proposed boards (not approved yet) are on the canvas's Proposed local UI page, row
 "Spec 18, the coach's Room Layout": `RL1_RoomLayout_Remote`, `RL1_RoomLayout_Local`,
 `RL2_LinkSensor_Pick`, `RL3_LinkSensor_Countdown`, `RL4_ClearRack`, `RL5_RemoveRack`,
-`RL6_Tablet_Pairing`, `RL7_Tablet_Identify`. Still without a board: the common sign-in on a device, the two-choice
+`RL6_Tablet_Pairing`. Still without a board: the common sign-in on a device, the two-choice
 role picker, and the rack tablet's own sensor list. They go on a proposal page first
 and are built after Devin approves them (rule in `specs/README.md`). The rack screen and
 the room display themselves are the existing ones.
