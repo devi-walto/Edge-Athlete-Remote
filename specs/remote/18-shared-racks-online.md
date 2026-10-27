@@ -304,11 +304,24 @@ current landscape layout, in the solid colours; only the corner button is new). 
 sign-in screen needs no new board. The rack screen itself is unchanged; online its
 check-in prompt drops the NFC line.
 
+**Also approved 2026-10-27, on Final designs, for local and remote:** `F_Rack_NoSession`,
+the first board in the gym rack row (BOTH 0). A rack with no session running shows "No
+session yet" in the header and, in place of the empty check-in list, "Rack 3 is ready ·
+Waiting for today's session" with "A coach starts it from the coach app. This screen
+updates on its own, then shows who can check in." and a small chip saying the sensor is
+live. The NFC prompt is hidden in this state only, since nobody can check in yet; the
+corner switch stays. It needs nothing from the common login, so it can ship on its own
+before the rest of this spec (the tablet already picks up a new session on its own,
+PR #14).
+
 **Done when:**
 
 - [ ] Each screen matches its approved board.
 - [ ] *(Browser)* A fresh tablet: sign in, keep or change the suggested name, pair a
       sensor, check an athlete in, finish a set.
+- [ ] *(Browser)* With no session running, a rack shows the waiting message (local and
+      remote); when a coach starts one, the check-in list replaces it within 5 seconds
+      with no reload.
 - [ ] *(Browser)* The corner button asks first, then flips the tablet to the room display
       and back; Cancel changes nothing; a reload keeps whichever it was showing.
 - [ ] *(Browser)* While a tablet is on "Set up this rack", a coach starting the check
