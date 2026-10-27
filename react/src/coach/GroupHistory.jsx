@@ -12,7 +12,7 @@
  * evidence instead of vibes.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { BEHIND_DOWN_DAYS, BEHIND_OF_LAST, buildGroupRows } from './groupHistory.js'
 import { rangeLabel } from './historyRange.js'
 
@@ -52,6 +52,10 @@ export default function GroupHistory({ group, range, accessToken, onLogout }) {
   const [analytics, setAnalytics] = useState({})
   const [state, setState] = useState('loading')
   const [requestCount, setRequestCount] = useState(0)
+  // Read through a ref so a new copy of the sign-out function from a redraw doesn't
+  // restart the load below (one roster request plus one per athlete, every time).
+  const onLogoutRef = useRef(onLogout)
+  onLogoutRef.current = onLogout
 
   useEffect(() => {
     if (!group?.id) return undefined
@@ -62,7 +66,7 @@ export default function GroupHistory({ group, range, accessToken, onLogout }) {
     const headers = { Accept: 'application/json', Authorization: `Bearer ${accessToken}` }
     const json = async (url) => {
       const response = await fetch(url, { headers })
-      if (response.status === 401 || response.status === 403) { onLogout(); return null }
+      if (response.status === 401 || response.status === 403) { onLogoutRef.current(); return null }
       if (!response.ok) throw new Error(url)
       return response.json()
     }
@@ -84,7 +88,7 @@ export default function GroupHistory({ group, range, accessToken, onLogout }) {
     })()
 
     return () => { cancelled = true }
-  }, [group?.id, accessToken, onLogout])
+  }, [group?.id, accessToken])
 
   if (!group) {
     return <p className="monitor-empty">Choose a group to see how its athletes are tracking.</p>

@@ -29,7 +29,7 @@
 // What is NOT here, on purpose: assigning athletes or workouts to a rack ahead
 // of time. See the D8 note further down.
 
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
 import { navigate } from "./router.js";
 import { coachFetch, fetchCurrentCoach, getCoachToken, getSignedInRole, setCoachToken, setSignedInRole } from "./coach/api.js";
@@ -961,16 +961,20 @@ export default function Dashboard({ mode = "wall", coachState = "planning" }) {
   // anything is asked of the server (the role is stored at sign-in), so the room
   // feed below is never started for them.
   const athleteHere = mode === "coach" && Boolean(accessToken) && (me?.role || getSignedInRole()) === "athlete";
-  const monitor = useLiveRoomState({ mode, accessToken: athleteHere ? null : accessToken, onAuthRequired: () => forget() });
-
   // One place to drop the login, so the stored copy can never outlive the
   // in-memory one — a stale token left in storage is a coach still signed in on
   // a shared tablet after they walked away.
-  function forget() {
+  //
+  // useCallback: the SAME function on every redraw. Screens below pass it to effects
+  // that restart when it changes (an opened group clears its picked athlete and
+  // reloads), and this component redraws on every live-room refresh. A new copy each
+  // time made the Groups tab drop the athlete a coach had just opened, seconds later.
+  const forget = useCallback(() => {
     setCoachToken(null);
     setAccessToken(null);
     setMe(null);
-  }
+  }, []);
+  const monitor = useLiveRoomState({ mode, accessToken: athleteHere ? null : accessToken, onAuthRequired: forget });
 
   useEffect(() => {
     if (mode !== "coach" || !accessToken) return undefined;
