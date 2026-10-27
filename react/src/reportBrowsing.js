@@ -46,6 +46,14 @@ export function athleteDayEntry(detail) {
   return detail?.athlete?.athlete ? detail.athlete : detail;
 }
 
+// What the Download PDF button tells the server it will accept. A PDF, AND JSON:
+// the server's API layer only answers in JSON (or web pages) and turns away a
+// request that will take nothing else with 406 before the PDF code ever runs, which
+// is how Download PDF failed everywhere. JSON is also how a refusal ("not found",
+// "too large") comes back, so the screen can show its message.
+// django/event_handler/tests.py sends exactly this; keep the two the same.
+export const REPORT_PDF_ACCEPT = "application/pdf, application/json";
+
 // "This athlete's report" is the SAME report read through a one-athlete lens —
 // so it is the same route with ?athlete={id}, not a parallel athletes/{id}/...
 // family (merge canon R6). The two can never disagree because there is only one
