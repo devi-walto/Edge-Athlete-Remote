@@ -92,6 +92,25 @@ How buffering works today, and why a dead tablet's sensor waits for an open set:
 - Reps the sensor sends while the tablet can't hear them are lost either way: the
   sensor doesn't keep them. That's unchanged.
 
+## What happens to the rack routes
+
+The rack keeps its number (automatic now), so **every route addressed by rack number
+stays as it is**; only who may use it online changes.
+
+| Route | Online, with this spec | Local |
+|---|---|---|
+| `/rack/<n>` (the rack screen) | Same, `n` the rack's automatic number | Same |
+| `/rack/setup` (wait for a coach to assign a number) | Not used: picking Rack Tablet makes and names the rack, then goes to `/rack/<n>` | Same for now. After the class it becomes "name this rack, pair a sensor" instead of waiting |
+| `/api/racks/<n>/…` (state, the controller lease, check-in, check-ins, sensor health) and `set_create` / `set_complete` | Same routes, now also allowed for the common login on its own device's racks (Phase 1) | Unchanged |
+| `/api/racks/register/`, `/api/racks/racknumber/`, `/api/racks/<n>/nfc-tap/` | Still refused | Unchanged |
+| `/api/racks/unassigned/`, `PATCH /api/racks/<device_id>/` (give a tablet its number), `/api/racks/node-assignment/` (link a sensor) | Not used for shared racks: the tablet names its rack and pairs its own sensor | Unchanged for now; no longer needed once local moves over after the class |
+| `DELETE /api/racks/<n>/` (force-clear), `DELETE /api/racks/<n>/node/` (take a sensor off), `/api/racks/release-all/` | Same, coaches only | Unchanged |
+| Virtual racks (an online athlete's own rack, spec 04) | Unchanged | — |
+
+**New routes:** make a rack and rename it (Phase 2); list the school's sensors, link one
+to a rack, take an idle one from a dead tablet's rack (Phase 3); a coach's list of
+devices and signing one out (Phase 0).
+
 ## What exists today
 
 - **Roles** (`roles.py`): a login attached to a coach profile is an administrator or a
@@ -142,15 +161,22 @@ How buffering works today, and why a dead tablet's sensor waits for an open set:
 - `role_of()` answers **common** for it. A login attached to it and to anything else is
   refused, like the existing two-attachment case.
 - Any coach sets it up and resets it the way they do an athlete's login: a login link
-  to set the password (spec 03). **A new password signs every device out** (their
-  renewals are refused from then on). A coach can also sign out one device.
+  to set the password (spec 03). A coach can also sign out one device.
+- **A new password signs out every device signed in with the old one, for every kind of
+  login** (Devin, 2026-10-27), not just the common one. Passwords are set in three places
+  today (a coach's own change in `coach_auth.py`, a coach's reset in `coach_accounts.py`,
+  a login link in `services/login_links.py`), and they all go through **one shared
+  function** that sets the password and records when. A renewal of a sign-in made
+  before that moment is refused (`CheckedTokenRefreshView`). The device that made the
+  change is handed a fresh sign-in, so the person changing it stays signed in.
 - Every coach route refuses the common login.
 
 **Done when:**
 
 - [ ] The common login's role is common; a half-made or switched-off one gets nothing.
-- [ ] After a password change, no device can renew; after signing out one device, the
-      others still can.
+- [ ] After a password change, no device signed in before it can renew, for a coach,
+      an athlete and the common login alike; the device that changed it stays signed in.
+- [ ] After signing out one device, the others still can renew.
 - [ ] *(Unit test)* The route walk gains a common column: every route that isn't opened
       to it in Phase 1 refuses it.
 - [ ] Full suite passes in both modes.
