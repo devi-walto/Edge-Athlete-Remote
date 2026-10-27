@@ -213,7 +213,7 @@ function PhaseBody({ children }) {
 
 // ─────────────────────────── the state machine host ───────────────────────────
 
-export default function RackScreen({ rackNumber, session, node, controller }) {
+export default function RackScreen({ rackNumber, session: openingSession, node, controller }) {
   const agent = useRackAgentStatus(node)
   const [phase, setPhase] = useState('idle')
 
@@ -234,7 +234,13 @@ export default function RackScreen({ rackNumber, session, node, controller }) {
 
   // Check-in screen data: the session roster (who can lift) + this rack's hot list
   // (who it currently owns). Seeded from the one-shot fetch, kept fresh by a poll.
-  const [roster, setRoster] = useState(session?.roster ?? [])
+  // The session is kept here and refreshed with the roster, not taken once from the
+  // parent. A tablet left on before practice opens with no session; when the coach
+  // starts one, the names arrived on the next poll but the session didn't, so the
+  // header still said "No active session" and Start Set sent no session (a 400).
+  const [session, setSession] = useState(openingSession)
+  useEffect(() => { setSession(openingSession) }, [openingSession])
+  const [roster, setRoster] = useState(openingSession?.roster ?? [])
   const [hotList, setHotList] = useState([])
   const [statusMap, setStatusMap] = useState({})   // athlete_id → { status, since, rack_number }
 
@@ -371,6 +377,7 @@ export default function RackScreen({ rackNumber, session, node, controller }) {
       const [active, hot, stat] = await Promise.all([
         getActiveSession(), getRackHotList(rackNumber), getSessionStatus(),
       ])
+      if (active) setSession(active)
       setRoster(active?.roster ?? [])
       setHotList(hot?.athletes ?? [])
       setStatusMap(Object.fromEntries((stat?.athletes ?? []).map((a) => [a.athlete_id, a])))
