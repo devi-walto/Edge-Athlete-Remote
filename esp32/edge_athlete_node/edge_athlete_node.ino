@@ -40,6 +40,7 @@
 #include <WiFi.h>
 #include <Wire.h>
 #include <esp_mac.h>
+#include <esp_system.h>
 #include <math.h>
 #include <mqtt_client.h>
 #include <time.h>
@@ -55,7 +56,7 @@
 
 namespace {
 
-constexpr char FIRMWARE_VERSION[] = "2.1.0";
+constexpr char FIRMWARE_VERSION[] = "2.1.2";
 constexpr uint8_t BNO_ADDRESS = 0x4B;  // this board's address (found by bringup_check)
 constexpr int PIN_RST = D1;            // restart line: pulsed once at start (see startImu)
 constexpr uint16_t REPORT_INTERVAL_MS = 10;  // 100 readings a second
@@ -181,6 +182,45 @@ void saveNetwork(const SavedNetwork &network) {
   }
   saved.end();
   loadNetworks();
+}
+
+// Why the sensor last restarted badly (power dip, crash, hang), kept across unplugging
+// so it can be read later over USB (`status`): a sensor that drops off on one charger
+// but not another shows "power dipped" here.
+const char *resetName(esp_reset_reason_t why) {
+  switch (why) {
+    case ESP_RST_POWERON: return "switched on";
+    case ESP_RST_SW: return "restarted itself";
+    case ESP_RST_BROWNOUT: return "power dipped too low";
+    case ESP_RST_PANIC: return "crashed";
+    case ESP_RST_INT_WDT:
+    case ESP_RST_TASK_WDT:
+    case ESP_RST_WDT: return "hung, and the watchdog restarted it";
+    case ESP_RST_DEEPSLEEP: return "woke up";
+    default: return "restarted";
+  }
+}
+
+void recordStart(esp_reset_reason_t why) {
+  const bool trouble = why == ESP_RST_BROWNOUT || why == ESP_RST_PANIC || why == ESP_RST_INT_WDT ||
+                       why == ESP_RST_TASK_WDT || why == ESP_RST_WDT;
+  if (!trouble) return;
+  saved.begin("ea-diag", false);
+  saved.putUChar("last", static_cast<uint8_t>(why));
+  saved.putUShort("count", saved.getUShort("count", 0) + 1);
+  saved.end();
+}
+
+void printTrouble() {
+  saved.begin("ea-diag", true);
+  const uint16_t count = saved.getUShort("count", 0);
+  const auto last = static_cast<esp_reset_reason_t>(saved.getUChar("last", 0));
+  saved.end();
+  if (count == 0) {
+    Serial.println("restarts after trouble: none");
+  } else {
+    Serial.printf("restarts after trouble: %u, the last because it %s\n", count, resetName(last));
+  }
 }
 
 // "Open setup" survives the restart it takes to get there.
@@ -613,6 +653,7 @@ void printStatus() {
                   networks[i].local ? "local install" : "remote server");
   }
   if (networkCount == 0) Serial.println("saved wi-fi: none (setup is open)");
+  printTrouble();
   Serial.printf("server: %s (%s)\n", serverHost[0] ? serverHost : "none yet", remote ? "remote, encrypted" : "local install, plain");
   Serial.printf("wi-fi: %s, time: %s\n",
                 WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString().c_str() : "not connected",
@@ -1015,6 +1056,9 @@ void startSetup() {
   WiFi.setAutoReconnect(false);
   WiFi.softAPConfig(SETUP_ADDRESS, SETUP_ADDRESS, SETUP_MASK);
   WiFi.softAP(setupName);  // open, no password (Devin, 2026-10-27)
+  // The phone is right beside the sensor during setup: a quieter radio is plenty, and
+  // draws smaller bursts of current from a weak charger or cable.
+  WiFi.setTxPower(WIFI_POWER_8_5dBm);
   dns.setErrorReplyCode(DNSReplyCode::NoError);
   dns.start(53, "*", SETUP_ADDRESS);
   web.on("/", HTTP_GET, handlePage);
@@ -1038,8 +1082,11 @@ void maintainSetup(uint32_t now) {
   web.handleClient();
   digitalWrite(LED_BUILTIN, (now / 500) % 2);  // the light blinks while setup is open
   if (restartAt != 0 && static_cast<int32_t>(now - restartAt) >= 0) ESP.restart();
-  // Left untouched with settings already saved: go back to them, unchanged.
-  if (networkCount > 0 && now - setupTouchedAt >= SETUP_IDLE_LIMIT_MS) {
+  // Left untouched with settings already saved: go back to them, unchanged. millis()
+  // again, not `now`: the page just answered may have touched it after `now` was read,
+  // and `now - setupTouchedAt` then wrapped round to "4 billion ms untouched" and
+  // restarted the sensor the moment a phone opened the page (seen 2026-10-27).
+  if (networkCount > 0 && millis() - setupTouchedAt >= SETUP_IDLE_LIMIT_MS) {
     Serial.println("setup untouched for 10 minutes; back to the saved settings");
     requestSetup(false);
     ESP.restart();
@@ -1055,6 +1102,9 @@ void setup() {
   esp_read_mac(mac, ESP_MAC_WIFI_STA);
   snprintf(sensorId, sizeof(sensorId), "ea-%02x%02x%02x", mac[3], mac[4], mac[5]);
   Serial.printf("\nEdge Athlete sensor %s, firmware %s\n", sensorId, FIRMWARE_VERSION);
+  const esp_reset_reason_t why = esp_reset_reason();
+  recordStart(why);
+  Serial.printf("started because it %s\n", resetName(why));
   pinMode(PIN_SETUP_BUTTON, INPUT_PULLUP);
   WiFi.onEvent(onWifiEvent);
   loadNetworks();
