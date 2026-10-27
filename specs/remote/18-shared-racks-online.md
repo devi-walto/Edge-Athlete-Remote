@@ -48,8 +48,10 @@ their own phone.
 - **No role picker.** The idle rack screen gains one small button in its bottom-right
   corner, above the footer (which stays word for word), showing the room display's mark
   (the rising bars): it switches the tablet to the room display. On the room display the
-  same corner shows the rack's mark (the barbell) to switch back. The tablet remembers
-  which it was showing. A tablet used only as a TV just stays on the display.
+  same corner shows the rack's mark (the barbell) to switch back. **Either way it asks
+  first** (Devin, 2026-10-27): "Switch Rack 3 to the room display?" / "Switch back to
+  Rack 3?", with Cancel and Switch, so a stray tap can't take a rack away. The tablet
+  remembers which it was showing. A tablet used only as a TV just stays on the display.
 - **The rack screen is the gym's rack screen**: check-in list, next lifter, the same
   flow. Not the athlete's own-rack view. **The display is the gym's room display.**
 - **A rack makes itself and is named at the rack.** A coach no longer links a tablet to
@@ -296,7 +298,8 @@ scrolls.
 
 **Proposed, not approved yet** (Proposed local UI page, row "a rack tablet on the common
 login"): `CS1_RackSetup`, `CS3_RackIdle_Switch`, `CS4_Display_Switch` (the room display in
-its current landscape layout, in the solid colours; only the corner button is new). The sign-in screen needs no new board. They are built after Devin
+its current landscape layout, in the solid colours; only the corner button is new), and
+the switch's confirm both ways, `CS3b_RackIdle_SwitchConfirm`, `CS4b_Display_SwitchConfirm`. The sign-in screen needs no new board. They are built after Devin
 approves them (rule in `specs/README.md`). The rack screen and the room display
 themselves are the existing ones; online the check-in prompt drops the NFC line.
 
@@ -305,8 +308,8 @@ themselves are the existing ones; online the check-in prompt drops the NFC line.
 - [ ] Each screen matches its approved board.
 - [ ] *(Browser)* A fresh tablet: sign in, keep or change the suggested name, pair a
       sensor, check an athlete in, finish a set.
-- [ ] *(Browser)* The corner button flips the tablet to the room display and back, and
-      a reload keeps whichever it was showing.
+- [ ] *(Browser)* The corner button asks first, then flips the tablet to the room display
+      and back; Cancel changes nothing; a reload keeps whichever it was showing.
 - [ ] *(Browser)* While a tablet is on "Set up this rack", a coach starting the check
       from Room Layout brings up the countdown on that tablet.
 - [ ] *(Browser)* A coach signs one device out; the others keep working.
