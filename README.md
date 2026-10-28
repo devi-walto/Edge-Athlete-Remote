@@ -187,4 +187,6 @@ first — the Django container **bakes its source at build time**, which makes
 docker exec -it edgeathlete-django python manage.py createsuperuser
 ```
 
-Then `http://localhost/admin/` to browse the tables directly.
+Then `http://localhost/admin/` to browse the tables directly. Local installs only: a
+remote server has no admin page, because online it would be a second sign-in with no
+limit on wrong passwords.
