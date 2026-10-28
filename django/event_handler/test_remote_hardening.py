@@ -4,7 +4,8 @@ WHY THESE EXIST: on the internet, a line left out of the configuration can turn 
 debug pages for strangers or let anyone try passwords as fast as they like. A remote
 installation must refuse to start without the settings that prevent that, must know
 that a request was HTTPS even though the cluster's front door handed it on as plain
-HTTP, and must slow down whoever keeps getting a password wrong. A local installation
+HTTP, must slow down whoever keeps getting a password wrong, and must not have Django's
+admin page (a second sign-in with no such limit). A local installation
 (a gym box) is on its own Wi-Fi over plain HTTP, and none of this may change it.
 """
 from django.conf import settings
@@ -64,6 +65,34 @@ class SettingsMatchTheModeTests(SimpleTestCase):
         request = RequestFactory().get('/', HTTP_X_FORWARDED_PROTO='https')
         self.assertTrue(request.is_secure())
         self.assertFalse(RequestFactory().get('/').is_secure())
+
+
+class AdminPageOnlyOnLocalTests(APITestCase):
+    """Like the class above, this checks the real URL configuration, which is built once
+    at start-up, so it runs as whichever mode CI started the suite in."""
+
+    def setUp(self):
+        User.objects.create_superuser('admin_page_coach', password=PASSWORD)
+
+    def test_remote_has_no_admin_page(self):
+        remote = settings.EA_DEPLOYMENT == 'remote'
+        for path in ('/admin/', '/admin/login/'):
+            with self.subTest(path):
+                response = self.client.get(path)
+                if remote:
+                    self.assertEqual(response.status_code, 404)
+                else:
+                    # local: still there, for debugging on the gym's Wi-Fi
+                    self.assertIn(response.status_code, (200, 302))
+
+    def test_remote_admin_sign_in_lets_nobody_in(self):
+        response = self.client.post('/admin/login/', {'username': 'admin_page_coach',
+                                                      'password': PASSWORD})
+        if settings.EA_DEPLOYMENT == 'remote':
+            self.assertEqual(response.status_code, 404)
+            self.assertNotIn('sessionid', response.cookies)
+        else:
+            self.assertEqual(response.status_code, 302)  # signed in, sent on to /admin/
 
 
 class WrongAttemptLimitTests(APITestCase):

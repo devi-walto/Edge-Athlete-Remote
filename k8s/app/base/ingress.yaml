@@ -40,7 +40,7 @@ spec:
       http:
         # Traefik picks the LONGEST matching path, so /api/... goes to django
         # even though "/" (react) would match everything. Same rules as
-        # nginx.conf.
+        # nginx.conf, except the admin pages.
         paths:
           # The app's API: everything the screens ask the server for.
           - path: /api/
@@ -50,23 +50,15 @@ spec:
                 name: django
                 port:
                   number: 8000
-          # Django's own admin pages.
-          - path: /admin/
-            pathType: Prefix
-            backend:
-              service:
-                name: django
-                port:
-                  number: 8000
-          # The stylesheets and scripts those admin pages (and the API's
-          # browsable pages) load. Django serves these itself.
-          - path: /static/admin/
-            pathType: Prefix
-            backend:
-              service:
-                name: django
-                port:
-                  number: 8000
+          # NOT HERE ON PURPOSE: /admin/ and /static/admin/, Django's own admin
+          # pages. nginx.conf sends them to django on a local install, for
+          # debugging on the gym's Wi-Fi. Online they would be a second sign-in
+          # page with no wrong-password limit, so a request for /admin/ falls
+          # through to react below, and django doesn't have the page anyway
+          # (urls.py).
+          #
+          # The stylesheets and scripts the API's browsable pages load. Django
+          # serves these itself.
           - path: /static/rest_framework/
             pathType: Prefix
             backend:

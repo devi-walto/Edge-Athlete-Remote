@@ -21,7 +21,8 @@ Think of this file as a switchboard operator:
 
 Works with:
   - event_handler/urls.py — handles all /api/ requests
-  - Django's built in admin panel — handles all /admin/ requests
+  - Django's built in admin panel — handles all /admin/ requests, on a local
+    install only (see below)
 
 URL flow example:
   Browser hits /api/motion/
@@ -38,6 +39,7 @@ from event_handler.coach_auth import (
 from event_handler.coach_accounts import (
     CoachDetailView, CoachListView, CoachResetPasswordView)
 from event_handler.athlete_logins import LoginLinkLookupView, LoginLinkRedeemView
+from event_handler.deployment import is_hosted
 
 
 urlpatterns = [
@@ -53,9 +55,6 @@ urlpatterns = [
     path('api/coaches/', CoachListView.as_view(), name='coach_list'),
     path('api/coaches/<int:user_id>/', CoachDetailView.as_view(), name='coach_detail'),
     path('api/coaches/<int:user_id>/reset/', CoachResetPasswordView.as_view(), name='coach_reset'),
-    # Django's built in admin panel — visit /admin/ in browser to manage data
-    path('admin/', admin.site.urls),
-
     # Any URL starting with /api/ gets forwarded to event_handler/urls.py
     # This is where all ESP32 and React dashboard requests are handled
     path('api/', include('event_handler.urls')),
@@ -68,3 +67,12 @@ urlpatterns = [
     # Refused for a login that has been switched off or is no longer a coach or athlete.
     path('api/auth/refresh/', CheckedTokenRefreshView.as_view(), name='token_refresh'),
 ]
+
+# Django's built in admin panel: visit /admin/ in a browser to look at the tables
+# directly while debugging. LOCAL ONLY. Online it was a second front door: any
+# administrator coach can sign in there (the first one is a superuser, so that
+# means every table, editable), with none of the real sign-in's wrong-password
+# limit. Nothing a coach does needs it, so a remote server doesn't have it at all
+# (ingress.yaml doesn't send /admin/ here either).
+if not is_hosted():
+    urlpatterns.append(path('admin/', admin.site.urls))
