@@ -56,7 +56,7 @@
 
 namespace {
 
-constexpr char FIRMWARE_VERSION[] = "2.1.3";
+constexpr char FIRMWARE_VERSION[] = "2.1.4";
 constexpr uint8_t BNO_ADDRESS = 0x4B;  // this board's address (found by bringup_check)
 constexpr int PIN_RST = D1;            // restart line: pulsed once at start (see startImu)
 constexpr uint16_t REPORT_INTERVAL_MS = 10;  // 100 readings a second
@@ -770,6 +770,12 @@ void maintainConnection(uint32_t now) {
     return;
   }
   offlineSince = 0;
+  // On a local install, the base station is whoever gave this Wi-Fi its addresses: use
+  // that, fresh on every join, rather than the address saved at setup, so a base
+  // station whose address changes is still found.
+  if (!remote && !started) {
+    strlcpy(serverHost, WiFi.gatewayIP().toString().c_str(), sizeof(serverHost));
+  }
   // The time: a school's from the internet; a base station's from its own answers, again
   // every hour (not mid-rep: asking takes a moment).
   if (remote && !timeAsked) {
