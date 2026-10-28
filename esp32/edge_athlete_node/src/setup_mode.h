@@ -12,4 +12,5 @@
 void startSetup();
 void maintainSetup(uint32_t now);  // call every loop while setup is open
 bool setupIsOpen();
+void printSetupStatus();  // for USB `status`: is the setup Wi-Fi up, and who's on it
 void watchSetupButton(uint32_t now);  // in normal running: a 3-second hold opens setup

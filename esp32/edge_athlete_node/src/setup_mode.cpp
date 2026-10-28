@@ -6,6 +6,7 @@
 #include <WebServer.h>
 #include <WiFi.h>
 #include <algorithm>
+#include <esp_wifi.h>
 
 #include "connection.h"
 #include "settings.h"
@@ -28,6 +29,7 @@ const IPAddress SETUP_ADDRESS(10, 71, 0, 1);
 const IPAddress SETUP_MASK(255, 255, 255, 0);
 
 bool inSetup = false;
+bool apStarted = false;
 char setupName[32];  // the setup Wi-Fi: "EdgeAthlete-" + the end of the sensor's ID
 DNSServer dns;
 WebServer web(80);
@@ -267,8 +269,12 @@ void startSetup() {
   snprintf(setupName, sizeof(setupName), "EdgeAthlete-%s", sensorId + 3);
   WiFi.mode(WIFI_AP_STA);
   WiFi.setAutoReconnect(false);
+  // US channels only (1-11). Left to the chip's default it also scanned 12-14, which a
+  // US phone never looks at, and the setup Wi-Fi was off the air while the scan was there
+  // (seen 2026-10-27: a phone couldn't find it). The setup Wi-Fi itself sits on 1.
+  esp_wifi_set_country_code("US", false);  // false: our list, not one a nearby router suggests
   WiFi.softAPConfig(SETUP_ADDRESS, SETUP_ADDRESS, SETUP_MASK);
-  WiFi.softAP(setupName);  // open, no password (Devin, 2026-10-27)
+  apStarted = WiFi.softAP(setupName, nullptr, 1);  // open, no password (Devin, 2026-10-27)
   // The phone is right beside the sensor during setup: a quieter radio is plenty, and
   // draws smaller bursts of current from a weak charger or cable.
   WiFi.setTxPower(WIFI_POWER_8_5dBm);
@@ -307,6 +313,12 @@ void maintainSetup(uint32_t now) {
 }
 
 bool setupIsOpen() { return inSetup; }
+
+void printSetupStatus() {
+  Serial.printf("setup wi-fi: %s %s, channel %d, address %s, %d phone(s) joined\n", setupName,
+                apStarted ? "broadcasting" : "FAILED TO START", WiFi.channel(),
+                WiFi.softAPIP().toString().c_str(), WiFi.softAPgetStationNum());
+}
 
 void watchSetupButton(uint32_t now) {
   static bool ready = false;

@@ -26,6 +26,7 @@ void printStatus() {
   }
   if (networkCount == 0) Serial.println("saved wi-fi: none (setup is open)");
   printTrouble();
+  if (setupIsOpen()) printSetupStatus();
   Serial.printf("motion sensor: %s\n", setupIsOpen() ? "not started during setup"
                                      : motionSensorFound() ? "BNO085 found" : "missing, so no reps");
   Serial.printf("server: %s (%s)\n", serverHost[0] ? serverHost : "none yet", remote ? "remote, encrypted" : "local install, plain");
