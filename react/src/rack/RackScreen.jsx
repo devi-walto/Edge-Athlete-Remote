@@ -73,13 +73,20 @@ const PHASE_BADGE = {
 // idle is now the real day-view picker (Idle.jsx); the rest are placeholders that
 // real content arrives in over Steps 3–5.
 
+// GO starts the set exactly once. onDone is read through a ref because the screen
+// hands down a new copy every redraw (a BLE rack redraws every second), and when it
+// was a dependency each redraw while the server was still answering queued another
+// start: the server refused the second (409) and the finished set then showed
+// "The rack changed underneath this screen".
 function CountdownPhase({ onDone }) {
   const [n, setN] = useState(3)
+  const onDoneRef = useRef(onDone)
+  onDoneRef.current = onDone
   useEffect(() => {
-    if (n <= 0) { const t = setTimeout(onDone, 350); return () => clearTimeout(t) }
+    if (n <= 0) { const t = setTimeout(() => onDoneRef.current(), 350); return () => clearTimeout(t) }
     const t = setTimeout(() => setN((v) => v - 1), 1000)
     return () => clearTimeout(t)
-  }, [n, onDone])
+  }, [n])
   return (
     <PhaseBody>
       <div style={{ ...LABEL, marginBottom: 18 }}>Get ready</div>
@@ -161,13 +168,18 @@ function SummaryPhase({ summary, onRest }) {
   )
 }
 
+// When rest runs out the rack goes back to idle once. Same reason as the countdown:
+// onDone is new every redraw, and the check-in list redraws the screen every 5 s, so
+// as a dependency it sent "back to idle" again on each redraw until the server answered.
 function RestPhase({ onDone, movementName, nextSetNumber, roster, hotList, groupName, statusMap, onSelectAthlete, owned }) {
   const [secs, setSecs] = useState(REST_SECONDS)
+  const onDoneRef = useRef(onDone)
+  onDoneRef.current = onDone
   useEffect(() => {
-    if (secs <= 0) { onDone(); return }
+    if (secs <= 0) { onDoneRef.current(); return }
     const t = setTimeout(() => setSecs((v) => v - 1), 1000)
     return () => clearTimeout(t)
-  }, [secs, onDone])
+  }, [secs])
   const mm = Math.floor(secs / 60)
   const ss = String(secs % 60).padStart(2, '0')
   return (
@@ -213,7 +225,7 @@ function PhaseBody({ children }) {
 
 // ─────────────────────────── the state machine host ───────────────────────────
 
-export default function RackScreen({ rackNumber, session, node, controller }) {
+export default function RackScreen({ rackNumber, session: openingSession, node, controller }) {
   const agent = useRackAgentStatus(node)
   const [phase, setPhase] = useState('idle')
 
@@ -234,7 +246,13 @@ export default function RackScreen({ rackNumber, session, node, controller }) {
 
   // Check-in screen data: the session roster (who can lift) + this rack's hot list
   // (who it currently owns). Seeded from the one-shot fetch, kept fresh by a poll.
-  const [roster, setRoster] = useState(session?.roster ?? [])
+  // The session is kept here and refreshed with the roster, not taken once from the
+  // parent. A tablet left on before practice opens with no session; when the coach
+  // starts one, the names arrived on the next poll but the session didn't, so the
+  // header still said "No active session" and Start Set sent no session (a 400).
+  const [session, setSession] = useState(openingSession)
+  useEffect(() => { setSession(openingSession) }, [openingSession])
+  const [roster, setRoster] = useState(openingSession?.roster ?? [])
   const [hotList, setHotList] = useState([])
   const [statusMap, setStatusMap] = useState({})   // athlete_id → { status, since, rack_number }
 
@@ -371,6 +389,7 @@ export default function RackScreen({ rackNumber, session, node, controller }) {
       const [active, hot, stat] = await Promise.all([
         getActiveSession(), getRackHotList(rackNumber), getSessionStatus(),
       ])
+      if (active) setSession(active)
       setRoster(active?.roster ?? [])
       setHotList(hot?.athletes ?? [])
       setStatusMap(Object.fromEntries((stat?.athletes ?? []).map((a) => [a.athlete_id, a])))

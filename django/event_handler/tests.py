@@ -3134,6 +3134,30 @@ class ReportsEndpointTests(APITestCase):
         missing = self.client.get(f"/api/reports/{report.id}/pdf/?athlete=9999")
         self.assertEqual(missing.status_code, 404)
 
+    # The tests above ask with no Accept header, which the server treats as "anything".
+    # The Download PDF button says what it takes, and when it said PDF only, the API
+    # layer refused it (406) before this view ran, so the button failed everywhere
+    # while these passed. Ask exactly the way the button does (REPORT_PDF_ACCEPT in
+    # react/src/reportBrowsing.js).
+    BUTTON_ACCEPT = "application/pdf, application/json"
+
+    def test_the_pdf_downloads_the_way_the_button_asks(self):
+        report = DailyReport.objects.get()
+        for path in (f"/api/reports/{report.id}/pdf/",
+                     f"/api/reports/{report.id}/pdf/?athlete={self.athlete.id}"):
+            with self.subTest(path):
+                res = self.client.get(path, HTTP_ACCEPT=self.BUTTON_ACCEPT)
+                self.assertEqual(res.status_code, 200)
+                self.assertEqual(res["Content-Type"], "application/pdf")
+                self.assertTrue(res.content.startswith(b"%PDF"))
+
+    def test_a_refused_pdf_comes_back_as_a_message_the_button_can_show(self):
+        report = DailyReport.objects.get()
+        res = self.client.get(f"/api/reports/{report.id}/pdf/?athlete=9999",
+                              HTTP_ACCEPT=self.BUTTON_ACCEPT)
+        self.assertEqual(res.status_code, 404)
+        self.assertEqual(res.json()["code"], "athlete_not_in_report")
+
 
 class ReferenceMaxWriteTests(APITestCase):
     """POST /api/reference-maxes/ — the prescription lever."""

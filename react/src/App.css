@@ -382,6 +382,11 @@
 .workout-panel input, .workout-panel select { appearance:none; background:#0b1114; border:1px solid var(--line); color:var(--ink); font:inherit; min-height:42px; min-width:0; padding:9px 10px; width:100%; }
 .workout-panel select { background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%); background-position:right 15px center,right 10px center; background-repeat:no-repeat; background-size:5px 5px,5px 5px; padding-right:32px; }
 .workout-panel input:focus, .workout-panel select:focus { border-color:var(--lime); }
+/* ...except checkboxes. `appearance:none` above also erased the tick, so a checked
+   box looked exactly like an empty one: clicking a training day worked but showed
+   nothing, and a second click (because "nothing happened") quietly unticked it. Give
+   checkboxes the browser's own drawing back; the dark field styling is for typing. */
+.workout-panel input[type=checkbox] { appearance:auto; background:none; border:0; padding:0; }
 
 /* The block's training days. Without this each checkbox stacks into its own row
    as a large bare square with the label stranded beside it — a week of days

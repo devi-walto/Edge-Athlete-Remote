@@ -281,6 +281,62 @@ there) or Phase 5 (the Athlete tab's numbers), whichever comes first.
 - [ ] Changing a movement's metric changes what screens show, with no data rewritten.
 - [ ] *(Frontend test)* A movement with no metric set is treated as mean.
 
+## Added 2026-10-27 — only the planned reps count
+
+Decided by Devin, 2026-10-27, while testing the first BNO085 sensor online. Reps past
+the plan are an athlete feeling out a weight, not work to measure. Counting them skews
+the numbers and adds noise for the coach. A set that went wrong is what False Set is for.
+
+**The sensor just reports what happened.** It sends every rep, as it does now. The
+server decides which reps count, and the screens show what the server decided.
+
+- **The first N reps count**, where N is the reps planned for that movement for that
+  athlete (the plan's `reps`, or the coach's per-athlete override, the same number the
+  rack screen already shows as `target_reps`). Reps after the Nth are kept but don't
+  count.
+- **No planned reps, nothing is capped.** A movement with no `reps` in the plan, a
+  Quick Training Session, or a set with no plan behind it counts every rep.
+- **A rep too slow to be real doesn't count either** *(proposed, Devin to confirm)*:
+  mean velocity under 0.15 m/s. On the first sensor, picking the board up or putting
+  it down sent "reps" of 0.08 to 0.13 m/s, and even a very heavy, slow barbell rep is
+  faster. Such a rep **doesn't use up one of the N**, so lifting the bar out of the rack
+  can't push the athlete's real last rep past the cap.
+- **Every rep is kept.** `Rep` gains `counts` (yes or no) and, when no, the reason
+  (`past_plan` or `too_slow`), in one migration. Reps already saved all count. Nothing
+  is thrown away, so changing the rule later can recalculate from what was sent.
+- **The server works out the set's numbers itself** when the set is saved
+  (`POST /api/sets/<id>/complete/`): marks each rep, then sets `reps_completed`,
+  `avg_velocity` and `peak_velocity` from the counted reps only, rather than taking the
+  tablet's figures.
+- **Everything that reads reps reads only the counted ones:** the athlete's analytics
+  (`services/athlete_analytics.py`), the session summary and its frozen report and PDF
+  (`services/session_completion.py`), the live room and its leaders, "most reps" among
+  them (`services/room_state.py`), velocity records, and "Behind".
+- **The rack screen says so as it happens,** for the gym and an online athlete alike.
+  The count reads against the plan ("4 / 5"). After the Nth rep a line appears:
+  **"Reps past 5 won't count"**. Extra reps still show their speed, greyed out, so the
+  athlete can see how the rep felt. The set summary says "5 reps · 2 extra, not
+  counted".
+- **The coach sees the counted reps only**, everywhere.
+- False Set is unchanged: the whole set is marked false.
+- No change to the sensor, its firmware or its messages.
+
+Built on PR #14 (the rack screen fixes), after the 2026-10-27 demo.
+
+**Done when:**
+
+- [ ] *(Backend test)* A set planned at 5 that receives 7 reps keeps all 7; reps 6 and 7
+      are `past_plan`; `reps_completed` is 5 and the averages are reps 1 to 5 only.
+- [ ] *(Backend test)* A 0.10 m/s rep before the first real one is `too_slow` and the 5
+      real reps after it all count.
+- [ ] *(Backend test)* A movement with no planned reps counts every rep.
+- [ ] *(Backend test)* The athlete's analytics, the session summary and the live room's
+      leaders leave out reps that don't count.
+- [ ] *(Frontend test)* After the 5th rep the rack screen shows "Reps past 5 won't count"
+      and the 6th rep greyed out with its speed.
+- [ ] *(Browser)* A real sensor, a set planned at 3: lift 5, and the saved set, the
+      coach's live room and the report all show 3.
+
 ## Acceptance criteria
 
 - [ ] ANALYTICS has three tabs and one picker.

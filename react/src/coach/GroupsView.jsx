@@ -30,7 +30,7 @@
  * editable is one athlete's plan, which is what the drill-down is for.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import AthleteWorkoutPlanning from '../AthleteWorkoutPlanning.jsx'
 import {
   FILTER_ALL, FILTER_UNASSIGNED, filterRoster, indexMembership, isMember, unassignedCount,
@@ -62,6 +62,11 @@ function OpenGroup({ group, accessToken, onLogout, onBack }) {
   const [athletes, setAthletes] = useState([])
   const [state, setState] = useState('loading')
   const [selected, setSelected] = useState(null)
+  // The sign-out function is read through a ref so it can't restart the load below:
+  // that load also clears the picked athlete, and a parent handing down a new copy
+  // of the function on a redraw used to close the athlete a coach had just opened.
+  const onLogoutRef = useRef(onLogout)
+  onLogoutRef.current = onLogout
 
   useEffect(() => {
     let cancelled = false
@@ -71,7 +76,7 @@ function OpenGroup({ group, accessToken, onLogout, onBack }) {
       headers: { Accept: 'application/json', Authorization: `Bearer ${accessToken}` },
     })
       .then((response) => {
-        if (response.status === 401 || response.status === 403) { onLogout(); return null }
+        if (response.status === 401 || response.status === 403) { onLogoutRef.current(); return null }
         if (!response.ok) throw new Error('roster unavailable')
         return response.json()
       })
@@ -82,7 +87,7 @@ function OpenGroup({ group, accessToken, onLogout, onBack }) {
       })
       .catch(() => { if (!cancelled) setState('error') })
     return () => { cancelled = true }
-  }, [group.id, accessToken, onLogout])
+  }, [group.id, accessToken])
 
   return (
     <div className="groups-open">
