@@ -41,6 +41,7 @@ constexpr float SETTLED_THRESHOLD_MPS2 = 1.5F;
 constexpr uint32_t SETTLED_DURATION_MS = 250;
 
 BNO08x imu;
+bool imuFound = false;
 
 // The newest orientation (game rotation vector: ignores the compass, which a steel
 // bar and rack make useless) and movement.
@@ -167,17 +168,20 @@ void startImu() {
       delay(200);
       turnOnReadings();
       previousReadingAt = millis();
+      imuFound = true;
       return;
     }
     Serial.printf("BNO085 start attempt %d: no answer\n", attempt);
     delay(500);
   }
-  Serial.println("[!] the BNO085 didn't start. Check the wires; bringup_check helps. Restarting.");
-  delay(2000);
-  ESP.restart();
+  // Without it the sensor can't measure, but it still keeps everything else going
+  // (setup, Wi-Fi, the server), so it stays visible and its other parts can be tested.
+  // It used to restart forever here, which hid what was wrong.
+  Serial.println("[!] the BNO085 didn't start: no reps until it's wired (bringup_check helps). Everything else carries on.");
 }
 
 void readImu(uint32_t now) {
+  if (!imuFound) return;
   if (imu.wasReset()) {
     Serial.println("the BNO085 restarted; turning the readings back on");
     turnOnReadings();
@@ -198,6 +202,8 @@ void readImu(uint32_t now) {
 }
 
 bool repInProgress() { return repActive; }
+
+bool motionSensorFound() { return imuFound; }
 
 float barSpeed() {
   float speed = repActive ? fabsf(velocityMps) : 0.0F;

@@ -6,6 +6,7 @@
 #include "connection.h"
 #include "measuring.h"
 #include "settings.h"
+#include "setup_mode.h"
 #include "shared.h"
 
 namespace {
@@ -25,6 +26,8 @@ void printStatus() {
   }
   if (networkCount == 0) Serial.println("saved wi-fi: none (setup is open)");
   printTrouble();
+  Serial.printf("motion sensor: %s\n", setupIsOpen() ? "not started during setup"
+                                     : motionSensorFound() ? "BNO085 found" : "missing, so no reps");
   Serial.printf("server: %s (%s)\n", serverHost[0] ? serverHost : "none yet", remote ? "remote, encrypted" : "local install, plain");
   Serial.printf("wi-fi: %s, time: %s\n",
                 WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString().c_str() : "not connected",

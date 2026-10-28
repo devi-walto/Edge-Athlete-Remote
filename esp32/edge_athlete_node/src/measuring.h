@@ -7,9 +7,10 @@
 
 #include <Arduino.h>
 
-void startImu();
+void startImu();             // without a BNO085 it says so and the rest carries on
 void readImu(uint32_t now);  // call every loop: reads whatever the BNO085 has sent
 
 bool repInProgress();        // the bar is moving in a rep right now
+bool motionSensorFound();    // the BNO085 answered at start
 float barSpeed();            // its speed so far in this rep, m/s (0 when not in one)
 void printMovement();        // one line of the live numbers, for USB `watch`
