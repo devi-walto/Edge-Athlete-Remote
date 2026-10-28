@@ -445,10 +445,13 @@ Final designs**, the athlete sensor row after `F_Ath_S5`: `F_Setup1_Networks`,
   lime. The sensor checks `https://<sub>.<domain>/api/health/` before going on. **The
   domain is a build setting in a file git ignores** (`site.h`, beside `secrets.h`),
   never in the firmware source, so it stays out of the public repo.
-- **Local: nothing to type.** On a local install the base station is the gym Wi-Fi's
-  own router (`192.168.4.1`), so the page fills it in from the network and checks
-  `http://<it>/api/health/`; "Change" is there in case. No code: the coach links the
-  sensor to a rack, as for every gym sensor, and the done screen says so.
+- **Local: nothing to type, nothing shown.** The base station serves its own Wi-Fi and
+  is that network's router, so it hands the sensor its address when the sensor joins.
+  The sensor uses that address itself and checks `http://<it>/api/health/`; the page
+  never shows an address (Devin, 2026-10-27: an IP would only confuse a non-technical
+  person). If nothing answers, the page says to pick the gym's base station Wi-Fi. No
+  code: the coach links the sensor to a rack, as for every gym sensor, and the done
+  screen says so.
 - **The time, on a local install, comes from the base station's own answers** (the
   `Date` header of `/api/health/`): the gym Wi-Fi has no internet and the base station
   runs no time server. Remote keeps `pool.ntp.org`.
@@ -469,7 +472,7 @@ Final designs**, the athlete sensor row after `F_Ath_S5`: `F_Setup1_Networks`,
 - [ ] *(Phone)* Remote: pick Wi-Fi, a wrong password says so, the right one connects;
       type `test`; a used code says so, a new one links the sensor; done; switching it
       off and on connects with nothing typed.
-- [ ] *(Phone)* Local: on a base station's Wi-Fi the address fills itself in and no code
+- [ ] *(Phone)* Local: on a base station's Wi-Fi nothing is typed or shown and no code
       is asked for; the sensor's pulses reach the base station with the right time.
 - [ ] Holding BOOT 3 seconds reopens setup; leaving it untouched for 10 minutes goes
       back to the saved settings, unchanged.

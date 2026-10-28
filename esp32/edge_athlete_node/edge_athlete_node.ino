@@ -56,7 +56,7 @@
 
 namespace {
 
-constexpr char FIRMWARE_VERSION[] = "2.1.2";
+constexpr char FIRMWARE_VERSION[] = "2.1.3";
 constexpr uint8_t BNO_ADDRESS = 0x4B;  // this board's address (found by bringup_check)
 constexpr int PIN_RST = D1;            // restart line: pulsed once at start (see startImu)
 constexpr uint16_t REPORT_INTERVAL_MS = 10;  // 100 readings a second
@@ -979,8 +979,9 @@ void handleServer() {
   setupLocal = web.arg("kind") == "local";
   String host;
   if (setupLocal) {
-    host = web.arg("host");
-    host.trim();
+    // The base station is the router of its own Wi-Fi, and handed the sensor its
+    // address when it joined: no one types it (Devin, 2026-10-27).
+    host = WiFi.gatewayIP().toString();
   } else {
     String sub = web.arg("sub");
     sub.trim();
@@ -1003,7 +1004,7 @@ void handleServer() {
     }
   }
   if (!serverAnswers(setupLocal, host)) {
-    refuse(setupLocal ? "No base station answered at " + host + "."
+    refuse(setupLocal ? String("No base station answered on this Wi-Fi. Pick the gym's base station Wi-Fi.")
                       : "Can't find a school at " + host + ". Check the spelling, and that this Wi-Fi has internet.");
     return;
   }

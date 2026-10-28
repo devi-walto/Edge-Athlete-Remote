@@ -117,13 +117,10 @@ function pollWifi(){api("/api/wifi").then(function(r){
  $("out").innerHTML=st("bad",why);$("b").disabled=false;$("b").textContent="Try again"})}
 
 function serverScreen(){S.screen="server";
- if(!S.host)S.host=S.gateway||"192.168.4.1";
  var sw='<div class="sw"><button class="'+(S.local?"":"on")+'" onclick="S.local=false;serverScreen()">Remote server</button><button class="'+(S.local?"on":"")+'" onclick="S.local=true;serverScreen()">Local install</button></div>'+
   '<p class="note" style="margin-top:-8px">'+(S.local?"In the gym, on the base station&rsquo;s own Wi-Fi.":"At home or anywhere with internet: your school&rsquo;s server.")+"</p>";
  if(S.local){show("<h1>Where to send reps</h1>"+sw+
-   '<label class="f"><span class="caps">Base station</span><span class="box"><input id="host" value="'+esc(S.host)+'" readonly></span></label>'+
-   '<div class="row" style="margin-top:-6px"><span class="note">Filled in from the gym&rsquo;s Wi-Fi.</span><button class="link" style="min-height:36px" onclick="var h=$(\'host\');h.readOnly=false;h.focus()">Change</button></div>'+
-   '<div id="out"></div><p class="note">No code on a local install: your coach links the sensor to a rack.</p>',
+   '<div id="out"></div><p class="note">Nothing to type: the sensor sends its reps to the base station whose Wi-Fi it&rsquo;s on. No code either: your coach links the sensor to a rack.</p>',
    '<button class="go" id="b" onclick="checkServer()">Finish</button>',1);return}
  var sub=S.sub||"test";
  show("<h1>Where to send reps</h1>"+sw+
@@ -136,13 +133,13 @@ function serverScreen(){S.screen="server";
 function fit(el){var c=fit.c||(fit.c=document.createElement("canvas").getContext("2d"));
  c.font=getComputedStyle(el).font;el.style.width=Math.ceil(c.measureText(el.value||el.placeholder).width)+2+"px"}
 function checkServer(){var body;
- if(S.local){S.host=$("host").value.trim();body={kind:"local",host:S.host}}
+ if(S.local){body={kind:"local"}}
  else{S.sub=$("sub").value.trim().toLowerCase();if(!S.sub)return;body={kind:"remote",sub:S.sub}}
  $("b").disabled=true;$("out").innerHTML=st("","Looking for it&hellip;");
  api("/api/server",body).then(function(r){
   if(!r.ok){$("out").innerHTML=st("bad",esc(r.detail));$("b").disabled=false;if(!S.local)$("sbox").className="box bad";return}
   S.host=r.host;S.linked=r.linked;
-  $("out").innerHTML=st("ok",S.local?"Found the base station":"Found Edge Athlete at "+esc(r.host));
+  $("out").innerHTML=st("ok",S.local?"Found the gym&rsquo;s base station":"Found Edge Athlete at "+esc(r.host));
   setTimeout(S.local?finish:codeScreen,900)})}
 
 function codeScreen(){S.screen="code";
@@ -157,7 +154,7 @@ function claim(){var c=$("code").value.trim();if(!c)return;$("b").disabled=true;
   $("cbox").className="box bad";$("out").innerHTML=st("bad",esc(r.detail));$("b").disabled=false;$("b").textContent="Try again"})}
 
 function finish(){api("/api/finish",{}).then(function(){S.screen="done";
- var facts=[["Sensor",S.id],["Wi-Fi",S.ssid],["Server",S.local?"base station, "+S.host:S.host]];if(!S.local)facts.push(["Linked to","your athlete account"]);
+ var facts=[["Sensor",S.id],["Wi-Fi",S.ssid],["Server",S.local?"the gym\u2019s base station":S.host]];if(!S.local)facts.push(["Linked to","your athlete account"]);
  var rows=facts.map(function(f){return "<div><span>"+f[0]+"</span><b>"+esc(f[1])+"</b></div>"}).join("");
  show('<div class="tick">&#10003;</div>'+(S.local?
    '<h1>Your sensor is on the gym&rsquo;s Wi-Fi</h1><p class="sub">One more step, for your coach: link sensor <b style="font-family:var(--mono);color:var(--ink)">'+esc(S.id)+"</b> to a rack in Room Layout.</p>":
