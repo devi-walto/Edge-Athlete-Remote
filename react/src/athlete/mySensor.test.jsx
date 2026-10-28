@@ -27,7 +27,7 @@ if (typeof globalThis.localStorage?.clear !== 'function') {
 }
 
 const { default: AthleteSignIn } = await import('./AthleteSignIn.jsx')
-const { sensorStatus } = await import('./MySensor.jsx')
+const { schoolPart, sensorStatus } = await import('./MySensor.jsx')
 const { setCoachToken, setSignedInRole } = await import('../coach/api.js')
 
 function token(seconds) {
@@ -111,6 +111,19 @@ describe('adding a sensor', () => {
     expect(container.textContent).toContain('Connected · seen just now')
   })
 
+  // The sensor's setup page fills the phone's screen, so the code is the one thing the
+  // athlete copies; the school is shown to remember (F_Ath_S2, 2026-10-27).
+  it('copies the code with one press', async () => {
+    const writeText = vi.fn(() => Promise.resolve())
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+    await show()
+    await press('Add my sensor')
+    await press('Copy')
+    expect(writeText).toHaveBeenCalledWith('K7MQ-2XPR')
+    expect(container.textContent).toContain('Copied ✓')
+    delete navigator.clipboard
+  })
+
   it('says when the code ran out, and a new code can be got', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     await show()
@@ -147,5 +160,18 @@ describe('a local install', () => {
     expect(container.textContent).toContain("You're signed in")
     expect(container.textContent).not.toContain('My sensor')
     expect(calls).not.toContain('GET /api/athlete/sensors/')
+  })
+})
+
+describe('the school to remember', () => {
+  it('is the first part of the page\'s own address', () => {
+    expect(schoolPart('test.example.com')).toBe('test')
+    expect(schoolPart('demo-u-k7m2qx.example.com')).toBe('demo-u-k7m2qx')
+  })
+
+  it('is left out where the address has no such part', () => {
+    expect(schoolPart('localhost')).toBeNull()
+    expect(schoolPart('example.com')).toBeNull()
+    expect(schoolPart('10.0.0.5')).toBeNull()
   })
 })

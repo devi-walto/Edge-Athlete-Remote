@@ -423,6 +423,12 @@ Final designs**, the athlete sensor row after `F_Ath_S5`: `F_Setup1_Networks`,
 `F_Setup4_Code`, `F_Setup4b_CodeRefused`, `F_Setup5_DoneRemote`, `F_Setup5_DoneLocal`;
 `F_Ath_S2`'s steps now point at the phone instead of USB.
 
+**The athlete page's code (`F_Ath_S2`, approved 2026-10-27):** the code has a **Copy**
+button, and the school is shown just as big below it, marked "remember this". Only the
+code is copyable because the sensor's setup page fills the phone's screen, so only one
+thing can be pasted into it (Devin). The school's part ("test") is read from the athlete
+page's own address, so the domain is never written into the app either.
+
 **Decisions (Devin, 2026-10-27):**
 
 - **When setup opens:** by itself when nothing is saved (a new sensor, or one that was
@@ -478,6 +484,8 @@ Final designs**, the athlete sensor row after `F_Ath_S5`: `F_Setup1_Networks`,
       back to the saved settings, unchanged.
 - [ ] After setup, the sensor's own network is gone (not in the phone's Wi-Fi list).
 - [ ] The domain appears nowhere in the repo.
+- [x] *(Frontend test)* Copy puts the code on the clipboard; the school is the first
+      part of the page's own address, and is left out on an address without one.
 
 **Stop. Devin reviews.**
 
