@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { athleteDayEntry, athleteDayLabel, athleteDaySets, normalizeReportPage, repWindow, reportPdfDownload, reportRequestState } from "./reportBrowsing.js";
+import { athleteDayEntry, athleteDayLabel, athleteDaySets, normalizeReportPage, REPORT_PDF_ACCEPT, repWindow, reportPdfDownload, reportRequestState } from "./reportBrowsing.js";
 
 describe("report browsing pages", () => {
   it("normalizes pagination and rejects cross-origin links", () => {
@@ -35,6 +35,12 @@ describe("report browsing pages", () => {
       url: "/api/reports/12/pdf/?athlete=7",
       filename: "athlete-7-report-12.pdf",
     });
+  });
+
+  it("asks for the PDF in a way the server accepts", () => {
+    // PDF alone is turned away (406) before the report is even looked at; JSON is
+    // what the server can always answer in, and how a refusal comes back.
+    expect(REPORT_PDF_ACCEPT).toBe("application/pdf, application/json");
   });
 });
 

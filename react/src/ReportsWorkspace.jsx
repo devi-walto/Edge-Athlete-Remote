@@ -28,7 +28,7 @@
 import { useEffect, useState } from "react";
 import { GeneratedReport } from "./TrainingDayPanel.jsx";
 import { reportValue } from "./trainingDay.js";
-import { athleteDayEntry, athleteDayLabel, athleteDaySets, normalizeReportPage, repWindow, reportPdfDownload, reportRequestState } from "./reportBrowsing.js";
+import { athleteDayEntry, athleteDayLabel, athleteDaySets, normalizeReportPage, REPORT_PDF_ACCEPT, repWindow, reportPdfDownload, reportRequestState } from "./reportBrowsing.js";
 
 const DAILY_REPORTS_URL = "/api/reports/";
 
@@ -205,7 +205,7 @@ export default function ReportsWorkspace({ athletes, accessToken, onLogout }) {
     const download = reportPdfDownload(mode, detailKey, athleteId);
     setDownloadState({ type: "loading", message: "Preparing PDF..." });
     try {
-      const response = await fetch(download.url, { headers: { Accept: "application/pdf", Authorization: `Bearer ${accessToken}` } });
+      const response = await fetch(download.url, { headers: { Accept: REPORT_PDF_ACCEPT, Authorization: `Bearer ${accessToken}` } });
       if (response.status === 401 || response.status === 403) {
         onLogout();
         return;
