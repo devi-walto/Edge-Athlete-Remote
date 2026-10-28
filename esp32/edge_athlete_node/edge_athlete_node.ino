@@ -7,7 +7,8 @@
 // internet, encrypted, with the sensor's own login; or a local install on the gym's
 // Wi-Fi, plain, with no login.
 //
-// The parts, each in its own file:
+// The parts, each in its own file in src/ (Arduino builds everything in a folder
+// named src; any other name it would skip):
 //   shared.h          which sensor this is, and where its reps go right now
 //   settings.*        what it remembers in flash: Wi-Fi networks, its login
 //   measuring.*       the BNO085, and what counts as a rep
@@ -23,13 +24,13 @@
 #include <esp_mac.h>
 #include <esp_system.h>
 
-#include "connection.h"
-#include "measuring.h"
-#include "messages.h"
-#include "settings.h"
-#include "setup_mode.h"
-#include "shared.h"
-#include "usb_console.h"
+#include "src/connection.h"
+#include "src/measuring.h"
+#include "src/messages.h"
+#include "src/settings.h"
+#include "src/setup_mode.h"
+#include "src/shared.h"
+#include "src/usb_console.h"
 
 char sensorId[16];
 bool remote = false;

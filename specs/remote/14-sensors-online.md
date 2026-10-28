@@ -359,7 +359,7 @@ Needs the sensor.
 **Done 2026-10-27 (firmware 2.0, `esp32/edge_athlete_node/`):** the ID from the chip
 (`ea-` + the last 3 bytes of its Wi-Fi address); ESP-MQTT over `wss` to
 `<school>/sensors` at QoS 1 for reps, sent at once and kept in the outbox while the
-connection is down; TLS checked against ISRG Root X1 and X2 (`roots.h`, from macOS's own
+connection is down; TLS checked against ISRG Root X1 and X2 (`src/roots.h`, from macOS's own
 trusted roots); the claim over HTTPS, the token kept in flash. The school's chain on
 2026-10-27 was leaf → YR1 → Root YR, cross-signed by X1, so X1 checks it; add Root YR
 before Let's Encrypt stops sending the cross-sign. Still to do here: the saved list of

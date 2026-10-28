@@ -11,7 +11,7 @@
 #include "settings.h"
 #include "setup_page.h"
 #include "shared.h"
-#include "site.h"
+#include "../site.h"  // beside the .ino, where it's easy to find (git ignores it)
 
 #ifndef SCHOOL_DOMAIN
 #error "site.h must define SCHOOL_DOMAIN (copy site.h.example)"
