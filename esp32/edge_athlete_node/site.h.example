@@ -1,0 +1,7 @@
+#pragma once
+
+// Copy this file to site.h (git ignores it) and set the schools' base domain.
+// Why it's not in the firmware: this repository is public, and the domain is ours.
+// The setup page asks an athlete for only the part before it (their school's
+// subdomain, e.g. "test"), and shows this part greyed out (spec 14 Phase 8).
+#define SCHOOL_DOMAIN "example.com"

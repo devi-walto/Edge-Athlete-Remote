@@ -55,6 +55,8 @@ docs/_build/
 # (renames containers + moves nginx to 8082 to avoid clashing with a real stack)
 docker-compose.demo.yml
 
-# Firmware credentials. secrets.h.example is the committed template; the real
-# secrets.h holds a Wi-Fi password and an MQTT host, and never belongs in git.
+# Firmware settings that never belong in git: secrets.h (a Wi-Fi password; the node
+# firmware no longer uses one, its settings come from the phone setup page).
+# site.h names our schools' base domain, which stays out of this public repo.
 esp32/**/secrets.h
+esp32/**/site.h

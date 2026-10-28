@@ -1,0 +1,5 @@
+# sketch.yaml — how this sketch is built, so plain `arduino-cli compile` gets it right.
+# The board is a Seeed XIAO ESP32-C6. "Huge APP" gives the program 3 MB of the board's
+# 4 MB: the setup page needs more room than the default 1.2 MB, and sensors aren't
+# updated over the air, so the space that layout gives up isn't used (spec 14 Phase 8).
+default_fqbn: esp32:esp32:XIAO_ESP32C6:PartitionScheme=huge_app
