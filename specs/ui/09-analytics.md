@@ -337,6 +337,66 @@ Built on PR #14 (the rack screen fixes), after the 2026-10-27 demo.
 - [ ] *(Browser)* A real sensor, a set planned at 3: lift 5, and the saved set, the
       coach's live room and the report all show 3.
 
+## Added 2026-10-30 — the rack screen shows each rep as it lands
+
+Asked by Devin, 2026-10-30: should the lifter get a sign that the sensor is ready for
+the next rep? Today the only sign a rep registered is the number going up, and while the
+rep-ending rules were being tuned (firmware 2.2: still for half a second, or slowed to a
+quarter of top speed) a lifter couldn't tell whether a rep had been missed or merged
+into the next one.
+
+**Feedback means "that rep counted", not "stop / go"** *(proposed, Devin to confirm)*.
+A stop/go light teaches lifters to pause for the sensor, and they should lift the way
+they always do: if a normal touch-and-go set loses reps, the rep detection gets fixed,
+not the lifter. So the screen answers the question the lifter actually has, "did that
+one count?", the moment each rep arrives.
+
+- **A short pulse on every rep, on the rack screen**, for the gym tablet and an online
+  athlete's phone alike (one `RackScreen.jsx`). The count pulses once (about half a
+  second):
+  - **counted:** the count steps up and flashes lime (spec 06's "you are here" colour);
+  - **won't count:** the count stays put and the rep's speed shows greyed with its
+    reason, "past the plan" or "too slow", using the `counts` and reason the server now
+    gives each rep (section above).
+- **The speed keeps its zone colour.** The latest rep's speed is already green, yellow
+  or red against the movement's velocity zone; the pulse is on the count, so "counted"
+  never reads as "in zone".
+- **Big enough to read from the bar**, a few steps away. The count ("4 / 5") stays the
+  largest thing on the screen and the flash is on it, not in a corner.
+- **Nothing new from the sensor.** Every rep already reaches the screen through the live
+  rack state, so this is front end only, plus the server sending each rep's `counts`
+  with it.
+- **Missed reps stay visible to the coach as they are today:** the set summary's rep
+  list. No "missed rep" guess on the screen; the screen only shows what arrived.
+
+**Later, on the sensor's own light** *(proposed, after the screen version)*. The same
+answer could blink the sensor's light, so a lifter facing away from the screen still
+sees it. Firmware today only blinks its built-in light while phone setup is open, and it
+listens to nothing from the server, so this needs:
+- the server to send each rep's answer back to that sensor on its own topic, which the
+  broker's per-sensor rules (spec 14) must let only that sensor read;
+- the firmware to subscribe to it and blink: once on its own the moment it sends a rep,
+  then the answer when it comes back (green / red only where the light has two colours;
+  one colour shows counted as a long blink, won't count as two short ones);
+- nothing to break when the answer never comes (offline, a local install with an older
+  server): the light just shows the first blink.
+
+Build after the class. The build is locked at v0.8.0 until Nov 11; this goes with the
+planned-reps work above.
+
+**Done when:**
+
+- [ ] *(Frontend test)* A counted rep pulses the count lime once; a rep past the plan
+      leaves the count alone and shows greyed with "past the plan"; neither repeats when
+      the screen redraws; the speed's zone colour is unchanged.
+- [ ] *(Frontend test)* A rep with no `counts` from the server (an older server) shows
+      as counted, exactly as today.
+- [ ] *(Browser)* A real sensor, a set planned at 3: lift 5 touch-and-go. Three lime
+      pulses, then two greyed reps marked "past the plan", each within a second of the rep.
+- [ ] *(Sensor, later)* The light blinks on every rep sent, and shows the server's
+      answer within a second when online; unplugging the server leaves only the first
+      blink.
+
 ## Acceptance criteria
 
 - [ ] ANALYTICS has three tabs and one picker.
