@@ -47,6 +47,7 @@
 #     eactl seed "Name"           fill it with demo data (asks for the short name;
 #                                 --reset removes the earlier demo rows first)
 #     eactl sim "Name"            wake the demo athletes' sensors for 2 hours
+#     eactl sim "Name" --phantom  ...and have them lift on their own (not Jordan Lee)
 #                                 (--hours N; --stop ends them early)
 #
 #   SAFETY COPIES  (of a school's database)
@@ -981,15 +982,18 @@ sim)
     # in the school runs the simulator for all of them, and each sends reps while
     # its athlete's set is running. It stops itself after --hours (default 2), and
     # Kubernetes ends it at the same limit if it hangs; either way its sensors are
-    # unlinked and switched off. --stop ends it early.
+    # unlinked and switched off. --stop ends it early. --phantom: the seeded athletes
+    # also lift on their own, set after set (simulate_node --phantom), except the
+    # hands-on demo athlete, who a real person lifts as.
     short="$(find_school "${1:-}")" || exit 1
     shift
-    hours=2 stop=no
+    hours=2 stop=no mode=--seeded
     while [ $# -gt 0 ]; do
         case "$1" in
             --hours) need_value "$1" "${2:-}"; hours="$2"; shift 2 ;;
             --stop) stop=yes; shift ;;
-            *) echo 'usage: eactl sim "School Name" [--hours 2] [--stop]'; exit 1 ;;
+            --phantom) mode=--phantom; shift ;;
+            *) echo 'usage: eactl sim "School Name" [--hours 2] [--phantom] [--stop]'; exit 1 ;;
         esac
     done
     case "$hours" in ''|*[!0-9]*|0) echo "[!] --hours must be a whole number of hours, 1 or more"; exit 1 ;; esac
@@ -1031,7 +1035,7 @@ spec:
       containers:
         - name: demo-sim
           image: $image
-          command: ["python", "manage.py", "simulate_node", "--seeded", "--stop-after", "$minutes"]
+          command: ["python", "manage.py", "simulate_node", "$mode", "--stop-after", "$minutes"]
           env: [{ name: PYTHONUNBUFFERED, value: "1" }]
           envFrom:
             - configMapRef: { name: school-settings }
@@ -1040,6 +1044,7 @@ spec:
             requests: { cpu: 20m, memory: 96Mi }
             limits: { memory: 256Mi }
 EOF
+    [ "$mode" = --phantom ] && echo "==> phantom lifters on: the demo athletes lift on their own (not Jordan Lee)"
     echo "==> demo sensors awake for ${hours}h. Watch: eactl logs $short sim -f   End early: eactl sim $short --stop"
     ;;
 

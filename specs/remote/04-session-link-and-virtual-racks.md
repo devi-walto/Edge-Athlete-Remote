@@ -518,6 +518,44 @@ a set running. Neither can be run on a remote school today.
       and inactive (a test with a short time); deleting the Job early does the same.
 - [ ] A fresh local box: `docker compose run --rm seed` still ends with the demo coach
       and the seeded session.
+
+### Added 2026-10-30 — phantom lifters, and one hands-on athlete
+
+Built for the final presentation (Devin, 2026-10-30): a live demo over a video call
+where the room trains in parallel while one real athlete lifts a real sensor. This is
+the "fake athletes that lift by themselves" left for later above.
+
+- **`simulate_node --phantom`** (`eactl sim "School" --phantom`): everything `--seeded`
+  does, and each seeded athlete also does the person's part (`phantom_lifter.py`): joins
+  the session, takes their own rack, counts down, starts the next planned set at the
+  planned load, sends the planned reps a little slower each rep, finishes, rests, and
+  starts over when the plan is done. Online only; on a gym box the racks are tablets,
+  which is spec 18.
+- **Through the same routes a phone uses**, in the same order, so the live room and the
+  room display show a phantom exactly as they show a person. Nothing in the rack rules
+  is loosened for it.
+- **The phantoms' logins (Devin, 2026-10-30).** An online athlete's own rack answers
+  only to that athlete's login (rule above), so a phantom needs one. The simulator
+  gives each phantom a login with **no usable password** (`phantom-<name>`) while it
+  runs and removes it when it stops; `--reset` removes any a cut-short run left. The
+  seeder still never makes a login. Nobody can sign in with a phantom's.
+- **Jordan Lee is the hands-on athlete** (`MANUAL_ATHLETE` in the seeder), never a
+  phantom. Jordan gets no simulated sensor (an earlier seed's is removed; a real sensor
+  added to Jordan is never touched). A coach sends Jordan a login link, and Jordan adds
+  a real sensor from their own page, like any athlete.
+- **Never a phantom:** a real athlete, or a seeded athlete someone can sign in as (a
+  coach sent them a login link).
+- **Stopped mid-set**, a phantom saves the set with the reps so far (a false set if
+  none), goes back to idle and lets go of its rack: nothing is left open.
+
+**Done when:**
+
+- [x] Three phantoms lift the plan in parallel on their own racks (Back Squat 5×3, then
+      Bench Press 4×5); the live room and room display show them. *(throwaway online
+      copy, 2026-10-30)*
+- [x] Jordan is never played and has no simulated sensor (`test_phantom_lifter.py`,
+      `test_demo_data.py`).
+- [x] Stopping leaves no open set, no rack stuck active, no phantom login.
 - [ ] Full suite passes in both modes.
 
 **Built (2026-10-19).** Every item above has a test (`test_demo_data.py`, 14 tests; the

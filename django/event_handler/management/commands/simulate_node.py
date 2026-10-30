@@ -23,6 +23,11 @@
 #                      a session online and starts a set. With --stop-after it stops
 #                      itself; however it stops (time up, Ctrl+C, or Kubernetes
 #                      ending the job), its sensors are unlinked and marked inactive.
+#   --phantom          online only: --seeded, and each seeded athlete also does the person's part
+#                      (phantom_lifter.py): joins, takes their own rack, lifts the
+#                      plan set by set and rests, so the room trains with nobody at
+#                      the screens. The hands-on athlete (the seeder's MANUAL_ATHLETE)
+#                      is never one: that's who a real person lifts as, beside them.
 
 import json
 import os
@@ -34,6 +39,7 @@ import paho.mqtt.client as mqtt
 from django.core.management.base import BaseCommand, CommandError
 from django.db import close_old_connections, connection
 
+from ...deployment import is_hosted
 from ...sensor_messages import build_pulse_payload, build_rep_payload
 
 MQTT_HOST = os.getenv("MQTT_HOST", "mosquitto")
@@ -150,6 +156,10 @@ class Command(BaseCommand):
                            help="Simulate every seeded demo athlete's own sensor at once "
                                 "(spec 04, Phase 5; what `eactl sim` runs). On stopping, "
                                 "they are unlinked from their racks and marked inactive.")
+        which.add_argument("--phantom", action="store_true",
+                           help="Online only: everything --seeded does, and the seeded athletes "
+                                "also lift on their own (join, set, reps, finish, rest), through "
+                                "the same routes a phone uses. Never the hands-on demo athlete.")
         parser.add_argument("--stop-after", type=float, default=None, metavar="MINUTES",
                             help="Stop by itself after this many minutes (default: run until "
                                  "stopped). `eactl sim` uses 120.")
@@ -161,6 +171,11 @@ class Command(BaseCommand):
         parser.add_argument("--reps-per-set", type=int, default=5,
                             help="Reps before a rest, in 'always' mode only (default: 5). "
                                  "In the gated modes the tablet decides where a set ends.")
+        parser.add_argument("--rep-seconds", type=float, default=2.5,
+                            help="Phantoms: seconds between reps (default: 2.5)")
+        parser.add_argument("--rest", type=float, nargs=2, default=[30.0, 45.0],
+                            metavar=("MIN", "MAX"),
+                            help="Phantoms: rest between sets, in seconds (default: 30 45)")
         parser.add_argument("--active-when", choices=[MODE_LIFTING, MODE_CHECKIN, MODE_ALWAYS],
                             default=MODE_LIFTING,
                             help="When to publish reps. 'lifting' (default): only while a set "
@@ -172,7 +187,13 @@ class Command(BaseCommand):
 
         fixed_rack = options["rack"]
         mode = options["active_when"]
-        seeded = options["seeded"]
+        phantom = options["phantom"]
+        seeded = options["seeded"] or phantom      # phantoms are the seeded athletes
+
+        if phantom and not is_hosted():
+            raise CommandError(
+                "Phantom lifters are online only: they join the session the way an athlete "
+                "does online. On a gym box the racks are tablets (spec 18 covers simulating them).")
 
         if seeded:
             # The seeded demo athletes' own sensors: marked simulated, owned by a
@@ -221,14 +242,18 @@ class Command(BaseCommand):
         stop_event = threading.Event()
         previous_sigterm = signal.signal(signal.SIGTERM, lambda *_: stop_event.set())
 
+        phantoms = self._start_phantoms(client, stop_event, options) if phantom else {}
+
         threads = []
         for node_id in node_ids:
-            for target in (self._pulse_loop, self._rep_loop):
+            loops = (self._pulse_loop,) if node_id in phantoms else (self._pulse_loop, self._rep_loop)
+            for target in loops:
                 thread = threading.Thread(
                     target=target, daemon=True,
                     args=(client, node_id, stop_event, fixed_rack, mode, options))
                 thread.start()
                 threads.append(thread)
+        threads += list(phantoms.values())
 
         deadline = options["stop_after"] * 60 if options["stop_after"] else None
         try:
@@ -241,7 +266,12 @@ class Command(BaseCommand):
         finally:
             stop_event.set()
             for thread in threads:
-                thread.join(timeout=5)
+                thread.join(timeout=15 if thread in phantoms.values() else 5)
+            if phantoms:
+                from ...phantom_lifter import take_logins_back
+                close_old_connections()
+                take_logins_back(self._phantom_athletes)
+                self.stdout.write(f"Took back {len(phantoms)} phantom login(s).")
             client.loop_stop()
             client.disconnect()
             signal.signal(signal.SIGTERM, previous_sigterm)
@@ -252,6 +282,36 @@ class Command(BaseCommand):
                 close_old_connections()
                 Node.objects.filter(node_id__in=node_ids).update(rack_number=None, is_active=False)
                 self.stdout.write(f"Unregistered {len(node_ids)} demo sensor(s).")
+
+    def _start_phantoms(self, client, stop_event, options):
+        """One phantom lifter per eligible seeded athlete, a few seconds apart so the
+        room isn't in lockstep. Returns {sensor node_id: its thread}."""
+        from ...phantom_lifter import phantom_athletes, run_phantom
+        from .seed_active_session import MANUAL_ATHLETE
+
+        lock = threading.Lock()
+
+        def log(line):
+            with lock:
+                self.stdout.write(line)
+
+        def publish_rep(node_id, rep_number, rep):
+            payload = {"node_id": node_id, "rep_number": rep_number, **rep}
+            client.publish(f"edgeathlete/node/{node_id}/rep", json.dumps(payload), qos=1)
+
+        pace = {"rep_seconds": options["rep_seconds"], "rest_seconds": tuple(sorted(options["rest"]))}
+        self._phantom_athletes = phantom_athletes(MANUAL_ATHLETE)
+        threads = {}
+        for i, athlete in enumerate(self._phantom_athletes):
+            node_id = athlete.owned_nodes.filter(is_simulated=True).values_list("node_id", flat=True).first()
+            thread = threading.Thread(
+                target=run_phantom, daemon=True,
+                args=(athlete, node_id, publish_rep, log, stop_event, pace, 2 + i * 6))
+            thread.start()
+            threads[node_id] = thread
+        names = ", ".join(a.name for a in self._phantom_athletes) or "none"
+        self.stdout.write(f"Phantom lifters: {names} (hands-on, never a phantom: {MANUAL_ATHLETE})")
+        return threads
 
     def _pulse_loop(self, client, node_id, stop_event, fixed_rack, mode, options):
         """Heartbeats, never gated: an idle node is still a healthy node."""

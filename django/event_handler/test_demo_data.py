@@ -17,8 +17,8 @@ from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
 from .management.commands.seed_active_session import (ATHLETES, BLOCK_NAME, GROUP_NAME,
-                                                       NFC_TAG_BY_ATHLETE, NODE_ID,
-                                                       SESSION_LABEL, sensor_id)
+                                                       MANUAL_ATHLETE, NFC_TAG_BY_ATHLETE,
+                                                       NODE_ID, SESSION_LABEL, sensor_id)
 from .models import (Athlete, CoachProfile, Node, RackRuntime, Set, TrainingBlock,
                      TrainingGroup, TrainingSession)
 from .services.session_join import join
@@ -74,12 +74,23 @@ class SeederAddsTests(TestCase):
         self.assertTrue(all(a.is_simulated for a in demo))
         for athlete in demo:
             sensors = Node.objects.filter(owner=athlete)
+            if athlete.name == MANUAL_ATHLETE:          # the hands-on athlete: none
+                self.assertFalse(sensors.exists())
+                continue
             self.assertEqual([n.node_id for n in sensors], [sensor_id(athlete.name)])
             self.assertTrue(sensors.get().is_simulated)
         session = TrainingSession.objects.get(label=SESSION_LABEL)
         self.assertIsNone(session.ended_at)
         self.assertEqual(TrainingBlock.objects.get(name=BLOCK_NAME).coach, self.admin)
         self.assertEqual(User.objects.count(), 1)          # no login was made
+
+    def test_the_hands_on_athlete_loses_a_simulated_sensor_but_keeps_a_real_one(self):
+        jordan = Athlete.objects.create(name=MANUAL_ATHLETE, is_simulated=True)
+        Node.objects.create(node_id=sensor_id(MANUAL_ATHLETE), owner=jordan, is_simulated=True)
+        Node.objects.create(node_id='ea-169a84', owner=jordan)                # a real sensor
+        seed()
+        self.assertEqual(list(Node.objects.filter(owner=jordan).values_list('node_id', flat=True)),
+                         ['ea-169a84'])
 
     def test_an_existing_sim_sensor_of_the_athlete_is_adopted(self):
         riley = Athlete.objects.create(name='Riley Brooks', is_simulated=True)
@@ -149,7 +160,10 @@ class GymOnlyPiecesTests(TestCase):
     def test_online_the_finished_sets_name_each_athletes_own_sensor(self):
         seed()
         for a_set in Set.objects.all():
-            self.assertEqual(a_set.node.owner, a_set.athlete)
+            if a_set.athlete.name == MANUAL_ATHLETE:   # has no simulated sensor
+                self.assertIsNone(a_set.node)
+            else:
+                self.assertEqual(a_set.node.owner, a_set.athlete)
 
     @override_settings(EA_DEPLOYMENT='remote')
     def test_an_earlier_seeds_rack_sensor_is_removed_online(self):
