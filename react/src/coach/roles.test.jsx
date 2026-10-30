@@ -57,8 +57,9 @@ it('shows an athlete the notice on the coach workspace and asks the server for n
   expect(container.textContent).toContain('This is the coach workspace')
   expect(container.textContent).toContain('Use the session link your coach sent you')
   expect(container.querySelector('.monitor')).toBeNull()
-  // "who am I" is for every role; anything else would be a coach request
-  expect(asked().filter((url) => !url.includes('/api/auth/'))).toEqual([])
+  // "who am I" and "local or online?" (open, no login) are for every role;
+  // anything else would be a coach request
+  expect(asked().filter((url) => !url.includes('/api/auth/') && !url.includes('/api/system/info/'))).toEqual([])
 })
 
 it('signs the athlete out from the notice, back to an empty sign-in form', async () => {

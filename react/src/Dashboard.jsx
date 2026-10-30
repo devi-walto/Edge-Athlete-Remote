@@ -38,6 +38,7 @@ import ChangePassword from "./coach/ChangePassword.jsx";
 import NotACoach from "./coach/NotACoach.jsx";
 import SignIn from "./coach/SignIn.jsx";
 import useLiveRoomState from "./useLiveRoomState.js";
+import useDeployment from "./useDeployment.js";
 import { compareReps, groupHistorySets, summariseTrainingDays } from "./historyView.js";
 import WorkoutCatalog from "./WorkoutCatalog.jsx";
 import { OpenDayFromScratch, StartStagedDay } from "./TrainingDayPanel.jsx";
@@ -957,10 +958,18 @@ export default function Dashboard({ mode = "wall", coachState = "planning" }) {
   // Who is signed in: their username, whether they are an administrator, and whether
   // they are still on a temporary password. Asked once per login.
   const [me, setMe] = useState(null);
+  // The room display needs a coach's login online, not in a gym: on a local install
+  // it is open to the gym's Wi-Fi, online the server only shows the room to a coach.
+  // So online the wall view goes through the same doors as the coach view (sign in,
+  // not an athlete, no temporary password) and then shows the display. null until
+  // the server has said which kind of installation this is.
+  const deployment = useDeployment();
+  const wallLoginRequired = mode === "wall" ? (deployment === null ? null : deployment === "remote") : false;
+  const needsCoach = mode === "coach" || wallLoginRequired === true;
   // An athlete's login is a real login, but not for this workspace. Known before
   // anything is asked of the server (the role is stored at sign-in), so the room
   // feed below is never started for them.
-  const athleteHere = mode === "coach" && Boolean(accessToken) && (me?.role || getSignedInRole()) === "athlete";
+  const athleteHere = needsCoach && Boolean(accessToken) && (me?.role || getSignedInRole()) === "athlete";
   // One place to drop the login, so the stored copy can never outlive the
   // in-memory one — a stale token left in storage is a coach still signed in on
   // a shared tablet after they walked away.
@@ -974,10 +983,12 @@ export default function Dashboard({ mode = "wall", coachState = "planning" }) {
     setAccessToken(null);
     setMe(null);
   }, []);
-  const monitor = useLiveRoomState({ mode, accessToken: athleteHere ? null : accessToken, onAuthRequired: forget });
+  const monitor = useLiveRoomState({
+    mode, accessToken: athleteHere ? null : accessToken, onAuthRequired: forget, loginRequired: wallLoginRequired,
+  });
 
   useEffect(() => {
-    if (mode !== "coach" || !accessToken) return undefined;
+    if (!needsCoach || !accessToken) return undefined;
     let cancelled = false;
     fetchCurrentCoach(accessToken)
       .then((reply) => { if (!cancelled) { setSignedInRole(reply.role); setMe(reply); } })
@@ -986,15 +997,18 @@ export default function Dashboard({ mode = "wall", coachState = "planning" }) {
       // no name until the next successful answer.
       .catch((error) => { if (!cancelled && error.status === 401) forget(); });
     return () => { cancelled = true; };
-  }, [mode, accessToken]);
+  }, [needsCoach, accessToken]);
 
-  if (mode === "coach" && !accessToken) {
+  // Wall view, not yet known whether online: show nothing rather than a sign-in
+  // form a gym display would never need.
+  if (mode === "wall" && wallLoginRequired === null) return null;
+  if (needsCoach && !accessToken) {
     return <SignIn onSignedIn={setAccessToken} />;
   }
   if (athleteHere) return <NotACoach onSignOut={forget} />;
   // A temporary password opens this form and nothing else. The server enforces the
   // same thing on every coach route, so this is the polite version of a locked door.
-  if (mode === "coach" && me?.must_change_password) {
+  if (needsCoach && me?.must_change_password) {
     return <ChangePassword accessToken={accessToken} forced onLogout={forget}
       onChanged={() => setMe({ ...me, must_change_password: false })} />;
   }
