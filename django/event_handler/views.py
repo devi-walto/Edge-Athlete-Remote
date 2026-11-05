@@ -2510,10 +2510,12 @@ def room_state(request):
     routes backed by the identical function one boolean apart; folding them
     leaves a single thing to document and maintain):
 
-      GET /api/room-state/               -> WALL view. Open, because the wall
-                                            screen is a shared display nobody
-                                            logs into. Names and numbers only:
-                                            no database ids, no roster.
+      GET /api/room-state/               -> WALL view. Names and numbers only:
+                                            no database ids, no roster. Open on
+                                            a local install (a shared gym
+                                            display nobody logs into); online
+                                            only for a signed-in coach, and the
+                                            display sends the coach's login.
       GET /api/room-state/?details=true  -> COACH view. Requires a coach login
                                             and adds ids, the participant
                                             roster, and node health so the UI

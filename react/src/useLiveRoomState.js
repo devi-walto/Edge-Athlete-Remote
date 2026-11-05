@@ -11,9 +11,12 @@
 // fetch again. Polling would work too; this just avoids asking a question when
 // nothing has happened.
 //
-// Both screens run through here, one boolean apart. The wall view is public and
-// gets the anonymous snapshot; the coach view asks for ?details=true, which adds
-// ids and requires the login.
+// Both screens run through here, one boolean apart. The wall view gets the
+// names-only snapshot; the coach view asks for ?details=true, which adds ids and
+// requires the login. On a local install the wall view is open to anyone on the
+// gym's Wi-Fi. Online the same snapshot is only for a signed-in coach (the room's
+// names are not for the whole internet), so there the wall view sends the coach's
+// login too: `loginRequired`, which is null until the page knows which it is.
 //
 // Most of the complexity below is about not lying to the room:
 //   - a fetch in flight blocks a second one, but remembers a newer revision came
@@ -50,7 +53,7 @@ const STALE_AFTER_MS = 15_000;
 // a suspect in one demo slowdown, so this stays a floor, not a heartbeat.
 const BACKSTOP_POLL_MS = 20_000;
 
-export default function useLiveRoomState({ mode, accessToken, onAuthRequired }) {
+export default function useLiveRoomState({ mode, accessToken, onAuthRequired, loginRequired = false }) {
   const [roomState, setRoomState] = useState(null);
   const [requestState, setRequestState] = useState("loading");
   const [connectionState, setConnectionState] = useState("connecting");
@@ -65,7 +68,11 @@ export default function useLiveRoomState({ mode, accessToken, onAuthRequired }) 
   const tokenRef = useRef(accessToken);
   tokenRef.current = accessToken;
 
-  const enabled = mode === "wall" || Boolean(accessToken);
+  // The coach view always signs in; the wall view only online. Until the page knows
+  // whether it is online (null), the wall waits rather than asking without a login:
+  // the server would refuse, and a refusal signs the coach out of this browser.
+  const sendsLogin = mode === "coach" || loginRequired === true;
+  const enabled = sendsLogin ? Boolean(accessToken) : loginRequired === false;
 
   async function refresh({ preserveSnapshot = false, forceAfterInFlight = false } = {}) {
     if (!enabled) return;
@@ -80,13 +87,13 @@ export default function useLiveRoomState({ mode, accessToken, onAuthRequired }) 
     if (!preserveSnapshot) setRequestState("loading");
     try {
       const headers = { Accept: "application/json" };
-      if (mode === "coach" && tokenRef.current) {
+      if (sendsLogin && tokenRef.current) {
         headers.Authorization = `Bearer ${tokenRef.current}`;
       }
-      // One endpoint, two audiences (merge canon R3). The wall display is public,
-      // so it gets the anonymous snapshot; the coach view asks for ?details=true,
-      // which adds ids and requires the login. There is no separate wall-state
-      // route — it was the same function one boolean apart.
+      // One endpoint, two audiences (merge canon R3). The wall display gets the
+      // names-only snapshot; the coach view asks for ?details=true, which adds
+      // ids. There is no separate wall-state route — it was the same function one
+      // boolean apart.
       const url = mode === "coach" ? "/api/room-state/?details=true" : "/api/room-state/";
       const response = await fetch(url, { headers, signal: controller.signal });
       if (response.status === 401) {
@@ -190,7 +197,7 @@ export default function useLiveRoomState({ mode, accessToken, onAuthRequired }) 
       clearStaleTimer();
       client.end(true);
     };
-  }, [mode, enabled]);
+  }, [mode, enabled, sendsLogin]);
 
   return { roomState, requestState, connectionState, lastError, refresh };
 }

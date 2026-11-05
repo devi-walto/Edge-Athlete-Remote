@@ -86,6 +86,13 @@ JORDAN = "Jordan Lee"
 CASEY = "Casey Morgan"
 RILEY = "Riley Brooks"
 
+# The hands-on demo athlete: always lifted by a real person, never by the simulator.
+# Jordan is already the one the gym demo taps a wristband for. Jordan gets no simulated
+# sensor (a real one is added from Jordan's own page), and `simulate_node --phantom`
+# never plays Jordan, so a real sensor can lift beside the phantom lifters. A coach
+# sends Jordan a login link like any athlete; the seeder still makes no login.
+MANUAL_ATHLETE = JORDAN
+
 # The prescription, written once for the whole group. 72% of a 315 squat is 227,
 # which rounds to 225 — the same bar the old per-athlete seed put in front of
 # Jordan, now arrived at the way the system actually works.
@@ -168,7 +175,15 @@ class Command(BaseCommand):
         # they join a session online it goes on their own rack; `eactl sim` (the
         # simulator with --seeded) makes them send reps. Marked simulated too.
         own_sensor = {}
+        # The hands-on athlete has none, and loses one an earlier seed gave them (only
+        # ever a simulated one: a real sensor added to Jordan is never touched).
+        removed, _ = Node.objects.filter(
+            is_simulated=True, owner=athletes[MANUAL_ATHLETE]).delete()
+        if removed:
+            self.stdout.write(f"  removed {MANUAL_ATHLETE}'s simulated sensor (hands-on athlete)")
         for athlete in athletes.values():
+            if athlete.name == MANUAL_ATHLETE:
+                continue
             sensor, _ = Node.objects.get_or_create(
                 node_id=sensor_id(athlete.name),
                 defaults={"owner": athlete, "is_simulated": True, "mount_type": Node.MOUNT_BAR})
@@ -246,7 +261,8 @@ class Command(BaseCommand):
 
         # Give TWO of the four a finished set already, so has_data is non-trivial
         # (Alex + Jordan read as has_data=true; Casey + Riley as false).
-        # Measured by the gym's rack sensor on a gym box; online, by each athlete's own.
+        # Measured by the gym's rack sensor on a gym box; online, by each athlete's own
+        # (none for the hands-on athlete, so that set names no sensor online).
         self._finish_a_set(session, node or own_sensor.get(ALEX), athletes[ALEX], squat, 1, 205.0)
         self._finish_a_set(session, node or own_sensor.get(JORDAN), athletes[JORDAN], squat, 1, 255.0)
 
@@ -264,8 +280,8 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(
             f"Seeded demo session '{session.label}' (id={session.id}) with "
-            f"{len(athletes)} invented athletes in '{GROUP_NAME}', each with their own "
-            f"simulated sensor, 2 finished sets, and maxes."))
+            f"{len(athletes)} invented athletes in '{GROUP_NAME}', each but {MANUAL_ATHLETE} "
+            f"(hands-on) with their own simulated sensor, 2 finished sets, and maxes."))
 
     # ── what is ours, and who owns the plan ───────────────────────────────────
 
@@ -303,6 +319,12 @@ class Command(BaseCommand):
         DailyReport.objects.filter(session__in=sessions).delete()
         sessions.delete()
         AthleteReferenceMax.objects.filter(athlete__in=demo).delete()
+        # Logins the phantom lifters left behind (a run cut short). Only ever the
+        # simulator's own no-password ones; a login a coach made is left alone.
+        from event_handler.phantom_lifter import is_phantom_login
+        for athlete in demo.filter(user__isnull=False).select_related("user"):
+            if is_phantom_login(athlete.user):
+                athlete.user.delete()
         Node.objects.filter(is_simulated=True).filter(
             Q(owner__in=demo) | Q(node_id=NODE_ID)).delete()
         TrainingProgram.objects.filter(training_group__name=GROUP_NAME).delete()
