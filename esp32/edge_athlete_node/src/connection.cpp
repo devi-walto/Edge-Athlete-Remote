@@ -176,7 +176,7 @@ bool clockIsSet() {
   return time(nullptr) > 1704067200;  // 2024-01-01; before that, the boot clock
 }
 
-bool serverAnswers(bool local, const String &host) {
+bool serverAnswers(bool local, const String &host, String *name) {
   HTTPClient http;
   NetworkClientSecure secure;
   NetworkClient plain;
@@ -186,20 +186,28 @@ bool serverAnswers(bool local, const String &host) {
     begun = http.begin(plain, "http://" + host + "/api/health/");
   } else {
     secure.setCACert(TRUSTED_ROOTS);
-    begun = http.begin(secure, "https://" + host + "/api/health/");
+    // A school's /api/system/info/ is open and says its name, so the setup page can
+    // show "Found Demo U": proof the athlete typed the right school code.
+    begun = http.begin(secure, "https://" + host + "/api/system/info/");
   }
   if (!begun) return false;
   http.setTimeout(6000);
   http.collectHeaders(keep, 1);
   const int status = http.GET();
   const String date = http.header("Date");
+  const String body = !local && status == 200 ? http.getString() : String();
   http.end();
   if (status != 200) return false;
   if (local) setClockFrom(date);
+  if (name != nullptr && !local) {
+    char found[64] = "";
+    *name = jsonField(body, "name", found, sizeof(found)) ? String(found) : String();
+  }
   return true;
 }
 
-bool claim(const char *code, String &detail) {
+bool claim(const char *code, String &detail, bool takeOver, bool *ownedByOther) {
+  if (ownedByOther != nullptr) *ownedByOther = false;
   if (!remote) {
     detail = "A local install needs no code: the coach links the sensor to a rack.";
     return false;
@@ -218,7 +226,8 @@ bool claim(const char *code, String &detail) {
   }
   http.addHeader("Content-Type", "application/json");
   http.addHeader("Accept", "application/json");
-  String body = String("{\"code\":\"") + code + "\",\"node_id\":\"" + sensorId + "\"}";
+  String body = String("{\"code\":\"") + code + "\",\"node_id\":\"" + sensorId + "\"" +
+                (takeOver ? ",\"take_over\":true}" : "}");
   Serial.printf("claiming %s at %s...\n", sensorId, serverHost);
   const int status = http.POST(body);
   String answer = http.getString();
@@ -227,6 +236,9 @@ bool claim(const char *code, String &detail) {
     Serial.printf("the school refused the claim (%d): %s\n", status, answer.c_str());
     char said[200] = "";
     jsonField(answer, "detail", said, sizeof(said));
+    if (status == 409 && ownedByOther != nullptr && answer.indexOf("owned_by_someone_else") >= 0) {
+      *ownedByOther = true;
+    }
     if (status == 409 || status == 503) {
       detail = said;  // another athlete's sensor; or the school can't take sensors now
     } else if (status == 429) {
@@ -234,7 +246,7 @@ bool claim(const char *code, String &detail) {
     } else if (status <= 0) {
       detail = "The sensor couldn't reach the school.";
     } else {
-      detail = "That code didn't work. It may be used, out of time or mistyped. Get a new one on your athlete page.";
+      detail = "That code didn't work. Get a new one on your Add my sensor page.";
     }
     return false;
   }

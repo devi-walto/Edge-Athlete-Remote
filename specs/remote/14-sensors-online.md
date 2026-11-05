@@ -491,6 +491,34 @@ page's own address, so the domain is never written into the app either.
 
 ---
 
+## Phase 9 — Setup, version 2 (from a real athlete, 2026-11-05)
+
+Devin watched an athlete set a sensor up on her own. What went wrong, and the fix for
+each (boards: Final designs, F_Setup1–5 and F_Ath_S2/S4, approved 2026-11-05):
+
+| What happened | Fix |
+|---|---|
+| She thought the school field was for making up a school name | One word everywhere: **school code** (green, on her Add my sensor page, not copyable) and **sensor code**. The setup page says "Enter your school code" and "Enter your sensor code" |
+| She missed the small grey 1·2·3 steps | Big green-bar steps: "Step 2 of 3 · School code" |
+| She only looked at the setup page, never the browser | The setup page names the one place to look: the Add my sensor page, which shows school code first, then sensor code, in the order setup asks |
+| Her typed code came up invalid | 8 boxes, the dash built in, small letters fine; a letter codes never use (O, 0, I, 1, L) turns its box amber as it's typed. The server already ignored the dash |
+| The sensor was still another athlete's, so she was blocked | "This sensor belongs to another athlete. Make it mine?" If she says yes, the claim asks to take it over (`take_over`); it moves to her and off any rack. The old owner's sets stay theirs. Only someone holding the sensor can do this: setup opens only from its button |
+| The first Wi-Fi try failed; Retry worked | The sensor stops any scan before joining, and tries a timed-out join once more by itself |
+| Setting up again on new Wi-Fi | The school code is filled in from the school the sensor already belongs to, and shown on the athlete's My sensor row |
+
+Also: the school check reads `/api/system/info/` so setup can say "Found Demo U"; the
+lock emoji is a drawn padlock. Firmware 2.3.0.
+
+**Done when:**
+
+- [x] *(Backend test)* A sensor someone else owns is refused at first, and moves to the
+      new athlete only when the claim asks to take it over; their sets stay theirs.
+- [x] *(Backend test)* Taking over still needs a working code.
+- [x] *(Browser, against a stand-in sensor)* The whole remote flow; the look-alike
+      warning; the takeover screen; the filled-in school code; the local switch.
+- [ ] *(Real sensor)* Flashed with 2.3.0: set up from scratch, then again on the same
+      Wi-Fi (school code filled in), then by a second athlete (takeover).
+
 ## Acceptance criteria
 
 - [ ] A sensor reaches its school only with its own token, over an encrypted
@@ -507,7 +535,7 @@ page's own address, so the domain is never written into the app either.
 | Risk | What reduces it |
 |---|---|
 | The broker's disk is lost, and with it every sensor login | Sensors re-claim with a fresh code; Phase 1 decides whether the safety copy also keeps the broker's file |
-| Someone types another athlete's sensor ID with their own code | A sensor already owned is refused; a coach removes it first |
+| Someone types another athlete's sensor ID with their own code | A sensor already owned is refused; taking it over needs the sensor in hand (its setup opens only from its button) and an explicit "Make it mine" (Phase 9) |
 | The BNO085 misbehaves on the ESP32-C6 (reported on some ESP32 boards) | It also speaks SPI and UART; Phase 6 is after the server side, so it can't block #6 |
 | Hardware time runs short | Phases 0–4 need no sensor, so the server side and #6's security are done first |
 | ESP-MQTT is awkward from the Arduino setup | `espMqttClient` is the fallback (`sensors.md`) |

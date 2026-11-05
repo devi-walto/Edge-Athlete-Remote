@@ -41,6 +41,8 @@ String trySsid;
 String tryPassword;
 bool setupLocal = false;
 String setupHost;
+String setupSchoolName;
+bool retriedWifi = false;  // a join that timed out is tried once more by itself
 
 enum class Trying { Nothing, Connecting, Connected, WrongPassword, NotFound, Failed };
 volatile Trying trying = Trying::Nothing;
@@ -166,7 +168,12 @@ void handleWifiTry() {
   // Answer first: joining moves the sensor's channel, which drops the phone for a moment.
   sendJson("{\"ok\":true}");
   delay(50);
+  // A scan still running (setup starts one the moment it opens) can make the join fail
+  // quietly; stop it first (seen 2026-11-05: the first try failed, Retry worked).
+  esp_wifi_scan_stop();
+  WiFi.scanDelete();
   WiFi.disconnect();
+  retriedWifi = false;
   trying = Trying::Connecting;
   tryStartedAt = millis();
   Serial.printf("trying %s...\n", trySsid.c_str());
@@ -175,7 +182,18 @@ void handleWifiTry() {
 
 void handleWifiState() {
   touch();
-  if (trying == Trying::Connecting && millis() - tryStartedAt > 20000) trying = Trying::Failed;
+  if (trying == Trying::Connecting && millis() - tryStartedAt > 20000) {
+    if (!retriedWifi) {
+      // Timed out once: try again by itself before telling the athlete.
+      retriedWifi = true;
+      tryStartedAt = millis();
+      Serial.printf("trying %s again...\n", trySsid.c_str());
+      WiFi.disconnect();
+      WiFi.begin(trySsid.c_str(), tryPassword.c_str());
+    } else {
+      trying = Trying::Failed;
+    }
+  }
   const String gateway = trying == Trying::Connected ? WiFi.gatewayIP().toString() : "";
   sendJson(String("{\"state\":\"") + tryingName() + "\",\"gateway\":" + jsonText(gateway) + "}");
 }
@@ -214,16 +232,18 @@ void handleServer() {
       }
     }
   }
-  if (!serverAnswers(setupLocal, host)) {
+  setupSchoolName = "";
+  if (!serverAnswers(setupLocal, host, &setupSchoolName)) {
     refuse(setupLocal ? String("No base station answered on this Wi-Fi. Pick the gym's base station Wi-Fi.")
-                      : "Can't find a school at " + host + ". Check the spelling, and that this Wi-Fi has internet.");
+                      : String("No school with that code. Check it on your Add my sensor page."));
     return;
   }
   setupHost = host;
   remote = !setupLocal;
   strlcpy(serverHost, host.c_str(), sizeof(serverHost));
   const bool linked = !setupLocal && loadLogin();
-  sendJson("{\"ok\":true,\"host\":" + jsonText(host) + ",\"linked\":" + (linked ? "true" : "false") + "}");
+  sendJson("{\"ok\":true,\"host\":" + jsonText(host) + ",\"name\":" + jsonText(setupSchoolName) +
+           ",\"linked\":" + (linked ? "true" : "false") + "}");
 }
 
 // Only the letters a code can have, so nothing else reaches the school.
@@ -241,10 +261,17 @@ void handleClaim() {
   String detail;
   if (setupHost.isEmpty() || setupLocal) {
     refuse("Pick your school first.");
-  } else if (claim(cleanCode(web.arg("code")).c_str(), detail)) {
-    sendJson("{\"ok\":true}");
   } else {
-    refuse(detail);
+    bool ownedByOther = false;
+    const bool takeOver = web.arg("takeover") == "1";
+    if (claim(cleanCode(web.arg("code")).c_str(), detail, takeOver, &ownedByOther)) {
+      sendJson("{\"ok\":true}");
+    } else if (ownedByOther) {
+      // The page warns, and claims again with takeover=1 if the athlete says so.
+      sendJson("{\"ok\":false,\"owned\":true,\"detail\":" + jsonText(detail) + "}");
+    } else {
+      refuse(detail);
+    }
   }
 }
 

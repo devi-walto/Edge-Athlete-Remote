@@ -1,10 +1,13 @@
 // setup_page.h — the page an athlete's phone opens when it joins the sensor's own
 // Wi-Fi (EdgeAthlete-<id>), to set the sensor up with no computer (spec 14 Phase 8).
 //
-// Why it looks like this: it follows the approved boards (Final designs, F_Setup1–5):
-// pick the Wi-Fi → its password, tried right away → where reps go (Remote server: type
-// only the school's subdomain; Local install: the base station, filled in) → the code
-// (remote only) → done. The sensor's Wi-Fi has no internet, so the page is this one
+// Why it looks like this: it follows the approved boards (Final designs, F_Setup1–5,
+// version 2 of 2026-11-05, from watching a real athlete set one up): pick the Wi-Fi →
+// its password, tried right away (and once more by itself) → the school code (Remote;
+// filled in when the sensor already knows its school) or the base station (Local) →
+// the sensor code in 8 boxes, the dash built in → done. Big green-bar steps, because
+// small numbered ones were missed; one word for each thing ("school code", "sensor
+// code"), the same as on the athlete's Add my sensor page. The sensor's Wi-Fi has no internet, so the page is this one
 // small file with the phone's own font, and it talks only to the sensor (/api/...).
 // While the sensor joins the chosen Wi-Fi the phone may drop off for a moment; every
 // request here simply tries again.
@@ -21,17 +24,15 @@ static const char SETUP_PAGE[] = R"PAGE(<!doctype html>
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);
 font:16px -apple-system,system-ui,"Segoe UI",Roboto,sans-serif}
-header{display:flex;flex-direction:column;gap:12px;padding:16px 16px 14px;border-bottom:1px solid var(--l)}
+header{display:flex;flex-direction:column;gap:14px;padding:16px;border-bottom:1px solid var(--l)}
 .top{display:flex;justify-content:space-between;align-items:center}
 .top b{font-size:15px;font-weight:800}.top span{color:var(--m);font:12px var(--mono)}
-.steps{display:flex;gap:18px}.step{display:flex;align-items:center;gap:6px;color:var(--m);font-size:12px;font-weight:800}
-.step i{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--l2);font-style:normal;font-size:11px}
-.step.now{color:var(--ink)}.step.now i{border-color:var(--lime);color:var(--lime)}
-.step.done{color:var(--lime)}.step.done i{background:var(--lime);border-color:var(--lime);color:var(--bg)}
+.steps{display:flex;flex-direction:column;gap:8px}.steps b{color:var(--lime);font-size:14px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.prog{display:flex;gap:6px}.prog i{flex:1;height:8px;border-radius:4px;background:var(--l)}.prog i.f{background:var(--lime)}
 main{flex:1;display:flex;flex-direction:column;gap:14px;padding:20px 16px 0}
 footer{display:flex;flex-direction:column;gap:10px;padding:14px 16px 26px}
-h1{margin:0;font-size:26px;font-weight:850;letter-spacing:-.02em}
-.sub{margin:-6px 0 0;color:var(--ink2);font-size:14px;line-height:1.45}
+h1{margin:0;font-size:30px;font-weight:850;letter-spacing:-.02em;line-height:1.1}
+.sub{margin:-4px 0 0;color:var(--ink2);font-size:16px;line-height:1.4}
 .note{margin:0;color:var(--m);font-size:13px;line-height:1.5}
 .caps{color:var(--m);font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
 button{font:inherit;cursor:pointer}
@@ -56,11 +57,17 @@ label.f{display:flex;flex-direction:column;gap:6px}
 .st.ok{background:var(--limebg);border-color:var(--lime)}.st.ok:before{background:var(--lime)}
 .st.bad{background:var(--coralbg);border-color:var(--coral)}.st.bad:before{background:var(--coral)}
 .sw{display:flex;gap:4px;padding:4px;background:var(--s);border:1px solid var(--l);border-radius:8px}
-.sw button{flex:1;min-height:44px;border:0;border-radius:5px;background:none;color:var(--ink2);font-size:14px;font-weight:800}
+.sw button{flex:1;min-height:46px;border:0;border-radius:5px;background:none;color:var(--ink2);font-size:15px;font-weight:800}
 .sw button.on{background:var(--lime);color:var(--bg)}
-.addr{display:flex;flex-direction:column;gap:8px;padding:14px;background:var(--s);border:1px solid var(--l)}
-.bar{display:flex;align-items:center;gap:8px;min-height:40px;padding:0 12px;background:var(--s2);border-radius:20px;font-size:15px;white-space:nowrap;overflow:hidden}
-.bar span{color:var(--m)}.bar mark{padding:2px 4px;border-radius:4px;background:var(--lime);color:var(--bg);font-weight:800}
+.lime{color:var(--lime)}.caps.lime{font-size:12px}
+.code8{position:relative;display:flex;align-items:center;gap:5px}
+.code8 span{display:grid;place-items:center;width:36px;height:54px;background:var(--s);border:1.5px solid var(--l);border-radius:6px;font:800 24px var(--mono)}
+.code8 span.has{border-color:var(--l2)}.code8 span.at{border:2px solid var(--lime)}
+.code8 span.odd{background:#241c0e;border:2px solid var(--amber);color:var(--amber)}.code8.bad span{border-color:var(--coral)}
+.code8 .dash{width:14px;border:0;background:none;color:var(--m)}
+.code8 #c8b,.code8 #c8b span{pointer-events:none}.code8 input{position:absolute;inset:0;width:100%;height:100%;opacity:.01;border:0;font-size:16px;color:transparent;caret-color:transparent;background:none}
+.st.warn{background:#241c0e;border-color:var(--amber)}
+.icon{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:#241c0e;border:2px solid var(--amber)}
 .row{display:flex;justify-content:space-between;align-items:center}
 .tick{display:grid;place-items:center;width:64px;height:64px;margin-top:18px;border-radius:50%;background:var(--lime);color:var(--bg);font-size:34px;font-weight:900}
 .facts{display:flex;flex-direction:column;background:var(--s);border:1px solid var(--l)}
@@ -70,7 +77,10 @@ label.f{display:flex;flex-direction:column;gap:6px}
 <header><div class="top"><b>Edge Athlete sensor</b><span id="sid"></span></div><div class="steps" id="steps"></div></header>
 <main id="main"></main><footer id="foot"></footer>
 <script>
-var S={id:"",domain:"",linked:"",nets:[],ssid:"",pass:"",local:false,sub:"",host:"",gateway:"",screen:"nets"};
+var S={id:"",domain:"",linked:"",nets:[],ssid:"",pass:"",local:false,sub:"",pref:false,host:"",name:"",gateway:"",code:"",screen:"nets"};
+// Codes are made from these (one_time_secrets.py); O, 0, I, 1 and L are left out so nothing can be mixed up.
+var ALPHABET="ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+var LOCK='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#89969d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Password protected"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
 var $=function(i){return document.getElementById(i)};
 function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 // Every request tries again for a while: the phone drops off the sensor's Wi-Fi for a
@@ -79,15 +89,16 @@ function api(path,body,tries){tries=tries==null?8:tries;
  var o=body?{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams(body).toString()}:{};
  return fetch(path,o).then(function(r){return r.json()}).catch(function(e){
   if(tries<=0)throw e;return new Promise(function(ok){setTimeout(ok,1500)}).then(function(){return api(path,body,tries-1)})})}
-function steps(n){var names=S.local?["Wi-Fi","Server"]:["Wi-Fi","Server","Code"];
- $("steps").innerHTML=n<0?"":names.map(function(t,i){var c=i<n?"done":i==n?"now":"";
-  return '<span class="step '+c+'"><i>'+(i<n?"&#10003;":i+1)+"</i>"+t+"</span>"}).join("")}
+function steps(n){var names=S.local?["Wi-Fi","Base station"]:["Wi-Fi","School code","Sensor code"];
+ if(n<0){$("steps").innerHTML="";return}
+ var bars=names.map(function(t,i){return '<i class="'+(i<=n?"f":"")+'"></i>'}).join("");
+ $("steps").innerHTML="<b>Step "+(n+1)+" of "+names.length+" &middot; "+names[n]+'</b><div class="prog">'+bars+"</div>"}
 function show(main,foot,step){steps(step);$("main").innerHTML=main;$("foot").innerHTML=foot||""}
 function st(cls,text){return '<div class="st '+cls+'" id="st">'+text+"</div>"}
 function bars(r){var n=r>-55?4:r>-67?3:r>-78?2:1,h="";for(var i=0;i<4;i++)h+='<i class="'+(i<n?"f":"")+'" style="height:'+(4+4*i)+'px"></i>';return '<span class="bars">'+h+"</span>"}
 
 function netsScreen(rescan){S.screen="nets";
- var list=S.nets.length?S.nets.map(function(n,i){return '<button class="net'+(n.ssid==S.ssid?" on":"")+'" onclick="pick('+i+')"><b>'+esc(n.ssid)+"</b>"+(n.lock?"<small>&#128274;</small>":"")+bars(n.rssi)+"</button>"}).join(""):st("","Looking for Wi-Fi&hellip;");
+ var list=S.nets.length?S.nets.map(function(n,i){return '<button class="net'+(n.ssid==S.ssid?" on":"")+'" onclick="pick('+i+')"><b>'+esc(n.ssid)+"</b>"+(n.lock?LOCK:"")+bars(n.rssi)+"</button>"}).join(""):st("","Looking for Wi-Fi&hellip;");
  show('<h1>Pick your Wi-Fi</h1><p class="sub">The sensor uses this to reach your school when you lift.</p><div class="nets">'+list+
   '</div><button class="link" onclick="typed()">Not listed? Type its name</button><p class="note">Only 2.4 GHz Wi-Fi shows here; the sensor can&rsquo;t use 5 GHz. If yours is missing, it may be 5 GHz only.</p>',
   '<button class="go" onclick="passScreen()" '+(S.ssid?"":"disabled")+">Next</button>",0);
@@ -117,41 +128,54 @@ function pollWifi(){api("/api/wifi").then(function(r){
  $("out").innerHTML=st("bad",why);$("b").disabled=false;$("b").textContent="Try again"})}
 
 function serverScreen(){S.screen="server";
- var sw='<div class="sw"><button class="'+(S.local?"":"on")+'" onclick="S.local=false;serverScreen()">Remote server</button><button class="'+(S.local?"on":"")+'" onclick="S.local=true;serverScreen()">Local install</button></div>'+
-  '<p class="note" style="margin-top:-8px">'+(S.local?"In the gym, on the base station&rsquo;s own Wi-Fi.":"At home or anywhere with internet: your school&rsquo;s server.")+"</p>";
- if(S.local){show("<h1>Where to send reps</h1>"+sw+
-   '<div id="out"></div><p class="note">Nothing to type: the sensor sends its reps to the base station whose Wi-Fi it&rsquo;s on. No code either: your coach links the sensor to a rack.</p>',
+ var sw='<div class="sw"><button aria-pressed="'+!S.local+'" class="'+(S.local?"":"on")+'" onclick="S.local=false;serverScreen()">Remote server</button><button aria-pressed="'+S.local+'" class="'+(S.local?"on":"")+'" onclick="S.local=true;serverScreen()">Local install</button></div>';
+ if(S.local){show(sw+"<h1>The gym&rsquo;s base station</h1>"+
+   '<div id="out"></div><p class="note">Nothing to type. Your coach links the sensor to a rack.</p>',
    '<button class="go" id="b" onclick="checkServer()">Finish</button>',1);return}
- var sub=S.sub||"test";
- show("<h1>Where to send reps</h1>"+sw+
-  '<div class="addr"><span class="caps">Your login link looks like this</span><div class="bar"><span>&#128274;</span><span><span>https://</span><mark id="mk">'+esc(sub)+"</mark><span>."+esc(S.domain)+'/&hellip;</span></span></div>'+
-  '<p class="note" style="color:var(--ink2)">Type only the <b style="color:var(--lime)">green part</b>. Your coach sent it in your login link, and it&rsquo;s in the address bar on your athlete page.</p></div>'+
-  '<label class="f"><span class="caps">School</span><span class="box" id="sbox"><input id="sub" autocapitalize="none" autocorrect="off" spellcheck="false" value="'+esc(S.sub)+'" placeholder="test" style="flex:none" oninput="$(\'mk\').textContent=this.value||\'test\';fit(this)"><em>.'+esc(S.domain)+"</em></span></label><div id=\"out\"></div>",
-  '<button class="go" id="b" onclick="checkServer()">Next</button>',1);fit($("sub"))}
-// The school field is exactly as wide as what's typed, so the domain follows right
-// after it and reads as one address, like the picture above it.
-function fit(el){var c=fit.c||(fit.c=document.createElement("canvas").getContext("2d"));
- c.font=getComputedStyle(el).font;el.style.width=Math.ceil(c.measureText(el.value||el.placeholder).width)+2+"px"}
+ show(sw+"<h1>Enter your school code</h1>"+
+  (S.pref?'<p class="sub">Already filled in: this sensor remembers its school.</p>':'<p class="sub">It&rsquo;s the <b class="lime">green</b> word on your Add my sensor page.</p>')+
+  '<label class="f"><span class="caps lime">School code</span><span class="box" id="sbox"><input id="sub" autocapitalize="none" autocorrect="off" spellcheck="false" value="'+esc(S.sub)+'"></span></label><div id="out"></div>',
+  '<button class="go" id="b" onclick="checkServer()">Next</button>',1);
+ if(S.pref)checkServer()}
 function checkServer(){var body;
  if(S.local){body={kind:"local"}}
  else{S.sub=$("sub").value.trim().toLowerCase();if(!S.sub)return;body={kind:"remote",sub:S.sub}}
  $("b").disabled=true;$("out").innerHTML=st("","Looking for it&hellip;");
  api("/api/server",body).then(function(r){
-  if(!r.ok){$("out").innerHTML=st("bad",esc(r.detail));$("b").disabled=false;if(!S.local)$("sbox").className="box bad";return}
+  if(!r.ok){S.pref=false;$("out").innerHTML=st("bad",esc(r.detail));$("b").disabled=false;if(!S.local)$("sbox").className="box bad";return}
   S.host=r.host;S.linked=r.linked;
-  $("out").innerHTML=st("ok",S.local?"Found the gym&rsquo;s base station":"Found Edge Athlete at "+esc(r.host));
-  setTimeout(S.local?finish:codeScreen,900)})}
+  S.name=r.name||"";
+  $("out").innerHTML=st("ok",S.local?"Found the gym&rsquo;s base station":"Found "+esc(S.name||r.host));
+  setTimeout(S.local?finish:codeScreen,S.pref?1400:900)})}
 
-function codeScreen(){S.screen="code";
- show('<h1>Your sensor&rsquo;s code</h1><p class="sub">On your athlete page: My sensor &rarr; Add my sensor. It works once, for 15 minutes.</p>'+
-  '<label class="f"><span class="caps">Code</span><span class="box" id="cbox"><input id="code" class="code" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="K7MQ-2XPR" maxlength="9"></span></label><div id="out"></div>'+
-  '<p class="note">This is the only thing the sensor needs from your account. Never type your password here.</p>',
-  '<button class="go" id="b" onclick="claim()">Link my sensor</button>'+(S.linked?'<button class="link" onclick="finish()">Already linked to this school: keep it</button>':""),2)}
-function claim(){var c=$("code").value.trim();if(!c)return;$("b").disabled=true;$("cbox").className="box";
+function codeScreen(){S.screen="code";S.code="";
+ show("<h1>Enter your sensor code</h1><p class=\"sub\">Under the school code on your Add my sensor page.</p>"+
+  '<label class="f"><span class="caps lime">Sensor code</span><div class="code8" id="c8"><div class="code8" id="c8b"></div>'+
+  '<input id="code" autocapitalize="characters" autocorrect="off" autocomplete="one-time-code" spellcheck="false" aria-label="Sensor code" maxlength="12" oninput="typedCode(this)"></div></label>'+
+  '<p class="note" style="font-size:14px">The dash is added for you.</p><div id="out"></div>',
+  '<button class="go" id="b" onclick="claim()" disabled>Link my sensor</button>'+(S.linked?'<button class="link" onclick="finish()">Already linked to this school: keep it</button>':""),2);
+ drawCode()}
+// One real input lies over 8 drawn boxes: the phone's own keyboard and paste work, and
+// whatever is typed (small letters, a dash or not) becomes the 8 characters.
+function drawCode(){var c=S.code,box="",odd=-1;
+ for(var i=0;i<8;i++){var ch=c.charAt(i),bad=ch&&ALPHABET.indexOf(ch)<0;if(bad&&odd<0)odd=i;
+  box+=(i==4?'<span class="dash" aria-hidden="true">&ndash;</span>':"")+'<span class="'+(bad?"odd":ch?"has":i==c.length?"at":"")+'">'+esc(ch)+"</span>"}
+ $("c8b").innerHTML=box;
+ if(odd>=0){var w=c.charAt(odd),hint=(w=="O"||w=="0")?"It&rsquo;s probably a Q or D.":"Check it on your Add my sensor page.";
+  $("out").innerHTML=st("warn","Codes never use "+esc(w)+". Check box "+(odd+1)+": "+hint)}
+ else if($("out").firstChild&&$("out").firstChild.className.indexOf("warn")>=0)$("out").innerHTML="";
+ $("b").disabled=odd>=0||c.length<8}
+function typedCode(el){S.code=el.value.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,8);if(el.value!=S.code)el.value=S.code;$("c8").className="code8";drawCode()}
+function claim(takeover){var c=S.code;if(c.length<8)return;$("b").disabled=true;
  $("out").innerHTML=st("","Linking&hellip;");
- api("/api/claim",{code:c},2).then(function(r){
+ api("/api/claim",takeover?{code:c,takeover:"1"}:{code:c},2).then(function(r){
   if(r.ok){finish();return}
-  $("cbox").className="box bad";$("out").innerHTML=st("bad",esc(r.detail));$("b").disabled=false;$("b").textContent="Try again"})}
+  if(r.owned){takeoverScreen();return}
+  $("c8").className="code8 bad";$("out").innerHTML=st("bad",esc(r.detail));$("b").disabled=false;$("b").textContent="Try again"})}
+function takeoverScreen(){S.screen="takeover";
+ show('<span class="icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f2b84b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l10 18H2z"/><path d="M12 10v5"/><path d="M12 18h.01"/></svg></span>'+
+  "<h1>This sensor belongs to another athlete</h1><p class=\"sub\">Make it yours and it comes off their account. Their history stays theirs.</p><div id=\"out\"></div>",
+  '<button class="go" id="b" onclick="claim(true)">Make it mine</button><button class="ghost" onclick="codeScreen()">Cancel, it&rsquo;s not mine</button>',2)}
 
 function finish(){api("/api/finish",{}).then(function(){S.screen="done";
  var facts=[["Sensor",S.id],["Wi-Fi",S.ssid],["Server",S.local?"the gym\u2019s base station":S.host]];if(!S.local)facts.push(["Linked to","your athlete account"]);
@@ -162,5 +186,8 @@ function finish(){api("/api/finish",{}).then(function(){S.screen="done";
   '<div class="facts">'+rows+'</div><p class="note">The sensor&rsquo;s own Wi-Fi closes now. To set it up again, hold its button for 3 seconds.</p>',
   '<button class="go" onclick="window.close()">Close</button>',-1)})}
 
-api("/api/info").then(function(r){S.id=r.id;S.domain=r.domain;S.linked=r.linked;$("sid").textContent=r.id;netsScreen()});
+api("/api/info").then(function(r){S.id=r.id;S.domain=r.domain;S.linked=r.linked;$("sid").textContent=r.id;
+ // Setting up again: the sensor remembers its school, so its school code is filled in.
+ var end="."+r.domain;if(r.linked&&r.linked.slice(-end.length)==end){S.sub=r.linked.slice(0,-end.length);S.pref=true}
+ netsScreen()});
 </script></body></html>)PAGE";

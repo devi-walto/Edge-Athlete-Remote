@@ -50,10 +50,16 @@
 .athlete-copy { background: transparent; border: 1px solid #263239; border-radius: 6px; color: #f5f7f2; cursor: pointer; flex: none; font: inherit; font-size: 13px; font-weight: 800; min-height: 40px; padding: 0 12px; }
 .athlete-copy.is-copied { background: #a9f04d; border-color: #a9f04d; color: #070b0e; }
 .athlete-school-card { background: #10171b; border: 1px solid #263239; display: flex; flex-direction: column; gap: 6px; padding: 16px; }
-.athlete-school { font-size: 36px; font-weight: 800; letter-spacing: -.01em; line-height: 1.1; overflow-wrap: anywhere; }
+/* The school code is green everywhere it appears, and not copyable: it's remembered,
+   the sensor code is the one copied (version 2, 2026-11-05). */
+.athlete-school { color: #a9f04d; font-size: 40px; font-weight: 850; letter-spacing: -.01em; line-height: 1.1; overflow-wrap: anywhere; user-select: none; -webkit-user-select: none; }
+.athlete-label.is-lime, .athlete-steps .is-lime { color: #a9f04d; }
+.athlete-label.is-lime { font-size: 12px; }
+.athlete-school-row { justify-content: space-between; min-height: 52px; }
+.athlete-school-code { color: #a9f04d; font-size: 24px; font-weight: 850; user-select: none; -webkit-user-select: none; }
 .athlete-code-card.is-used { border-color: #263239; }
 .athlete-code-card.is-used .athlete-code { color: #5d6a70; text-decoration: line-through; }
-.athlete-steps { color: #c9d1d5; display: flex; flex-direction: column; font-size: 14px; gap: 10px; line-height: 1.45; margin: 0; padding: 0 0 0 20px; }
+.athlete-steps { color: #f5f7f2; display: flex; flex-direction: column; font-size: 16px; font-weight: 700; gap: 10px; line-height: 1.45; margin: 0; padding: 0 0 0 22px; }
 .athlete-wide { min-height: 52px; width: 100%; }
 .athlete-overlay { align-items: center; background: rgba(0, 0, 0, .6); display: flex; inset: 0; justify-content: center; padding: 16px; position: fixed; z-index: 10; }
 .athlete-dialog { background: #10171b; border: 1px solid #263239; border-radius: 10px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; max-width: 420px; padding: 22px 20px; width: 100%; }

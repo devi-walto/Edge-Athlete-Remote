@@ -24,7 +24,10 @@ void stopMqtt();
 bool clockIsSet();
 // Asks a server whether it's an Edge Athlete server (GET /api/health/), over HTTPS for a
 // school. On a local install its answer also sets the clock.
-bool serverAnswers(bool local, const String &host);
+// Remote: the school's name comes back in `name` when one is passed ("Demo U").
+bool serverAnswers(bool local, const String &host, String *name = nullptr);
 // Trades a one-time code for this sensor's login at serverHost. Returns true when
 // claimed; otherwise `detail` says why, in words the athlete can act on.
-bool claim(const char *code, String &detail);
+// takeOver: the athlete chose "Make it mine" for a sensor another athlete owns.
+// ownedByOther is set when the school refused because someone else owns it.
+bool claim(const char *code, String &detail, bool takeOver = false, bool *ownedByOther = nullptr);

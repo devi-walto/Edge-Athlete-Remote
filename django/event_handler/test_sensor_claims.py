@@ -31,6 +31,13 @@ def athlete_with_login(name, username):
     return Athlete.objects.create(name=name, user=User.objects.create_user(username, password=PASSWORD))
 
 
+def make_set_on(sensor, athlete):
+    session = TrainingSession.objects.create(label='Remote day', started_at=timezone.now())
+    exercise = Exercise.objects.create(name='Back squat')
+    return Set.objects.create(session=session, athlete=athlete, node=sensor, exercise=exercise,
+                              set_number=1)
+
+
 @override_settings(EA_DEPLOYMENT='remote')
 class ClaimTestCase(APITestCase):
     def setUp(self):
@@ -48,8 +55,8 @@ class ClaimTestCase(APITestCase):
         self.assertEqual(reply.status_code, 201, reply.data)
         return reply.data['code']
 
-    def claim(self, code, node_id='ea-3f9c'):
-        return self.client.post('/api/sensors/claim/', {'code': code, 'node_id': node_id},
+    def claim(self, code, node_id='ea-3f9c', **more):
+        return self.client.post('/api/sensors/claim/', {'code': code, 'node_id': node_id, **more},
                                 format='json')
 
 
@@ -120,6 +127,25 @@ class ClaimTests(ClaimTestCase):
         self.assertEqual(Node.objects.get(node_id='ea-3f9c').owner, self.jordan)
         self.door['add'].assert_not_called()
         self.assertEqual(self.claim(code, 'ea-mine').status_code, 201)   # the code still works
+
+    def test_making_someone_elses_sensor_mine_moves_it_and_their_sets_stay(self):
+        sensor = Node.objects.create(node_id='ea-3f9c', owner=self.jordan, rack_number=4)
+        jordans_set = make_set_on(sensor, self.jordan)
+        code = self.code_for(self.riley)
+        self.assertEqual(self.claim(code).status_code, 409)              # warned first
+        reply = self.claim(code, take_over=True)
+        self.assertEqual(reply.status_code, 201, reply.data)
+        sensor.refresh_from_db()
+        self.assertEqual((sensor.owner, sensor.rack_number), (self.riley, None))
+        self.door['add'].assert_called_once()                            # a new token; the old one stops
+        jordans_set.refresh_from_db()
+        self.assertEqual(jordans_set.athlete, self.jordan)
+
+    def test_taking_over_still_needs_a_working_code(self):
+        Node.objects.create(node_id='ea-3f9c', owner=self.jordan)
+        reply = self.claim('K7MQ-2XPR', take_over=True)
+        self.assertEqual(reply.data['code'], 'code_does_not_work')
+        self.assertEqual(Node.objects.get(node_id='ea-3f9c').owner, self.jordan)
 
     def test_if_the_broker_cant_be_told_nothing_changes(self):
         self.door['add'].side_effect = sensor_logins.SensorDoorError('down')
