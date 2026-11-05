@@ -67,6 +67,11 @@ label.f{display:flex;flex-direction:column;gap:6px}
 .code8 .dash{width:14px;border:0;background:none;color:var(--m)}
 .code8 #c8b,.code8 #c8b span{pointer-events:none}.code8 input{position:absolute;inset:0;width:100%;height:100%;opacity:.01;border:0;font-size:16px;color:transparent;caret-color:transparent;background:none}
 .st.warn{background:#241c0e;border-color:var(--amber)}
+.keep{display:flex;flex-direction:column;gap:14px;padding:18px;background:var(--limebg);border:1.5px solid var(--lime);border-radius:8px}
+.keeph{display:flex;gap:12px;align-items:center;font-size:22px;font-weight:850;line-height:1.15}
+.okdot{display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:50%;background:var(--lime)}
+.or{display:flex;align-items:center;gap:12px;color:var(--m);font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.or span{flex:1;height:1px;background:var(--l)}.ghost:disabled{color:var(--m)}
 .icon{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:#241c0e;border:2px solid var(--amber)}
 .row{display:flex;justify-content:space-between;align-items:center}
 .tick{display:grid;place-items:center;width:64px;height:64px;margin-top:18px;border-radius:50%;background:var(--lime);color:var(--bg);font-size:34px;font-weight:900}
@@ -138,10 +143,9 @@ function serverScreen(){S.screen="server";
    '<div id="out"></div><p class="note">Nothing to type. Your coach links the sensor to a rack.</p>',
    '<button class="go" id="b" onclick="checkServer()">Finish</button>',1);return}
  show(sw+"<h1>Enter your school code</h1>"+
-  (S.pref?'<p class="sub">Already filled in: this sensor remembers its school.</p>':'<p class="sub">It&rsquo;s the <b class="lime">green</b> word on your Add my sensor page.</p>')+
+  (S.pref?'<p class="sub">Already filled in: this sensor remembers its school. Change it, or press Next.</p>':'<p class="sub">It&rsquo;s the <b class="lime">green</b> word on your Add my sensor page.</p>')+
   '<label class="f"><span class="caps lime">School code</span><span class="box" id="sbox"><input id="sub" autocapitalize="none" autocorrect="off" spellcheck="false" value="'+esc(S.sub)+'"></span></label><div id="out"></div>',
-  '<button class="go" id="b" onclick="checkServer()">Next</button>',1);
- if(S.pref)checkServer()}
+  '<button class="go" id="b" onclick="checkServer()">Next</button>',1)}
 function checkServer(){var body;
  if(S.local){body={kind:"local"}}
  else{S.sub=$("sub").value.trim().toLowerCase();if(!S.sub)return;body={kind:"remote",sub:S.sub}}
@@ -151,14 +155,21 @@ function checkServer(){var body;
   S.host=r.host;S.linked=r.linked;
   S.name=r.name||"";
   $("out").innerHTML=st("ok",S.local?"Found the gym&rsquo;s base station":"Found "+esc(S.name||r.host));
-  setTimeout(S.local?finish:codeScreen,S.pref?1400:900)})}
+  setTimeout(S.local?finish:codeScreen,900)})}
 
 function codeScreen(){S.screen="code";S.code="";
- show("<h1>Enter your sensor code</h1><p class=\"sub\">Under the school code on your Add my sensor page.</p>"+
-  '<label class="f"><span class="caps lime">Sensor code</span><div class="code8" id="c8"><div class="code8" id="c8b"></div>'+
-  '<input id="code" autocapitalize="characters" autocorrect="off" autocomplete="one-time-code" spellcheck="false" aria-label="Sensor code" maxlength="12" oninput="typedCode(this)"></div></label>'+
+ var boxes='<label class="f"><span class="caps lime">Sensor code</span><div class="code8" id="c8"><div class="code8" id="c8b"></div>'+
+  '<input id="code" autocapitalize="characters" autocorrect="off" autocomplete="one-time-code" spellcheck="false" aria-label="Sensor code" maxlength="12" oninput="typedCode(this)"></div></label>';
+ // Already linked to this school (it has a login for it): setting it up on new Wi-Fi is
+ // the usual reason, so keeping it comes first and needs no code (F_Setup4e, 2026-11-05).
+ if(S.linked){show('<div class="keep"><div class="keeph"><span class="okdot"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#070b0e" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></span><span>Already linked to <span style="white-space:nowrap">'+esc(S.name||S.host)+'</span></span></div>'+
+   '<p class="sub" style="margin:0">Setting it up on new Wi-Fi? Keep it as it is. No code needed.</p><button class="go" onclick="finish()">Keep it and finish</button></div>'+
+   '<div class="or"><span></span>Or link it to me<span></span></div>'+boxes+
+   '<p class="note" style="font-size:14px">Only if it should be yours now. From your Add my sensor page.</p><div id="out"></div>',
+   '<button class="ghost" id="b" onclick="claim()" disabled>Link it to me</button>',2)}
+ else{show("<h1>Enter your sensor code</h1><p class=\"sub\">Under the school code on your Add my sensor page.</p>"+boxes+
   '<p class="note" style="font-size:14px">The dash is added for you.</p><div id="out"></div>',
-  '<button class="go" id="b" onclick="claim()" disabled>Link my sensor</button>'+(S.linked?'<button class="link" onclick="finish()">Already linked to this school: keep it</button>':""),2);
+  '<button class="go" id="b" onclick="claim()" disabled>Link my sensor</button>',2)}
  drawCode()}
 // One real input lies over 8 drawn boxes: the phone's own keyboard and paste work, and
 // whatever is typed (small letters, a dash or not) becomes the 8 characters.
@@ -169,7 +180,8 @@ function drawCode(){var c=S.code,box="",odd=-1;
  if(odd>=0){var w=c.charAt(odd),hint=(w=="O"||w=="0")?"It&rsquo;s probably a Q or D.":"Check it on your Add my sensor page.";
   $("out").innerHTML=st("warn","Codes never use "+esc(w)+". Check box "+(odd+1)+": "+hint)}
  else if($("out").firstChild&&$("out").firstChild.className.indexOf("warn")>=0)$("out").innerHTML="";
- $("b").disabled=odd>=0||c.length<8}
+ $("b").disabled=odd>=0||c.length<8;
+ if(S.linked&&S.screen=="code")$("b").className=$("b").disabled?"ghost":"go"}
 function typedCode(el){S.code=el.value.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,8);if(el.value!=S.code)el.value=S.code;$("c8").className="code8";drawCode()}
 function claim(takeover){var c=S.code;if(c.length<8)return;$("b").disabled=true;
  $("out").innerHTML=st("","Linking&hellip;");
