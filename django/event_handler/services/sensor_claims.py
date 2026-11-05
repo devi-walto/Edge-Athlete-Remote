@@ -10,8 +10,11 @@ WHY: online, an athlete sets up their sensor at home without anyone's help (spec
      this sensor, with this token, may send only its own messages.
 
 The athlete's account password never touches the sensor; the code can only add a
-sensor, once. A sensor that already belongs to someone else is refused, so nobody can
-take over another athlete's sensor by typing its ID: their coach removes it first.
+sensor, once. A sensor that already belongs to someone else is refused at first, so a
+sensor never changes hands by accident. The setup page then warns the athlete and, if
+they say "Make it mine", claims again asking to take it over (Devin, 2026-11-05: an
+athlete passing a sensor on shouldn't need a coach). Only someone holding the sensor
+can do that: its setup opens only from its own button. The old owner's sets stay theirs.
 
 Removing a sensor takes its login away on the broker (it is disconnected at once),
 gives it no owner and no rack, and keeps its record and every set it measured.
@@ -72,9 +75,12 @@ def latest_code(athlete):
             "sensor": code.sensor.node_id if code.sensor else None}
 
 
-def claim(code_text, sensor_id):
+def claim(code_text, sensor_id, take_over=False):
     """A sensor claims itself with an athlete's code. Returns its login:
     {"username": its ID, "token": its new sensor token, "path": "/sensors"}.
+
+    A sensor another athlete owns is refused (409 owned_by_someone_else) unless
+    take_over is True; then it moves to this athlete and off any rack it was on.
 
     All or nothing: if the broker can't be told, nothing is saved and the code still
     works. Raises ClaimRefused. A code that doesn't work, for any reason, gets the same
@@ -93,14 +99,17 @@ def claim(code_text, sensor_id):
         if code is None:
             raise _code_does_not_work()
         sensor, _ = Node.objects.select_for_update().get_or_create(node_id=sensor_id)
-        if sensor.owner_id not in (None, code.athlete_id):
-            raise ClaimRefused(
-                'owned_by_someone_else',
-                "This sensor belongs to another athlete. Ask your coach to remove it "
-                "from them first.", 409)
+        changing_hands = sensor.owner_id not in (None, code.athlete_id)
+        if changing_hands and not take_over:
+            raise ClaimRefused('owned_by_someone_else',
+                               "This sensor belongs to another athlete.", 409)
+        fields = ['owner', 'is_active']
+        if changing_hands:
+            sensor.rack_number = None   # the old owner's rack isn't the new owner's
+            fields.append('rack_number')
         sensor.owner_id = code.athlete_id
         sensor.is_active = True   # claimed means ready to use (spec 04 attaches active ones)
-        sensor.save(update_fields=['owner', 'is_active'])
+        sensor.save(update_fields=fields)
         code.sensor = sensor
         code.save(update_fields=['sensor'])
         one_time_secrets.mark_used(code)

@@ -94,7 +94,11 @@ class SensorClaimView(LimitWrongAttempts, APIView):
 
     def attempt(self, request):
         try:
-            login = sensor_claims.claim(request.data.get('code'), request.data.get('node_id'))
+            # take_over: the athlete saw "This sensor belongs to another athlete" and
+            # chose "Make it mine" on the sensor's setup page.
+            take_over = str(request.data.get('take_over', '')).lower() in ('1', 'true', 'yes')
+            login = sensor_claims.claim(request.data.get('code'), request.data.get('node_id'),
+                                        take_over=take_over)
         except sensor_claims.ClaimRefused as refused:
             response = Response({'code': refused.code, 'detail': refused.detail},
                                 status=refused.status)
