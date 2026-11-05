@@ -42,11 +42,22 @@ String tryPassword;
 bool setupLocal = false;
 String setupHost;
 String setupSchoolName;
-bool retriedWifi = false;  // a join that timed out is tried once more by itself
+
+// Joining the athlete's Wi-Fi (2026-11-05: the first try kept failing, Retry sometimes
+// worked). The cause was the quiet transmit power setup used (see startJoinTry). Up to
+// 3 tries, 3 s apart, before the page says anything went wrong. (Moving to the router's
+// channel at the pick was tried and dropped: it closed the phone's setup page.)
+constexpr int JOIN_TRIES = 3;
+constexpr uint32_t JOIN_TRY_MS = 15000;   // each try; about 45 s in all
+int joinTry = 0;                          // 1..JOIN_TRIES while connecting
+uint32_t joinTryAt = 0;
+volatile bool joinTryLost = false;        // this try was turned away: start the next one
+volatile uint8_t joinLastReason = 0;      // the last reason a try was turned away
+uint32_t joinLostAt = 0;
+constexpr uint32_t JOIN_GAP_MS = 3000;     // after a try is turned away, before the next
 
 enum class Trying { Nothing, Connecting, Connected, WrongPassword, NotFound, Failed };
 volatile Trying trying = Trying::Nothing;
-uint32_t tryStartedAt = 0;
 
 const char *tryingName() {
   switch (trying) {
@@ -59,29 +70,68 @@ const char *tryingName() {
   }
 }
 
-// Why the Wi-Fi turned the sensor away, so the page can say so on the spot.
+// Why the Wi-Fi turned the sensor away. A try turned away is just tried again (from the
+// loop, not here); the reason decides what the page says only after the last try.
 void onWifiEvent(arduino_event_id_t event, arduino_event_info_t info) {
   if (!inSetup) return;
   if (event == ARDUINO_EVENT_WIFI_STA_GOT_IP) {
     trying = Trying::Connected;
-  } else if (event == ARDUINO_EVENT_WIFI_STA_DISCONNECTED && trying == Trying::Connecting) {
-    switch (info.wifi_sta_disconnected.reason) {
-      case WIFI_REASON_AUTH_FAIL:
-      case WIFI_REASON_AUTH_EXPIRE:
-      case WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT:
-      case WIFI_REASON_HANDSHAKE_TIMEOUT:
-        trying = Trying::WrongPassword;
-        break;
-      case WIFI_REASON_NO_AP_FOUND:
-      case WIFI_REASON_NO_AP_FOUND_W_COMPATIBLE_SECURITY:
-      case WIFI_REASON_NO_AP_FOUND_IN_AUTHMODE_THRESHOLD:
-      case WIFI_REASON_NO_AP_FOUND_IN_RSSI_THRESHOLD:
-        trying = Trying::NotFound;
-        break;
-      default:
-        break;  // anything else: keep waiting until the time runs out
-    }
+  } else if (event == ARDUINO_EVENT_WIFI_STA_DISCONNECTED && trying == Trying::Connecting &&
+             millis() - joinTryAt > 500) {   // not the disconnect that starts a try
+    joinLastReason = info.wifi_sta_disconnected.reason;
+    joinTryLost = true;
   }
+}
+
+// Only the router actually refusing the password. AUTH_EXPIRE (2) is a sign-in that
+// timed out, not a wrong password (seen 2026-11-05 with the right one).
+bool wasWrongPassword(uint8_t reason) {
+  return reason == WIFI_REASON_AUTH_FAIL || reason == WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT ||
+         reason == WIFI_REASON_HANDSHAKE_TIMEOUT || reason == WIFI_REASON_MIC_FAILURE;
+}
+
+bool wasNotFound(uint8_t reason) {
+  return reason == WIFI_REASON_NO_AP_FOUND || reason == WIFI_REASON_NO_AP_FOUND_W_COMPATIBLE_SECURITY ||
+         reason == WIFI_REASON_NO_AP_FOUND_IN_AUTHMODE_THRESHOLD ||
+         reason == WIFI_REASON_NO_AP_FOUND_IN_RSSI_THRESHOLD;
+}
+
+// One try, the same way the Retry that always worked did it, at full transmit power.
+// The quiet setting below is for the phone beside the sensor, but one setting covers
+// the whole radio: at 8.5 dBm the router barely heard the sensor, and turned it away
+// mid sign-in (reasons 2, 4, 36) while it showed full bars (2026-11-05).
+void startJoinTry() {
+  WiFi.setTxPower(WIFI_POWER_19_5dBm);
+  ++joinTry;
+  joinTryLost = false;
+  WiFi.disconnect();
+  delay(100);
+  joinTryAt = millis();
+  Serial.printf("[%lu] trying %s (%d of %d) on channel %d...\n", millis(), trySsid.c_str(), joinTry,
+                JOIN_TRIES, WiFi.channel());
+  WiFi.begin(trySsid.c_str(), tryPassword.c_str());
+}
+
+
+// From the loop: the next try when this one was turned away or ran out of time; after
+// the last, what the page shows.
+void watchJoin() {
+  if (trying != Trying::Connecting) return;
+  if (joinTryLost && joinLostAt == 0) {
+    joinLostAt = millis();
+    Serial.printf("[%lu] turned away (reason %u)\n", joinLostAt, joinLastReason);
+  }
+  const bool timedOut = millis() - joinTryAt >= JOIN_TRY_MS;
+  const bool gapDone = joinLostAt != 0 && millis() - joinLostAt >= JOIN_GAP_MS;
+  if (!timedOut && !gapDone) return;
+  joinLostAt = 0;
+  if (joinTry < JOIN_TRIES) {
+    startJoinTry();
+    return;
+  }
+  const uint8_t why = joinLastReason;
+  trying = wasWrongPassword(why) ? Trying::WrongPassword : wasNotFound(why) ? Trying::NotFound : Trying::Failed;
+  Serial.printf("couldn't join %s (reason %u)\n", trySsid.c_str(), why);
 }
 
 String jsonText(const String &text) {
@@ -163,39 +213,34 @@ void handleScan() {
 
 void handleWifiTry() {
   touch();
-  trySsid = web.arg("ssid");
-  tryPassword = web.arg("password");
+  const String ssid = web.arg("ssid");
+  const String password = web.arg("password");
   // Answer first: joining moves the sensor's channel, which drops the phone for a moment.
   sendJson("{\"ok\":true}");
+  // The same request again (the page re-sends when the phone dropped before it heard
+  // the answer) must not throw away the join in progress: that kept it from ever
+  // finishing (2026-11-05).
+  if ((trying == Trying::Connecting || trying == Trying::Connected) && ssid == trySsid &&
+      password == tryPassword) {
+    return;
+  }
+  trySsid = ssid;
+  tryPassword = password;
   delay(50);
-  // A scan still running (setup starts one the moment it opens) can make the join fail
-  // quietly; stop it first (seen 2026-11-05: the first try failed, Retry worked).
+  // A scan still running (setup starts one the moment it opens) can make a join fail
+  // quietly; stop it first.
   esp_wifi_scan_stop();
-  WiFi.scanDelete();
-  WiFi.disconnect();
-  retriedWifi = false;
+  joinTry = 0;
+  joinLostAt = 0;
   trying = Trying::Connecting;
-  tryStartedAt = millis();
-  Serial.printf("trying %s...\n", trySsid.c_str());
-  WiFi.begin(trySsid.c_str(), tryPassword.c_str());
+  startJoinTry();
 }
 
 void handleWifiState() {
   touch();
-  if (trying == Trying::Connecting && millis() - tryStartedAt > 20000) {
-    if (!retriedWifi) {
-      // Timed out once: try again by itself before telling the athlete.
-      retriedWifi = true;
-      tryStartedAt = millis();
-      Serial.printf("trying %s again...\n", trySsid.c_str());
-      WiFi.disconnect();
-      WiFi.begin(trySsid.c_str(), tryPassword.c_str());
-    } else {
-      trying = Trying::Failed;
-    }
-  }
   const String gateway = trying == Trying::Connected ? WiFi.gatewayIP().toString() : "";
-  sendJson(String("{\"state\":\"") + tryingName() + "\",\"gateway\":" + jsonText(gateway) + "}");
+  sendJson(String("{\"state\":\"") + tryingName() + "\",\"try\":" + String(joinTry) + ",\"tries\":" +
+           String(JOIN_TRIES) + ",\"gateway\":" + jsonText(gateway) + "}");
 }
 
 // Where reps go: a school by its subdomain, or the base station of this Wi-Fi.
@@ -326,6 +371,7 @@ void startSetup() {
 void maintainSetup(uint32_t now) {
   dns.processNextRequest();
   web.handleClient();
+  watchJoin();
   digitalWrite(LED_BUILTIN, (now / 500) % 2);  // the light blinks while setup is open
   if (restartAt != 0 && static_cast<int32_t>(now - restartAt) >= 0) ESP.restart();
   // Left untouched with settings already saved: go back to them, unchanged. millis()

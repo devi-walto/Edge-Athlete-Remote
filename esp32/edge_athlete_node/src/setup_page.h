@@ -116,16 +116,21 @@ function passScreen(){S.screen="pass";
   '<p class="note">While it tries, your phone may drop off the sensor&rsquo;s Wi-Fi for a moment. This page finds it again on its own.</p>',
   '<button class="go" id="b" onclick="tryWifi()">Connect</button><button class="link" onclick="netsScreen()">&lsaquo; Pick another Wi-Fi</button>',0)}
 function tryWifi(){S.pass=$("pw").value;$("b").disabled=true;$("pbox").className="box";
- $("out").innerHTML=st("","Trying "+esc(S.ssid)+"&hellip;");
+ $("out").innerHTML=st("","Connecting to "+esc(S.ssid)+"&hellip; This can take up to a minute.");
  api("/api/wifi",{ssid:S.ssid,password:S.pass}).then(function(){setTimeout(pollWifi,1500)})}
+// The sensor tries up to 3 times by itself; until the last try is done the page only
+// says it's still connecting, never that it failed (a first try often needs a second).
 function pollWifi(){api("/api/wifi").then(function(r){
  if(S.screen!="pass")return;
- if(r.state=="connecting"){setTimeout(pollWifi,1000);return}
+ if(r.state=="connecting"){if(r.try>1)$("out").innerHTML=st("","Still connecting&hellip; (try "+r.try+" of "+r.tries+")");
+  setTimeout(pollWifi,1000);return}
  if(r.state=="connected"){S.gateway=r.gateway;$("out").innerHTML=st("ok","Connected to "+esc(S.ssid));
   $("b").outerHTML='<button class="go" onclick="serverScreen()">Next</button>';return}
  var why={wrong_password:"Wrong password. Check it and try again.",not_found:"Can&rsquo;t find "+esc(S.ssid)+". It may be out of range, or 5 GHz only."}[r.state]||"Couldn&rsquo;t join "+esc(S.ssid)+". Try again.";
  if(r.state=="wrong_password")$("pbox").className="box bad";
- $("out").innerHTML=st("bad",why);$("b").disabled=false;$("b").textContent="Try again"})}
+ $("out").innerHTML=st("bad",why);$("b").disabled=false;$("b").textContent="Try again"}).catch(function(){
+ // The phone dropped off the sensor's Wi-Fi for longer than usual: keep asking.
+ if(S.screen=="pass")setTimeout(pollWifi,1500)})}
 
 function serverScreen(){S.screen="server";
  var sw='<div class="sw"><button aria-pressed="'+!S.local+'" class="'+(S.local?"":"on")+'" onclick="S.local=false;serverScreen()">Remote server</button><button aria-pressed="'+S.local+'" class="'+(S.local?"on":"")+'" onclick="S.local=true;serverScreen()">Local install</button></div>';

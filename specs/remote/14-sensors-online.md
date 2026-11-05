@@ -503,7 +503,7 @@ each (boards: Final designs, F_Setup1–5 and F_Ath_S2/S4, approved 2026-11-05):
 | She only looked at the setup page, never the browser | The setup page names the one place to look: the Add my sensor page, which shows school code first, then sensor code, in the order setup asks |
 | Her typed code came up invalid | 8 boxes, the dash built in, small letters fine; a letter codes never use (O, 0, I, 1, L) turns its box amber as it's typed. The server already ignored the dash |
 | The sensor was still another athlete's, so she was blocked | "This sensor belongs to another athlete. Make it mine?" If she says yes, the claim asks to take it over (`take_over`); it moves to her and off any rack. The old owner's sets stay theirs. Only someone holding the sensor can do this: setup opens only from its button |
-| The first Wi-Fi try failed; Retry worked | The sensor stops any scan before joining, and tries a timed-out join once more by itself |
+| The first Wi-Fi try failed; Retry worked | **Cause: transmit power.** Setup turned the radio down to 8.5 dBm for the phone beside it, and one setting covers the whole radio, so the router barely heard the sensor and turned it away mid sign-in (reasons 2, 4, 36) while it showed full bars. Now every join runs at full power. Also: a repeated Connect no longer restarts a join in progress; up to 3 tries, 3 s apart, with an amber "Still connecting… (try 2 of 3)" and no red until the last; a sign-in that timed out is no longer called a wrong password. (Moving to the router's channel at the pick was tried and dropped: it closed the phone's setup page.) Firmware 2.3.4 |
 | Setting up again on new Wi-Fi | The school code is filled in from the school the sensor already belongs to, and shown on the athlete's My sensor row |
 
 Also: the school check reads `/api/system/info/` so setup can say "Found Demo U"; the
@@ -516,8 +516,9 @@ lock emoji is a drawn padlock. Firmware 2.3.0.
 - [x] *(Backend test)* Taking over still needs a working code.
 - [x] *(Browser, against a stand-in sensor)* The whole remote flow; the look-alike
       warning; the takeover screen; the filled-in school code; the local switch.
-- [ ] *(Real sensor)* Flashed with 2.3.0: set up from scratch, then again on the same
-      Wi-Fi (school code filled in), then by a second athlete (takeover).
+- [x] *(Real sensor, 2026-11-05)* `ea-ab632c` taken over from Riley Brooks by Jordan Lee
+      through the setup page: 409 first, then "Make it mine"; off its rack; Riley's 10 sets
+      stay Riley's. Connected on the first try at full power.
 
 ## Acceptance criteria
 

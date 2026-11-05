@@ -8,7 +8,7 @@
 
 #include <Arduino.h>
 
-constexpr char FIRMWARE_VERSION[] = "2.3.0";
+constexpr char FIRMWARE_VERSION[] = "2.3.4";
 
 extern char sensorId[16];    // "ea-" + the last 3 bytes of the chip's Wi-Fi address
 extern bool remote;          // true: a school over the internet; false: a local install
