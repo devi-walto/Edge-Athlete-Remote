@@ -169,3 +169,42 @@ jobs:
       - name: Clean up
         if: always()
         run: find "$GITHUB_WORKSPACE" -mindepth 1 -delete
+
+  # A GitHub Release page for each version, once it is running on every school. Before
+  # this, versions were only tags, so the repo's sidebar kept calling the one hand-made
+  # Release (v0.6.0) "Latest" long after v0.8 shipped (found 2026-11-05).
+  notes:
+    name: publish the release page for ${{ needs.decide.outputs.deploy }}
+    needs: [decide, deploy]   # only once it is live: a page never names a version that failed
+    if: success() && needs.decide.outputs.deploy != ''
+    # GitHub's own machine, not the server's runner: writing a Release needs only this
+    # run's own login, and the server's runner only does deploys.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write   # creating a Release; this job alone gets it
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSIONS: ${{ needs.decide.outputs.versions }}
+      LATEST: ${{ needs.decide.outputs.deploy }}
+    steps:
+      # Every tag, to read each version's own title from its tag message.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # One page per version this run released, oldest first. GitHub writes the notes
+      # from the pull requests merged since the version before. Only the version now
+      # running is marked Latest; a page that already exists is left alone.
+      - name: Publish each version's page
+        run: |
+          for v in $(printf '%s' "$VERSIONS" | jq -r '.[]'); do
+            if gh release view "$v" >/dev/null 2>&1; then
+              echo "$v already has a page"; continue
+            fi
+            title="$(git tag -l --format='%(contents:subject)' "$v")"
+            # A tag made without a message falls back to a commit's text: use the version.
+            case "$title" in ''|Merge\ *) title="$v" ;; esac
+            latest=false; [ "$v" = "$LATEST" ] && latest=true
+            gh release create "$v" --verify-tag --generate-notes --title "$title" --latest="$latest"
+          done
