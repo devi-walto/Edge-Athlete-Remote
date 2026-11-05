@@ -6,13 +6,16 @@
 // and gets its own token back. This page never sees that token, and the sensor never
 // sees the athlete's password.
 //
-// Two parts, built to the Final designs boards F_Ath_S1 to S5:
+// Two parts, built to the Final designs boards F_Ath_S1 to S5 (S2 and S4: version 2 of
+// 2026-11-05, after watching a real athlete set a sensor up):
 //   MySensorSection  the "My sensor" row on the athlete's page: none yet, or each
-//                    sensor with whether it is connected, and Remove (with a confirm).
-//   AddSensorPage    the code, large, with a Copy button, while it waits for the sensor
-//                    to use it, and the school's name below it to remember (the two
-//                    things the sensor's setup page asks for). It asks the server every
-//                    few seconds, so it changes by itself when the sensor claims the code.
+//                    sensor with whether it is connected, and Remove (with a confirm),
+//                    with the school code under it for setting a sensor up again.
+//   AddSensorPage    the two things the sensor's setup page asks for, in its order:
+//                    1 · the school code (green, big, to remember), 2 · the sensor code
+//                    (with Copy). The same two words are used on the sensor's page. It
+//                    asks the server every few seconds, so it changes by itself when the
+//                    sensor claims the code.
 // Remote only: a gym's sensors are linked to racks by a coach, as before.
 
 import { useCallback, useEffect, useState } from 'react'
@@ -46,7 +49,7 @@ export function sensorStatus(lastSeen, now = Date.now()) {
   return { connected: false, text: `Last seen ${new Date(lastSeen).toLocaleDateString()}` }
 }
 
-/** The part of this page's address the sensor's setup page asks for: "test" from
+/** The school code, the part of this page's address the sensor's setup page asks for: "test" from
  *  test.<domain>. Read from the address itself, so the domain is never written into the
  *  code. Null where there's no such part (an address like localhost or 10.0.0.5). */
 export function schoolPart(hostname = window.location.hostname) {
@@ -82,6 +85,7 @@ export function MySensorSection({ onAdd }) {
   }
 
   if (sensors === null) return null
+  const school = schoolPart()
   return <section className="athlete-sensors" aria-labelledby="my-sensor">
     <span id="my-sensor" className="athlete-label">My sensor</span>
     {sensors.length === 0 && <div className="athlete-row">
@@ -98,6 +102,11 @@ export function MySensorSection({ onAdd }) {
           onClick={() => { setError(''); setRemoving(sensor.node_id) }}>Remove</button>
       </div>
     })}
+    {/* Setting a sensor up again (new Wi-Fi) asks for this, and needs no new code. */}
+    {sensors.length > 0 && school && <div className="athlete-row athlete-school-row">
+      <span className="athlete-label is-lime">School code</span>
+      <span className="athlete-school-code">{school}</span>
+    </div>}
     {removing && <div className="athlete-overlay">
       <div role="dialog" aria-modal="true" aria-labelledby="remove-title" className="athlete-dialog">
         <h2 id="remove-title">Remove {removing}?</h2>
@@ -145,7 +154,7 @@ export function AddSensorPage({ onDone }) {
 
   const used = state.status === 'used'
   // The sensor's setup page fills the phone's screen, so only one thing can be pasted
-  // into it: the code gets Copy, the school is short enough to remember.
+  // into it: the sensor code gets Copy, the school code is short enough to remember.
   async function copyCode() {
     try {
       await navigator.clipboard.writeText(code.code)
@@ -162,8 +171,12 @@ export function AddSensorPage({ onDone }) {
       <h1 className="athlete-title">Add my sensor</h1>
       {state.status === 'offline' && <p className="acct-error" role="alert">
         The school couldn't be reached. Check your connection, then get a code again.</p>}
+      {code && school && !used && <div className="athlete-school-card">
+        <span className="athlete-label is-lime">1 · School code</span>
+        <span className="athlete-school">{school}</span>
+      </div>}
       {code && <div className={`athlete-code-card${used ? ' is-used' : ''}`}>
-        <span className="athlete-label">Your sensor's code</span>
+        <span className="athlete-label is-lime">{school ? '2 · Sensor code' : 'Sensor code'}</span>
         <div className="athlete-code-row">
           <span className="athlete-code">{code.code}</span>
           {!used && state.status !== 'expired' && navigator.clipboard &&
@@ -172,18 +185,12 @@ export function AddSensorPage({ onDone }) {
         </div>
         <span className="athlete-muted">{used ? "Used. It won't work again."
           : state.status === 'expired' ? 'This code ran out.'
-            : `Works once, until ${clock(code.expires_at)} (15 minutes). Copy it now: the sensor's page fills your screen.`}</span>
-      </div>}
-      {code && school && !used && <div className="athlete-school-card">
-        <span className="athlete-label">Your school · remember this</span>
-        <span className="athlete-school">{school}</span>
-        <span className="athlete-muted">Type only this part of {window.location.hostname}</span>
+            : `Works once, until ${clock(code.expires_at)}.`}</span>
       </div>}
       <ol className="athlete-steps">
-        <li>Switch your sensor on. A new sensor opens its setup by itself; to set one up
-          again, hold its button for 3 seconds.</li>
-        <li>On this phone, join the Wi-Fi called <b>EdgeAthlete-…</b> The setup page opens.</li>
-        <li>Pick your home Wi-Fi, type your school, then paste the code.</li>
+        <li>Hold the sensor's button 3 seconds</li>
+        <li>Join Wi-Fi <b className="is-lime">EdgeAthlete-…</b></li>
+        <li>Enter both codes</li>
       </ol>
       {code && <div className="athlete-row is-status" role="status">
         <span className={`athlete-dot${used ? ' is-on' : state.status === 'waiting' ? ' is-waiting' : ''}`}
@@ -192,12 +199,10 @@ export function AddSensorPage({ onDone }) {
           : state.status === 'expired' ? 'Get a new code to try again'
             : 'Waiting for your sensor…'}</b>
       </div>}
-      <p className="athlete-muted athlete-lead">Your sensor only ever needs this code. Never
-        type your password into a sensor.</p>
       {used
         ? <button type="button" className="acct-primary athlete-wide" onClick={onDone}>Done</button>
         : <button type="button" className="acct-solid athlete-wide" onClick={newCode}
-          disabled={state.status === 'loading'}>Get a new code</button>}
+          disabled={state.status === 'loading'}>Get a new sensor code</button>}
     </div>
   </main>
 }

@@ -98,7 +98,6 @@ describe('adding a sensor', () => {
     await press('Add my sensor')
     expect(container.textContent).toContain('K7MQ-2XPR')
     expect(container.textContent).toContain('Waiting for your sensor…')
-    expect(container.textContent).toContain('Never type your password into a sensor')
 
     codeStatus = { status: 'used', sensor: 'ea-3f9c' }
     await act(async () => { await vi.advanceTimersByTimeAsync(3100) })
@@ -131,7 +130,7 @@ describe('adding a sensor', () => {
     codeStatus = { status: 'expired', sensor: null }
     await act(async () => { await vi.advanceTimersByTimeAsync(3100) })
     expect(container.textContent).toContain('This code ran out.')
-    await press('Get a new code')
+    await press('Get a new sensor code')
     expect(calls.filter((c) => c === 'POST /api/athlete/sensor-code/')).toHaveLength(2)
     expect(container.textContent).toContain('Waiting for your sensor…')
   })
