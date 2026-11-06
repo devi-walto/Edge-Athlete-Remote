@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Keep the route list in the docs matching urls.py.
 
-The sibling of refresh-schema.py, and it works the same way. journal/apis.md lists
+The sibling of refresh-schema.py, and it works the same way. handbook/reference/api.md lists
 every endpoint the server has. That list has to come from the code, or the first
 route somebody adds goes undocumented and the page slowly becomes fiction.
 
@@ -41,7 +41,7 @@ APP = REPO / "django" / "event_handler"
 URLS = APP / "urls.py"
 # The project's own urls.py: sign-in, setup and coach accounts live there, under /api/.
 PROJECT_URLS = REPO / "django" / "basestation_config" / "urls.py"
-PAGE = DOCS / "journal" / "apis.md"
+PAGE = DOCS / "handbook" / "reference" / "api.md"
 
 
 def view_modules():

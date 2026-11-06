@@ -38,3 +38,6 @@ sphinxcontrib-mermaid>=1.0 # draws the ```mermaid fences as real diagrams.
 sphinx-design>=0.6         # the :::{dropdown} collapsible blocks. The base station
                            # guide is built almost entirely out of these — without
                            # this the guide is not just unstyled, the build fails.
+sphinx-reredirects>=0.1.5  # "sphinx_reredirects" in conf.py: when a page moves, its old
+                           # address forwards to the new one, so links already sent
+                           # out (weekly reports, the README) don't go dead.
