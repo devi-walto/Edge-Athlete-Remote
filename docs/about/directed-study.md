@@ -1,111 +1,71 @@
 <!--
-this page — what the directed study promises, what is being built to meet it, and in
-what order.
+this page — the CSC 4903 directed study the remote work was built for: what I
+promised, where each piece ended up, and what changed from the plan and why.
 
-Written down now, at the start, because the scope was cut deliberately and the reasons
-are much easier to record today than to reconstruct in November. If the plan changes,
-change this page and say why; do not let it quietly drift from what is being built.
+Written at the start (Sep 24) and finished at the end (Nov 6). The plan is kept
+next to what happened on purpose: the changes are the useful part.
 -->
 
 # Directed study (CSC 4903)
 
-**Due November 11, 2026.** Planned September 24.
+*Dr. Prather · Sep 17 – Nov 11, 2026*
 
-## What it promises
+## What I set out to do
 
-The learning outcomes, as proposed — the requirements document itself is written from
-the course's template (CSC 4903) and has not been submitted yet:
+The same flow as the gym, run from anywhere. A coach runs a session over a video call, athletes on their own networks open their own rack screen and lift with their own sensor, and the workout is saved on the server. Three learning outcomes:
 
 1. **Learn k3s.**
 2. **Host the app at a link anyone can click.**
-3. **Athletes on another network reach the rack screen and run a workout that is saved
-   on the server.**
+3. **Athletes on another network reach the rack screen and run a workout that's saved on the server.**
 
-That is: **the same flow as the gym, run from anywhere** instead of needing to be on
-the gym box's Wi-Fi. Where something makes more sense for a remote-only session, it
-may change — who is lifting is proven with a login rather than a tap, for example —
-but the workout itself is the gym's workout.
+The rule I planned by: **anything that shapes the data, a protocol or the hardware is built now; anything that only adds on top of those can wait.** The first kind gets expensive to change once there's data or devices depending on it. Or, the way I put it in my presentation: I wanted to get the foundation right first. Everything else can be built on top of it later.
 
-## What makes it reachable
+## Where each item ended up
 
-Most of the backend was built with this in mind:
+The Definition of Done from the project form, in priority order:
 
-- **Sets without a sensor are already legal** on the server — the sensor is optional
-  when a set is created.
-- **Secure live updates are encryption in front of the existing broker**, not a new
-  real-time layer ({doc}`../journal/core/remote/hosting`).
-- **The database schema stays as it is.** Coach accounts use Django's own
-  authentication; the planning features already exist.
-- **The coach-account hardening is already written** — on the team repository, by
-  Braydon — and is being ported ({doc}`../journal/core/remote/access`).
+| # | Item | Status | Where |
+|---|---|---|---|
+| 1 | k3s, public HTTPS, certificates that renew themselves, CI/CD | **Done**, live Oct 16 | {doc}`../journal/core/remote/hosting`, {doc}`../journal/core/remote/releases` |
+| 2 | Coach accounts hardened: a setup code, an administrator manages logins, no well-known demo login online | **Done** | {doc}`../journal/core/remote/access` |
+| 3 | Coach and athlete roles; athletes join only sessions their group is in, on their own rack | **Done** | {doc}`../journal/core/remote/access`, {doc}`../journal/core/remote/virtual-racks` |
+| 4 | Login links (also for recovery), a session link that works from any network, live updates over `wss` | **Done** | {doc}`../journal/core/remote/access` |
+| 5 | A separate demo school, made from the same template | **Done** | {doc}`../journal/core/remote/databases` |
+| 6 | Sensors: MQTT over TLS, a credential per sensor, each publishes only its own data, settings stored on the sensor | **Done** | {doc}`../journal/core/remote/sensors` |
+| 7 | End to end, live or on video, from a different network with a real sensor | **Done**, shown live Oct 27 | {doc}`../journal/core/remote/sensors` |
+| 8 | Developer docs: deploying on k3s, and the key decisions | **Done** | {doc}`../handbook/guides/remote-server`, the {doc}`Journal <../journal/index>` |
+| 9 | Weekly progress reports to Dr. Prather, with links to commits | **Done** | the final report, Nov 6 |
+| 10 | The final presentation | **Scheduled** | before Nov 11 |
 
-## What is actually new
+## The plan vs what happened
 
-- **Hosting**: k3s, TLS, automatic certificates, deploys from CI, and installations
-  stamped out from one template — the real one and a demo ({doc}`../journal/core/remote/hosting`,
-  {doc}`../journal/core/remote/databases`)
-- **Logins where the network used to be the lock**: a coach/athlete role split, login
-  links, the session link with its group check, a rack slot per remote athlete
-  ({doc}`../journal/core/remote/access`)
-- **Sensors over the internet**: TLS, per-sensor credentials, the broker locked down,
-  and settings stored on the sensor per network ({doc}`../journal/core/remote/sensors`)
-
-**The main risk is authentication.** The rack screen has no login by design, because
-the gym box's network was the boundary. On the internet, everything the old boundary
-did has to be done by logins — and it has to be complete before the first athlete login
-exists.
-
-## What goes in now, and what waits
-
-The rule: **anything that shapes the data, a protocol or the hardware is built now.
-Anything that only adds on top of those can wait** — because the first kind is
-expensive to change once there is data, devices or a printed board depending on it,
-and the second kind is not.
-
-| Now — by November 11 | Why now |
-|---|---|
-| The group check: an athlete gets into a session only if one of their groups is in it | It *is* the access model |
-| Login links — first sign-in and recovery | The only way a login is connected to an athlete |
-| Installations deployed from one template, with the demo as the second | Proves one database per installation for real — and faculty need the demo |
-| Creating an installation from a copy, with the counters moved apart | Trivial before there is data; painful after |
-| Sensor settings stored on the device, per network | The firmware is being rewritten for TLS anyway |
-| The circuit-board requirements written down | Must be settled before a board is printed |
-
-| Later | Why it can wait |
-|---|---|
-| The sensor's setup page (captive portal) | Writes the settings format built now |
-| Merging a gym box and a hosted installation back together | Nothing to merge until a program runs both |
-| An athlete's "my history" page | A screen over data that already exists |
-| One sign-in across programs | Needs a second program to matter |
-
-## The schedule
-
-| Dates | Work | Done when |
+| Planned | Work | Actually |
 |---|---|---|
-| **Sep 24 – Oct 7** | Port the coach-account hardening. Stand up k3s, TLS and automatic certificates, deploys from CI. The installation template, with the demo as the second installation | **The app is live at a public HTTPS link**, and the demo beside it |
-| **Oct 8 – Oct 17** | The coach/athlete role split. Login links, the session link and its group check, a rack slot per remote athlete. Encrypted live updates | A linked athlete opens the session link and lands on their own rack screen; one outside the session's groups is turned away |
-| **Oct 18 – Oct 31** | Sensors over the internet: broker TLS and credentials, per-sensor topic limits, per-network settings on the sensor and the USB tool that writes them, authenticated sensor registration. Board requirements written down | A sensor on a home network sends reps to the hosted broker |
-| **Nov 1 – Nov 3** | End to end, from a network other than the cluster's | **A remote athlete lifts with a real sensor and the workout is saved on the server** |
-| **Nov 4 – Nov 11** | Report, and buffer | Submitted |
+| Sep 24 – Oct 7 | Coach-account hardening; k3s, TLS, certificates, CI deploys; the school template with the demo as the second school | Live at a public HTTPS link on **Oct 16**, about a week late. I was learning Kubernetes and getting a starter app running first |
+| Oct 8 – Oct 17 | Roles, login links, the session link and its group check, a rack per remote athlete, encrypted live updates | Live updates over `wss` Oct 17 (v0.5); session links and virtual racks Oct 19 (v0.6) |
+| Oct 18 – Oct 31 | Sensors over the internet: TLS and credentials, per-sensor topic limits, settings stored on the sensor | Sensors online Oct 21 (v0.7); the real sensor and the phone setup page Oct 27 (v0.8.0) |
+| Nov 1 – Nov 3 | End to end from another network | **Done early**, at the Oct 27 demo |
+| Nov 4 – Nov 11 | Report, and buffer | Sensor setup v2 after watching a real athlete set one up; these docs; the presentation |
 
-The sensor work sits **before** the buffer, not inside it, because it is the only part
-with hardware in the loop. The first block grew the most; if it runs long, the demo
-installation is the piece that slides into the second.
+The first block grew the most, like I expected. The sensor work sat **before** the buffer on purpose, since it was the only part with hardware in the loop, and that's the part that ended up finishing early.
+
+## What changed from the plan, and why
+
+- **The sensor's phone setup page moved from "later" to "now"** (Oct 27). The plan was a USB tool for the class and a setup page after. After the demo, a laptop and a cable clearly wasn't something an athlete would do alone, so I dropped the USB tool ({doc}`../journal/core/remote/sensors`).
+- **Sensors use `wss` on 443, not MQTT on 8883** (Oct 19). Moving the firmware to ESP-MQTT made WebSockets one setting, and 443 needs no extra router port and gets through hotel and guest Wi-Fi.
+- **One shared Postgres with a database per school, not a Postgres per school** (Oct 14), before it was built ({doc}`../journal/core/remote/databases`).
+- **The second server was cut** (Oct 14). It was never in the Definition of Done, and k3s only runs on Linux.
+- **One kind of sensor everywhere** (Oct 27). The Bluetooth sensor was dropped; the same MQTT sensor works in the gym and from home.
+- **Copying a school between a local install and the remote server slid to later.** It was planned "now" because it's trivial before there's data. It's decided, and nothing needs it until a program runs both.
 
 ## Deliberately left out
 
-Everything in the **Later** table above, plus:
+- **Live two-way sync** between a local install and the remote server. Rejected outright, not deferred: two copies editing the same data puts data integrity at risk.
+- **A second server, autoscaling, load testing.** One home server is enough for now; nothing assumes a second. (I ran a load test anyway on Nov 4: each school uses about a third of a gigabyte of memory, busy or idle.)
+- **Firmware updates over the air,** and a certificate per sensor.
+- **An athlete history page with charts,** and **one sign-in across programs.** A history page is a screen over data that already exists; one sign-in only matters with a second program.
 
-- **Firmware updates over the air.**
-- **Live two-way sync** — rejected outright, not deferred ({doc}`../journal/core/remote/databases`).
+## What was open at the start, and the answers
 
-## Still open
-
-- **Whether any measurement is required** — load testing, monitoring, response times.
-  If it is, it needs its own slot, and something above moves.
-- **Whether the provider blocks ports 80 and 443.** The home connection has its own
-  public address (checked October 5), so traffic can reach the router; whether those
-  two ports get through can only be tested once something is serving on them
-  ({doc}`../journal/core/remote/hosting`).
-- **When the sensor board is printed** — the setup page does not need to exist first,
-  but the board requirements do.
+- **Was any measurement required?** No. Load testing wasn't on the form.
+- **Would my provider block ports 80 and 443?** No. The connection has its own public address (checked Oct 5), and both ports came through once something was serving on them (Oct 14).
