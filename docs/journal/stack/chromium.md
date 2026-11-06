@@ -1,5 +1,9 @@
 # Chromium
 
+*Local install*
+
+**Why I picked it.** No native app to build: every screen is the same web app in a locked browser.
+
 **What it is.** The browser every screen runs. There is no native app — a rack
 screen is a locked browser in full screen.
 
@@ -22,5 +26,4 @@ overwrite each other's identity.
 and makes the rep buffer memory-only — which is the one thing protecting a set from
 a Wi-Fi drop.
 
-**More:** {doc}`../../handbook/guides/rack-screen` · {doc}`nginx` for why secure-context
-features are off
+**More:** {doc}`../core/local/kiosk-screens` for why · {doc}`../../handbook/guides/rack-screen`

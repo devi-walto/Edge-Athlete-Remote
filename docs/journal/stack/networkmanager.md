@@ -1,5 +1,9 @@
 # NetworkManager
 
+*Local install*
+
+**Why I picked it.** It's the only way the Wi-Fi adapter shows up for the tool that builds the access point. So it owns every network device on the base station.
+
 **What it is.** What owns the Wi-Fi on both sides — the base station broadcasting a
 network, and the screens joining it.
 

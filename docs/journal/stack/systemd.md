@@ -1,5 +1,9 @@
 # systemd
 
+*Local install*
+
+**Why I picked it.** It's already on every Linux machine, and starting things at boot is its job.
+
 **What it is.** What starts things at boot and restarts them when they die. The
 Linux service manager.
 
@@ -8,7 +12,7 @@ Linux service manager.
 | Unit | Where | Job |
 |---|---|---|
 | `edgeathlete.service` | base station | brings up the AP, then the Docker stack |
-| `edgeathlete-rack-agent` | rack screen | the WT901 Bluetooth sensor |
+| `edgeathlete-rack-agent` | rack screen | the WT901 Bluetooth sensor. **Leftover:** unused since Oct 27 |
 | `edgeathlete-nfc-agent` | rack screen | the USB wristband reader |
 
 **Where it lives.** Units written by the provisioning scripts into

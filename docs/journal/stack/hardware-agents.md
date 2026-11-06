@@ -1,5 +1,11 @@
 # Hardware agents
 
+*Local install*
+
+:::{note}
+**Half of this is leftover.** The WT901 agent hasn't been used since Oct 27, when every rack moved to the MQTT sensor ({doc}`esp32`). The NFC wristband agent is still the way a rack reads a tag.
+:::
+
 **What it is.** Two small Python programs on a rack laptop that talk to hardware a
 browser cannot reach.
 

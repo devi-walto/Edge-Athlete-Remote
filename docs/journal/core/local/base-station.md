@@ -116,13 +116,13 @@ Coaches need to change the gym's Wi-Fi password from the app. But the app runs i
 
 | Mode | Window | On close | For |
 |---|---|---|---|
-| locked | full-screen, **no way out** | reopens itself | a rack screen in a gym |
-| default | full-screen, an ordinary window | stays closed | anything a person sits at |
-| windowed | a normal window | stays closed | when you want the toolbar |
+| `kiosk` | full-screen, **no way out** | reopens itself | a rack screen in a gym |
+| `once` | full-screen, an ordinary window | stays closed | anything a person sits at |
+| `windowed` | a normal window | stays closed | when you want the toolbar |
 
 Reopening is for screens **nobody's standing at**. Anywhere a person is at the keyboard, closing has to mean closing. *Two behaviours that always travel together in the case you built for aren't necessarily one behaviour.*
 
-**The rack screens say "locked" out loud.** They were locked only because it was the launcher's *default*. The two things the gym depends on (an athlete can't leave the screen, a dead screen revives itself) rested on a default any later change would flip across every rack. A default is a convenience, not a place to keep a decision.
+**The rack screens say `kiosk` out loud.** They were locked only because `kiosk` was the launcher's *default*. The two things the gym depends on (an athlete can't leave the screen, a dead screen revives itself) rested on a default any later change would flip across every rack. A default is a convenience, not a place to keep a decision.
 
 **A locked screen still needs a way out for whoever maintains it.** The relaunch loop watches for a flag file. `ea-kiosk-exit`, or **Ctrl+Alt+K**, sets the flag and then closes the browser, in that order; the other order races the relaunch loop and looks intermittent. The shortcut matters because you can't open a terminal from inside a locked window, and the desktop handles it, not the browser. The flag clears at the next start. There's deliberately **no exit button in the app**: an athlete must not find one by accident.
 
@@ -168,7 +168,7 @@ Reopening is for screens **nobody's standing at**. Anywhere a person is at the k
 | `scripts/rack-screen/rack-bootstrap.sh` | Install **or** update a rack screen |
 | `scripts/rack-screen/rack-kiosk-setup.sh` | Provisions a screen; run it directly only for a coach tablet |
 | `scripts/rack-screen/ea.sh` | The screen's own short commands. A separate file on purpose |
-| `scripts/rack-screen/kiosk.sh` | Launches a screen with a role and a mode: locked, default or windowed |
+| `scripts/rack-screen/kiosk.sh` | Launches a screen with a role and a mode: `kiosk`, `once` or `windowed` |
 | `scripts/netmon.sh` | The three-pane radio diagnostic |
 
 :::{admonition} The pattern underneath most of these
