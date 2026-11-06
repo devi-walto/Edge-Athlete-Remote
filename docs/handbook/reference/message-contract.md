@@ -8,6 +8,8 @@ Two kinds of message, one page: the **MQTT** messages sensors and the server pub
 
 **Everything is collapsed.** Find the topic or route you need and open it.
 
+**Who may call a route** isn't on this page: it's in {doc}`api`, which is generated from the code, so it can't drift.
+
 ## At a glance: every MQTT topic
 
 | Topic | Published by | Subscribed by | QoS |
@@ -165,7 +167,7 @@ Django also sends a **`leaderboard_update`** on the same topic after every compl
 
 Not MQTT, but the same data contract, so they live here too.
 
-:::::{dropdown} `GET /api/sessions/active/` — the rack tablet's one startup fetch (open)
+:::::{dropdown} `GET /api/sessions/active/` — the rack tablet's one startup fetch
 ```json5
 {
   "session_id": 1,
@@ -198,7 +200,7 @@ Not MQTT, but the same data contract, so they live here too.
 
 :::::
 
-:::::{dropdown} `GET /api/sessions/active/athlete/{athlete_id}/progress/` — the rack's athlete day-view (open)
+:::::{dropdown} `GET /api/sessions/active/athlete/{athlete_id}/progress/` — the rack's athlete day-view
 ```json5
 {
   "session_id": 1,
@@ -226,7 +228,7 @@ Not MQTT, but the same data contract, so they live here too.
 
 :::::
 
-:::::{dropdown} `GET /api/sessions/active/status/` — room state: every athlete's live status (open)
+:::::{dropdown} `GET /api/sessions/active/status/` — room state: every athlete's live status
 Each session athlete's current status + when it started, so the rack's rest/check-in cards can show a ticking timer + status label, and a coach tablet can reuse the same data. **Derived** from `Set` + `RackCheckIn`; no new tables.
 ```json5
 {
@@ -244,7 +246,7 @@ Each session athlete's current status + when it started, so the rack's rest/chec
 
 :::::
 
-:::::{dropdown} `DELETE /api/racks/{rack_number}/` — force-clear a wedged rack (coach)
+:::::{dropdown} `DELETE /api/racks/{rack_number}/` — force-clear a wedged rack
 
 The escape hatch for a rack whose screen is physically gone: ends any open set on
 the rack as a **false set**, resets the rack runtime to idle (controller lease
@@ -262,7 +264,7 @@ coach pulls when nobody can finish that set because the screen is unreachable.
 
 :::::
 
-:::::{dropdown} `POST /api/racks/{rack_number}/checkin/` — record an athlete signing in at a rack (open)
+:::::{dropdown} `POST /api/racks/{rack_number}/checkin/` — record an athlete signing in at a rack
 Body: `{ "athlete": 4 }`. Writes an append-only `RackCheckIn`, making THIS rack the athlete's current one for the session (newest-wins). Returns `201`:
 ```json5
 { "session_id": 1, "athlete": { "id": 4, "name": "Jordan Lee" }, "rack_number": 3 }
@@ -274,7 +276,7 @@ Body: `{ "athlete": 4 }`. Writes an append-only `RackCheckIn`, making THIS rack 
 
 :::::
 
-:::::{dropdown} `GET /api/racks/{rack_number}/checkins/` — the rack's hot list (open)
+:::::{dropdown} `GET /api/racks/{rack_number}/checkins/` — the rack's hot list
 The athletes this rack currently "owns" — those whose NEWEST `RackCheckIn` this session is this rack. Surfaced first on the check-in screen for fast re-pick; the full roster (from `/api/sessions/active/`) stays reachable below it.
 ```json5
 { "session_id": 1, "rack_number": 3, "athletes": [ { "athlete_id": 4, "name": "Jordan Lee" } ] }
@@ -320,7 +322,7 @@ base station.
 
 :::::
 
-:::::{dropdown} `POST /api/sets/` — start a set (create) (open)
+:::::{dropdown} `POST /api/sets/` — start a set (create)
 Called when a set STARTS (Phase 11 Step 3). The server returns the created `Set` incl. its `id`, kept for the complete POST at set end.
 ```json5
 {
@@ -341,7 +343,7 @@ Called when a set STARTS (Phase 11 Step 3). The server returns the created `Set`
 
 :::::
 
-:::::{dropdown} `PUT /api/racks/node-assignment/` — link a sensor to a gym rack (active staff)
+:::::{dropdown} `PUT /api/racks/node-assignment/` — link a sensor to a gym rack
 Exact body: `{ "device_id": "...", "node_id": "rack_3" }`. The screen must
 already have a rack number. Node IDs use `[A-Za-z0-9_-]{1,64}`. Returns `200`:
 ```json5
@@ -452,7 +454,7 @@ older rows are pruned opportunistically when a new command arrives. The same
 
 :::::
 
-:::::{dropdown} `GET /api/room-state/` — the live room picture (wall: open · coach: `?details=true`)
+:::::{dropdown} `GET /api/room-state/` — the live room picture (`?details=true` adds the coach's detail)
 
 The coach dashboard and the gym wall screen both read this. **One route serves
 both**, switched by a query flag — they were two routes on the branch this merged
@@ -523,7 +525,7 @@ empty, HTTP is still 200 — the wall has to render something before the day sta
 
 :::::
 
-:::::{dropdown} `PATCH /api/sessions/{id}/` — end a training day (coach)
+:::::{dropdown} `PATCH /api/sessions/{id}/` — end a training day
 
 **There is no `sessions/{id}/end/` route.** Ending a day IS this PATCH — it
 already meant "set the end time", so a second route would be two ways to do one
@@ -556,7 +558,7 @@ perfectly every time (canon D18).
 
 :::::
 
-:::::{dropdown} `POST /api/training-programs/{id}/promote/` — turn a program into a block (coach)
+:::::{dropdown} `POST /api/training-programs/{id}/promote/` — turn a program into a block
 
 For a plan a coach tuned until it beat the template it came from, or wrote from
 scratch for one group and now wants to run again. Returns the new `TrainingBlock`
@@ -585,7 +587,7 @@ promotion the honest answer is the new block.
 
 :::::
 
-:::::{dropdown} `GET /api/scheduled-sessions/` — the calendar (coach)
+:::::{dropdown} `GET /api/scheduled-sessions/` — the calendar
 
 A **slot** is a plan: "this program's Day 2, on the 14th". Slots are generated
 when a block is deployed — cadence picks the weekdays, `duration_weeks` says when
@@ -617,7 +619,7 @@ to stop — and are **frozen** after that.
 
 :::::
 
-:::::{dropdown} `GET|PATCH /api/scheduled-sessions/{id}/` — move a day (coach)
+:::::{dropdown} `GET|PATCH /api/scheduled-sessions/{id}/` — move a day
 
 `date` is the **only** writable field: moving a slot is one date write and
 regenerates nothing. Which day runs in a slot is decided when the schedule is
@@ -633,7 +635,7 @@ are separate things.
 
 :::::
 
-:::::{dropdown} `POST /api/scheduled-sessions/{id}/session/` — turn a plan into a real day (coach)
+:::::{dropdown} `POST /api/scheduled-sessions/{id}/session/` — turn a plan into a real day
 
 Creates the session, sets its roster from the group's current members, and writes
 the `SessionParticipation` row that points the group at the day this slot runs.
@@ -650,7 +652,7 @@ making a second one. Two taps on a calendar must not produce two Thursdays.
 
 :::::
 
-:::::{dropdown} `POST /api/sessions/{id}/start/` — start a prepared day (coach)
+:::::{dropdown} `POST /api/sessions/{id}/start/` — start a prepared day
 
 > **Why a route and not a PATCH:** `PATCH /api/sessions/{id}/` with an empty body
 > already means "END the day now". Start and end are opposites, and one call's
@@ -664,7 +666,7 @@ making a second one. Two taps on a calendar must not produce two Thursdays.
 
 :::::
 
-:::::{dropdown} `POST /api/sessions/` — start a training day (coach)
+:::::{dropdown} `POST /api/sessions/` — start a training day
 
 Body: `{ "label": "Monday — Upper", "athletes": [4, 7, 9] }`. **`athletes` is
 required and must not be empty** — a training day with nobody in it is refused.
@@ -690,7 +692,7 @@ obviously safer than requiring a human to end it.
 
 :::::
 
-:::::{dropdown} `GET /api/analytics/athlete/{id}/` — one athlete's performance context (coach)
+:::::{dropdown} `GET /api/analytics/athlete/{id}/` — one athlete's performance context
 
 Answers both of a coach's questions about a person in one call: **how are they
 doing** (`summary`, `exercise_summaries`) and **what did they actually do**
@@ -759,7 +761,7 @@ bests, and empty lists — a new signing is an ordinary state, not an error.
 
 :::::
 
-:::::{dropdown} `GET /api/reports/` — finished training days (coach)
+:::::{dropdown} `GET /api/reports/` — finished training days
 
 One family of routes. "This athlete's reports" is the same list **filtered**, not
 a parallel set of endpoints:
@@ -779,7 +781,7 @@ never disagree.
 
 :::::
 
-:::::{dropdown} `POST /api/reference-maxes/` — record what athletes can lift (coach)
+:::::{dropdown} `POST /api/reference-maxes/` — record what athletes can lift
 
 **The prescription lever.** Every target weight is a percentage of these numbers.
 Takes a list so a whole TrainingGroup's testing day goes in with one call.
@@ -801,7 +803,7 @@ are never rewritten.
 :::::
 
 
-## 3b. REST — planning (coach only)
+## 3b. REST — planning
 
 The hierarchy these serve: a **TrainingGroup** (`TrainingGroup`) trains a **plan**
 (`TrainingProgram`), which is usually a copy of a reusable **template**
@@ -813,7 +815,7 @@ out per athlete from their reference max at read time ({doc}`database-tables`).
 > client that already existed rather than reshaping its code. Scheduled for
 > renaming in P9; see the P9 rename list.
 
-:::::{dropdown} `GET|POST /api/training-groups/` — TrainingGroups (coach)
+:::::{dropdown} `GET|POST /api/training-groups/` — TrainingGroups
 
 A TrainingGroup is a *subset* of the gym that trains together, not everyone on file.
 
@@ -836,7 +838,7 @@ never what someone meant to make.
 
 :::::
 
-:::::{dropdown} `GET|POST|PATCH|DELETE /api/training-groups/{id}/coaches/` — who runs the group (coach)
+:::::{dropdown} `GET|POST|PATCH|DELETE /api/training-groups/{id}/coaches/` — who runs the group
 
 | Method | Body | Effect |
 |---|---|---|
@@ -858,7 +860,7 @@ and can never leave two heads behind.
 
 :::::
 
-:::::{dropdown} `POST /api/training-groups/{id}/athletes/` — set a TrainingGroup's members (coach)
+:::::{dropdown} `POST /api/training-groups/{id}/athletes/` — set a TrainingGroup's members
 
 ```json5
 { "athletes": [3, 4, 7] }        // → the TrainingGroup's full member list
@@ -869,7 +871,7 @@ past sessions and sets stay attached to whatever they ran under.
 
 :::::
 
-:::::{dropdown} `GET|POST /api/training-blocks/` — reusable templates (coach)
+:::::{dropdown} `GET|POST /api/training-blocks/` — reusable templates
 
 ```json5
 { "id": 1, "name": "Fall Strength", "duration_weeks": 8,
@@ -896,7 +898,7 @@ Filters combine: `?coach=me&category=2` is "my off-season blocks".
 
 :::::
 
-:::::{dropdown} `GET|PATCH /api/training-blocks/{id}/` — one block's own fields (coach)
+:::::{dropdown} `GET|PATCH /api/training-blocks/{id}/` — one block's own fields
 
 PATCH accepts `name`, `categories`, `duration_weeks`, `cadence_days_of_week`.
 The days and rows *inside* the block have their own routes (below).
@@ -910,7 +912,7 @@ created before P11 has no labels, and a create-only API could never give it any.
 
 :::::
 
-:::::{dropdown} `GET|POST /api/block-categories/` — the catalog's label vocabulary (coach)
+:::::{dropdown} `GET|POST /api/block-categories/` — the catalog's label vocabulary
 
 ```json5
 { "id": 1, "name": "Off-season", "block_count": 4 }
@@ -933,7 +935,7 @@ body region or a grade level depending on what it hangs off.
 
 :::::
 
-:::::{dropdown} `GET|POST /api/training-blocks/{id}/workouts/` — one day inside a template (coach)
+:::::{dropdown} `GET|POST /api/training-blocks/{id}/workouts/` — one day inside a template
 
 ```json5
 { "name": "Day 1 — Lower", "position": 1,
@@ -948,7 +950,7 @@ The block is in the URL, not the body — a day cannot exist without one.
 
 :::::
 
-:::::{dropdown} Editing a template (coach)
+:::::{dropdown} Editing a template
 
 | Route | Does |
 |---|---|
@@ -981,7 +983,7 @@ mid-flight. It is also idempotent and cannot leave a gap or a duplicate.
 
 :::::
 
-:::::{dropdown} `GET|POST /api/training-programs/` — deploy a template for a TrainingGroup (coach)
+:::::{dropdown} `GET|POST /api/training-programs/` — deploy a template for a TrainingGroup
 
 ```json5
 { "training_group": 4, "training_block": 1,
@@ -995,7 +997,7 @@ not a shim (D6).
 
 :::::
 
-:::::{dropdown} `POST /api/sessions/{id}/participation/` — which TrainingGroups train today (coach)
+:::::{dropdown} `POST /api/sessions/{id}/participation/` — which TrainingGroups train today
 
 ```json5
 { "training_group": 4, "training_program": 3 }
@@ -1005,7 +1007,7 @@ This is what lets one session hold several TrainingGroups on different plans.
 
 :::::
 
-:::::{dropdown} `GET|PUT|DELETE /api/athletes/{id}/program/` — one athlete's plan (coach)
+:::::{dropdown} `GET|PUT|DELETE /api/athletes/{id}/program/` — one athlete's plan
 
 **Reads as "this athlete's program"; underneath it is TrainingGroup membership**, because
 a plan belongs to a TrainingGroup (D12/D13). `PUT { "workout_program_id": 3 }` puts them
@@ -1035,7 +1037,7 @@ here has a **wider effect than the route name suggests**.
 
 :::::
 
-:::::{dropdown} `GET|PUT|DELETE /api/athletes/{id}/program-exercises/{id}/override/` — one athlete's exception (coach)
+:::::{dropdown} `GET|PUT|DELETE /api/athletes/{id}/program-exercises/{id}/override/` — one athlete's exception
 
 Rare by design: everyone in a TrainingGroup trains the TrainingGroup's plan unless a row like
 this says otherwise.
@@ -1047,7 +1049,7 @@ this says otherwise.
 :::::
 
 
-## 3c. REST — spreadsheet import (coach only)
+## 3c. REST — spreadsheet import
 
 :::::{dropdown} `POST /api/imports/preview/` · `POST /api/imports/`
 
@@ -1121,5 +1123,200 @@ Corrections are needed because **both endpoints re-read the file from scratch an
 never trust a previous preview** (the gym changes between the two calls — someone
 gets renamed, another coach imports first). Without them the app would forget the
 answer it just asked for.
+
+:::::
+
+## 3d. REST — sign-in and accounts
+
+Every reply here is marked `Cache-Control: no-store` where it carries a secret. Wrong tries are slowed down on the remote server: 10 wrong in a minute from one address returns `429` `{"code": "too_many_attempts"}`.
+
+:::::{dropdown} `POST /api/auth/login/` — sign in, coach or athlete
+```json5
+// request
+{ "username": "jlee", "password": "…" }
+
+// 200
+{ "access": "<jwt>", "refresh": "<jwt>",
+  "must_change_password": false,
+  "role": "athlete",            // "administrator", "coach" or "athlete"
+  "athlete_id": 4, "athlete_name": "Jordan Lee" }   // athletes only
+```
+- A login attached to neither a coach profile nor an athlete is refused here with `401`, code `no_role`, instead of getting a token every route would refuse.
+- An athlete's renewal token lasts **30 days**, a coach's 7. The access token lasts 8 hours.
+- `must_change_password` is also inside the access token, so a screen can send a coach with a temporary password straight to the change-password screen.
+
+:::::
+
+:::::{dropdown} `POST /api/auth/refresh/` — renew a sign-in
+```json5
+// request
+{ "refresh": "<jwt>" }
+
+// 200: a new pair (the renewal token rotates)
+{ "access": "<jwt>", "refresh": "<jwt>" }
+```
+- Refused (`401`, code `user_inactive`) for a login that was switched off or lost its coach or athlete record, even while its renewal token is still genuine.
+
+:::::
+
+:::::{dropdown} `GET /api/auth/me/` — who am I
+```json5
+{ "username": "jlee", "is_staff": false, "must_change_password": false,
+  "role": "athlete", "athlete_id": 4, "athlete_name": "Jordan Lee" }
+```
+
+:::::
+
+:::::{dropdown} `POST /api/auth/password/` — change my own password
+```json5
+{ "current_password": "…", "new_password": "…" }
+```
+- `204` on success, and the "must change password" flag is cleared.
+- `400` with `current_password` (wrong) or `new_password` (the same as the old one, or too weak) as the field.
+
+:::::
+
+:::::{dropdown} `GET|POST /api/auth/setup/` — claim a new installation
+```json5
+// GET
+{ "setup_required": true, "setup_code_pending": true }
+
+// POST: the first administrator
+{ "username": "coach", "password": "…", "setup_code": "K7MQ-2XPR" }
+
+// 201: signed straight in
+{ "access": "<jwt>", "refresh": "<jwt>" }
+```
+- `setup_code_pending` is true only while a code exists and hasn't expired (`eactl setup-code` online, `python manage.py setup_code` locally).
+- `409` once setup is complete. `400` with `setup_code` as the field for a code that's wrong or expired.
+
+:::::
+
+:::::{dropdown} `GET|POST /api/coaches/` — list or create coach logins
+```json5
+// GET: a list of these. POST returns one, with the temporary password
+{ "id": 7, "username": "asst", "is_active": true, "is_staff": false,
+  "must_change_password": true, "date_joined": "2026-10-20T14:02:11Z",
+  "temporary_password": "…" }    // POST and reset only, shown once
+
+// POST request (password optional: one is made if left out)
+{ "username": "asst", "password": "" }
+```
+- Lists only logins with a coach profile, so athletes never show up here.
+
+:::::
+
+:::::{dropdown} `PATCH /api/coaches/{id}/` — switch a coach off, or make them an administrator
+```json5
+{ "is_active": false }      // and/or "is_staff": true
+```
+- Returns the coach, as above. `400` for switching off or demoting yourself, or for removing the last active administrator.
+
+:::::
+
+:::::{dropdown} `POST /api/coaches/{id}/reset/` — a new temporary password
+No body. Returns the coach with a new `temporary_password`, and they must change it at their next sign-in.
+
+:::::
+
+## 3e. REST — remote: athletes and sensors
+
+The join and sensor routes are **remote only**: a local install answers `404`. The login-link routes exist on both installs, but only the remote screens use them.
+
+:::::{dropdown} `POST|DELETE /api/athletes/{id}/login-link/` — make or cancel an athlete's login link
+```json5
+// POST, no body. 201:
+{ "link": "https://<school>/login-link#<lookup>.<secret>", "expires_at": "2026-10-23T14:02:11Z" }
+```
+- The secret is after the `#`, so a browser never sends it to the server. A newer link cancels the older one. `409` for an archived athlete.
+- `DELETE` cancels their unused link: `204`.
+- `DELETE /api/athletes/{id}/login/` removes the athlete's login itself. Their sets, reps and reports stay.
+
+:::::
+
+:::::{dropdown} `POST /api/auth/login-link/lookup/` — who is this link for?
+```json5
+// request
+{ "link": "<lookup>.<secret>" }
+// 200: the page says "Hi Jordan"
+{ "athlete_name": "Jordan Lee" }
+```
+- Every way a link can fail (wrong, used, expired, cancelled) is the same `404`, and counts as a wrong try.
+
+:::::
+
+:::::{dropdown} `POST /api/auth/login-link/redeem/` — use the link: make the login, sign in
+```json5
+// request
+{ "link": "<lookup>.<secret>", "username": "jlee", "password": "…" }
+
+// 201: signed straight in, same shape as sign-in
+{ "access": "<jwt>", "refresh": "<jwt>", "role": "athlete",
+  "athlete_id": 4, "athlete_name": "Jordan Lee" }
+```
+- `400` with `fields` (`username` or `password`) for a username that's taken or a password that's too weak. `404` for a link that doesn't work.
+
+:::::
+
+:::::{dropdown} `POST /api/sessions/{id}/join/` — join a session from home
+No body.
+```json5
+// 200: your own rack, checked in, with your sensor on it
+{ "rack_number": 10003, "sensor": { "id": 2, "node_id": "ea-169a84", "last_seen": "2026-11-05T19:02:11Z" } }
+// "sensor": null if you don't have one. You can still lift
+```
+
+| Refused | Status | `code` |
+|---|---|---|
+| no such session | `404` | `not_found` |
+| you're not on its roster or in one of its groups | `403` | `not_in_session` |
+| your coach hasn't started it | `409` | `not_started` (with `session: {id, label}`) |
+| it's over | `409` | `ended` (with `session: {id, label}`) |
+
+Joining again returns the same rack. See {doc}`../../journal/core/remote/virtual-racks`.
+
+:::::
+
+:::::{dropdown} `GET|POST /api/athlete/sensor-code/` — the code for "Add my sensor"
+```json5
+// POST, no body. 201 (shown once; works once, for 15 minutes)
+{ "code": "K7MQ-2XPR", "expires_at": "2026-11-05T19:17:11Z" }
+
+// GET: how the newest code is doing
+{ "status": "waiting", "expires_at": "…", "sensor": null }   // waiting | used | expired | none
+```
+- The athlete's page asks `GET` every few seconds, and flips to "linked" once `status` is `used`, with the sensor's ID in `sensor`.
+
+:::::
+
+:::::{dropdown} `GET /api/athlete/sensors/` · `DELETE /api/athlete/sensors/{node_id}/` — my sensors
+```json5
+{ "sensors": [ { "node_id": "ea-169a84", "last_seen": "2026-11-05T19:02:11Z", "is_active": true } ] }
+```
+- `DELETE` removes one of mine: `204`. Its sets stay, and its login on the broker is deleted.
+- A coach removes an athlete's lost sensor with `DELETE /api/athletes/{id}/sensors/{node_id}/`, same answers.
+- `503` `sensors_door_unavailable` if the broker can't be reached to delete the sensor's login. Try again in a few minutes.
+
+:::::
+
+:::::{dropdown} `POST /api/sensors/claim/` — a sensor claims itself (called by the sensor, not a person)
+```json5
+// request, from the sensor's setup page
+{ "code": "K7MQ-2XPR", "node_id": "ea-169a84", "take_over": false }
+
+// 201: the sensor's own login for the broker, kept in its flash
+{ "username": "ea-169a84", "token": "<long random secret>", "path": "/sensors" }
+```
+The sensor then connects to `wss://<school>/sensors` with that username and token, and may publish only under `edgeathlete/node/ea-169a84/`.
+
+| Refused | Status | `code` |
+|---|---|---|
+| any code that doesn't work (wrong, used, expired) | `400` | `code_does_not_work` |
+| a sensor ID that isn't valid | `400` | `bad_sensor_id` |
+| the sensor belongs to another athlete | `409` | `owned_by_someone_else` |
+| the broker can't add the login right now | `503` | `sensors_door_unavailable` |
+
+- **`take_over: true`** makes a sensor that belongs to someone else yours, after the setup page has warned the athlete. The old owner's history stays theirs, and the sensor comes off their rack.
+- Open to anyone (a sensor has no login yet). A wrong code counts as a wrong try.
 
 :::::
