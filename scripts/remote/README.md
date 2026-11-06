@@ -1,5 +1,7 @@
 # scripts/remote/ — the remote server
 
+**The step-by-step version of this page is the Remote server guide** (`docs/handbook/guides/remote-server.md`, or on the docs site under Handbook → Guides). Every command is in Handbook → Reference → eactl.
+
 Everything for running Edge Athlete as a remote service: one server (a PC at home, or
 a machine on Azure or AWS) running Kubernetes (k3s), with many schools on it. The gym
 box's scripts are in `../basestation/` and `../rack-screen/`; nothing here touches them.

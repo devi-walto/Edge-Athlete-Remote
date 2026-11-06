@@ -2,6 +2,9 @@
 
 Exact shapes, for looking things up. Don't read these front to back.
 
+**{doc}`eactl`**
+: Every remote-server command, what it changes, and where things live on the server.
+
 **{doc}`api`**
 : Every route, grouped by what it touches, with its permission and the reasoning beside it. The permission rule and how a login's role is worked out are at the top.
 
@@ -18,6 +21,7 @@ Exact shapes, for looking things up. Don't read these front to back.
 :maxdepth: 1
 :hidden:
 
+eactl
 api
 database-tables
 mqtt-messages
