@@ -136,9 +136,10 @@ Each sprint is one weekly report.
 | v0.4.0 | Oct 17 | Hosting on k3s (PR #3) |
 | v0.5.0 | Oct 17 | Live updates over `wss`. It crashed the demo school's broker (a root-only rules file); the release stopped at the demo school, as designed |
 | v0.5.1 | Oct 17 | The broker fix, named ports, and failed updates that undo themselves |
-| v0.6.0 | Oct 19 | Session links and virtual racks (PR #9) |
-| v0.7.0 | Oct 21 | Sensors online: claim codes, a token per sensor (PR #10) |
-| v0.7.1, v0.7.2 | Oct 22 | `eactl` on the system path; eactl keeps itself up to date (PRs #11, #12) |
+| v0.6.0 | Oct 19 | Session links, virtual racks and demo data (PR #9) |
+| v0.7.0 | Oct 21 | Sensors online: claim codes and a token per sensor, the `/sensors` listener, and the plate loader on the rack screen (PR #10) |
+| v0.7.1 | Oct 22 | `eactl get-session-link`, `eactl update` to a named release, `eactl version` (PR #11) |
+| v0.7.2 | Oct 22 | eactl keeps itself up to date: the hourly self-update (PR #12) |
 | v0.8.0 | Oct 27 | Sensors set up from a phone, and three PRs of fixes (PRs #13–15). **The build was locked here** for the presentation |
 | v0.8.1 | Nov 4 | The room display stays signed in online, and phantom lifters (PR #16). A planned exception to the lock |
 | v0.8.2 | Nov 4 | Sensor setup v2 after watching a real athlete set one up, taking over a sensor, and release pages (PR #17) |
