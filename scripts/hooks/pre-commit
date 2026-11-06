@@ -5,8 +5,8 @@
 # WHAT IT DOES
 # Two generated sections exist in the docs, and each is tied to the file it describes:
 #
-#   models.py / migrations   ->  the table-by-table schema in journal/database.md
-#   urls.py / the view files ->  the route list in journal/apis.md
+#   models.py / migrations   ->  the table-by-table schema in handbook/reference/database-tables.md
+#   urls.py / the view files ->  the route list in handbook/reference/api.md
 #
 # If a commit touches either source, the matching section is refreshed and staged into
 # the same commit. Code and docs therefore change together, always, in one commit.
@@ -33,8 +33,8 @@ STAGED="$(git diff --cached --name-only)"
 
 # refresher | doc it maintains | regex of source paths that should trigger it
 JOBS=(
-  "docs/refresh-schema.py|docs/journal/database.md|django/event_handler/(models\.py|migrations/)"
-  "docs/refresh-routes.py|docs/journal/apis.md|django/(event_handler/[a-z_]+\.py|basestation_config/urls\.py)"
+  "docs/refresh-schema.py|docs/handbook/reference/database-tables.md|django/event_handler/(models\.py|migrations/)"
+  "docs/refresh-routes.py|docs/handbook/reference/api.md|django/(event_handler/[a-z_]+\.py|basestation_config/urls\.py)"
 )
 
 for job in "${JOBS[@]}"; do
