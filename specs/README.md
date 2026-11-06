@@ -123,7 +123,7 @@ then. Business plans (pricing, billing) are kept out of this repository.
 | An installation's name on the sign-in card (reads "Coach workspace") | Read from the registry | spec 13 |
 | **Usage history, a cloud cost estimate, and when to scale** | Not in the Definition of Done. Phase 0 (recording) can start any time, because history can't be collected later | [spec 15](later/15-usage-and-cost.md) |
 | **Several sessions running at once (remote)** | Teams lifting together share one session today (spec 07); separate teams with their own coaches need this. Best with the coach redesign | [spec 17](later/17-concurrent-sessions.md) |
-| Moving a database between a gym box and hosted, both directions | Not in the Definition of Done; "if there is time" in spec 12 | spec 12, `docs/remote/databases.md` |
+| Moving a database between a gym box and hosted, both directions | Not in the Definition of Done; "if there is time" in spec 12 | spec 12, `docs/journal/core/remote/databases.md` |
 | Browser logins to the broker | Online it is open to read, accepted while the data is test data; needed before a real program's athletes use it | spec 12, Phase 4 and Non-goals |
 | Un-archiving an athlete from a screen | The server rule exists (spec 02); the button belongs with archived athletes in Analytics | spec 09 |
 | Opening a past session (athlete) | Built last in spec 10, only if there is time | spec 10, Phase 4 |
@@ -132,7 +132,7 @@ then. Business plans (pricing, billing) are kept out of this repository.
 | An image pull key that renews itself (a GitHub App) | The 90-day token is renewed by hand meanwhile | spec 12, Phase 0 result |
 | A real secrets vault (beyond k3s encrypting Secrets on disk) | One server does not need it yet | spec 12, Phase 7 |
 | Ansible in place of `bootstrap.sh` | The script is enough for one machine | spec 12, Deferred |
-| A second node | Cut on 2026-10-14; nothing assumes one node | `docs/remote/hosting.md` |
+| A second node | Cut on 2026-10-14; nothing assumes one node | `docs/journal/core/remote/hosting.md` |
 
 ---
 
@@ -264,7 +264,7 @@ Checked on 2026-10-06 against commit `31f0573`.
   `SessionParticipation` per program; `plan_resolution.py` gives an athlete in two of
   those groups both plans combined, lighter percentage winning on a shared movement.
   The front end has no way to put two programs on one session yet; spec 07 Phase 3
-  adds it ("Add to the existing sessions?"). Explained in `docs/journal/database.md`.
+  adds it ("Add to the existing sessions?"). Explained in `docs/handbook/reference/database-tables.md`.
 - **A program's days cannot be edited through the API today.** Blocks have routes for
   adding, reordering, editing and deleting days; programs have only "create" and
   "promote". See spec 07.

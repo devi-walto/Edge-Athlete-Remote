@@ -11,7 +11,7 @@
   (sensors owned by athletes), [12 Hosting](12-hosting.md) (the `/mqtt` route, the
   school's certificate), [03 Login links](03-athlete-login-links.md) (the one-time secret
   pattern this spec makes shared)
-- Background: `docs/remote/sensors.md` (saved networks, trust the root, the BNO085,
+- Background: `docs/journal/core/remote/sensors.md` (saved networks, trust the root, the BNO085,
   getting every rep through). This spec changes two of its choices; see Decisions.
 
 ## Why

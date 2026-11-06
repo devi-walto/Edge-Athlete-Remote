@@ -2,7 +2,7 @@
 //
 // Why this exists: before the real firmware relies on the BNO085, show it working on
 // this board (and settle the reported I2C trouble between BNO08x chips and ESP32s).
-// It turns on the two readings the sensor will use (docs/remote/sensors.md):
+// It turns on the two readings the sensor will use (docs/journal/core/remote/sensors.md):
 //   - linear acceleration: movement in m/s^2 with gravity already taken out, so a bar
 //     lying still reads about 0 whichever way it's tilted;
 //   - game rotation vector: which way the board is pointing, ignoring the compass

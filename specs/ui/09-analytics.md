@@ -359,6 +359,6 @@ Built on PR #14 (the rack screen fixes), after the 2026-10-27 demo.
 
 ## Docs to update when done
 
-`docs/journal/coach-tablet.md` (analytics), `docs/journal/apis.md` (the new route, and
+`docs/journal/core/coach-screens.md` (analytics), `docs/handbook/reference/api.md` (the new route, and
 Reports' routes now reached from History), `_COACH_UI_REDESIGN.md` Phase H (group
 history) — add a note that the calculation moved to the server.

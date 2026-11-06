@@ -448,5 +448,5 @@ it takes the machine. Django's own command does it, and the docs must say so:
 
 ## Docs to update when done
 
-`docs/journal/database.md` (why "mine" is derived and coaches hang off the group),
-`docs/journal/coach-tablet.md` (lens, not fence), and the route table.
+`docs/handbook/reference/database-tables.md` (why "mine" is derived and coaches hang off the group),
+`docs/journal/core/coach-screens.md` (lens, not fence), and the route table.

@@ -1,33 +1,23 @@
-# The journal
+# Journal
 
-Why the system is the way it is: each decision, what it displaced, and what it cost.
+Why the system is the way it is. Read once, roughly in order. For the pages you'll come back to, see the {doc}`Handbook <../handbook/index>`.
 
-## The groundwork
+**{doc}`timeline`**
+: What happened, in order, including the parts that changed course.
 
-What everything else sits on. Read the relevant one before the screen that uses it.
+**{doc}`Stack <stack/index>`**
+: Every tool it's built with, what it does here, and why I picked it.
 
-- {doc}`database` — tables, the three weights, how a target is derived
-- {doc}`apis` — endpoints, permissions, where auth lives
-- {doc}`real-time` — the message broker, and what actually listens to it
-- {doc}`scripts` — the base station, its Wi-Fi, and how a gym gets one
-
-## The screens
-
-Each one is a view onto the groundwork above.
-
-- {doc}`rack-tablet` — what the athlete uses, and where durability lives
-- {doc}`coach-tablet` — login, room setup, planning, spreadsheet import
-- {doc}`dashboard` — the wall display
+**{doc}`Core <core/index>`**
+: The decisions both installs stand on: real-time, the rack screen, the coach screens, the room display. Its two children are the decisions that only apply to one install:
+  - **{doc}`Local only <core/local/index>`**: the base station in the gym.
+  - **{doc}`Remote <core/remote/index>`**: the same app on the internet.
 
 ```{toctree}
 :maxdepth: 2
 :hidden:
 
-database
-apis
-real-time
-scripts
-rack-tablet
-coach-tablet
-dashboard
+timeline
+stack/index
+core/index
 ```

@@ -234,6 +234,6 @@ Mockups `V4d` and `V2e`.
 
 ## Docs to update when done
 
-`docs/journal/coach-tablet.md` — SESSION is always reachable, and why the earlier
+`docs/journal/core/coach-screens.md` — SESSION is always reachable, and why the earlier
 "dim it until a day is set" rule was dropped. `_COACH_UI_REDESIGN.md` describes the old
 gating; add a note pointing here rather than rewriting history.

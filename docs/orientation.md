@@ -69,45 +69,29 @@ browser storage as they arrive, so a Wi-Fi drop mid-set loses nothing.
 **A plan stores a percentage, not a weight.** "Back Squat 5×3 at 80%" is written
 once for a whole group; each athlete's bar is worked out against their own current
 max when the screen is read. That max can go **down**, and prescribed weights follow
-it down. That is the design — {doc}`journal/database`.
+it down. That is the design — {doc}`handbook/reference/database-tables`.
 
 **Some files are frozen.** `react/src/rack/`, `react/src/db/repBuffer.js` and
 `react/src/device.js` are a fixed contract. Build alongside them, not inside them.
 
 **Live updates do not go through the web server.** Screens talk to the broker
 directly. Adding a WebSocket layer to Django was considered and rejected —
-{doc}`journal/real-time`.
+{doc}`journal/core/real-time`.
 
-## The stack, one page each
+## The stack
 
-What every service is, how we use it, and where it lives. Short on purpose.
-
-```{toctree}
-:maxdepth: 1
-
-stack/mosquitto
-stack/django
-stack/postgres
-stack/react
-stack/nginx
-stack/docker
-stack/networkmanager
-stack/systemd
-stack/chromium
-stack/hardware-agents
-stack/sphinx
-```
+Every tool, what it does here, and why I picked it: {doc}`journal/stack/index`. Short on purpose.
 
 ## Then read one journal page
 
 Whichever part you are about to touch — that is where the *why* lives.
 
-- athletes, plans, weights → {doc}`journal/database`
-- endpoints, permissions, auth → {doc}`journal/apis`
-- how live data moves → {doc}`journal/real-time`
-- the machine, its Wi-Fi, deployment → {doc}`journal/scripts`
-- the athlete's screen → {doc}`journal/rack-tablet`
-- the coach's tools → {doc}`journal/coach-tablet`
-- the wall display → {doc}`journal/dashboard`
+- athletes, plans, weights → {doc}`handbook/reference/database-tables`
+- endpoints, permissions, auth → {doc}`handbook/reference/api`
+- how live data moves → {doc}`journal/core/real-time`
+- the machine, its Wi-Fi, deployment → {doc}`journal/core/local/base-station`
+- the athlete's screen → {doc}`journal/core/rack-screen`
+- the coach's tools → {doc}`journal/core/coach-screens`
+- the wall display → {doc}`journal/core/room-display`
 
-For how the project got here instead, read {doc}`history`.
+For how the project got here instead, read {doc}`journal/timeline`.

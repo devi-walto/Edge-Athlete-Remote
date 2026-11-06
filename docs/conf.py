@@ -22,6 +22,7 @@ extensions = [
     "myst_parser",
     "sphinxcontrib.mermaid",   # draws the ```mermaid diagrams as pictures
     "sphinx_design",           # collapsible {dropdown} blocks
+    "sphinx_reredirects",      # old page addresses forward to new ones (redirects below)
 ]
 
 # Treat a ```mermaid fence as the mermaid directive rather than code to highlight.
@@ -98,7 +99,7 @@ html_theme = "furo"
 # The DOC SITE's title only. The product is still called Edge Athlete everywhere
 # it faces a coach or an athlete — this repo is the remote-capable line of it, and
 # the title says which docs you are reading when two sites look identical.
-html_title = "Edge Athlete Remote — Developer Journal"
+html_title = "Edge Athlete Remote — Developer Docs"
 
 # Furo's stock palette is low contrast in dark mode — dull grey text on near-black,
 # with the sidebar almost the same shade as the page. custom.css replaces it with a
@@ -110,3 +111,46 @@ html_css_files = ["custom.css"]
 # keep a light background on a dark page.
 pygments_style = "default"
 pygments_dark_style = "github-dark"
+
+# Old addresses -> new ones, after the Nov 2026 reorganisation (Handbook / Journal /
+# About). Links already sent out, like the weekly reports, keep working. Each value
+# is relative to the OLD page's folder. Adding a page needs nothing here; only a
+# page that MOVES gets a line.
+redirects = {
+    "guides/index": "../handbook/guides/index.html",
+    "guides/base-station": "../handbook/guides/local-install.html",
+    "guides/rack-screen": "../handbook/guides/rack-screen.html",
+    "guides/migrations": "../handbook/guides/database-changes.html",
+    "guides/importing-spreadsheets": "../handbook/guides/import-spreadsheets.html",
+    "journal/apis": "../handbook/reference/api.html",
+    "journal/database": "../handbook/reference/database-tables.html",
+    "reference/index": "../handbook/reference/index.html",
+    "reference/message-contract": "../handbook/reference/message-contract.html",
+    "reference/versioning": "../handbook/reference/versions.html",
+    "reference/spec": "../about/original-spec.html",
+    "reference/database": "../handbook/reference/database-tables.html",
+    "history": "journal/timeline.html",
+    "journal/real-time": "core/real-time.html",
+    "journal/rack-tablet": "core/rack-screen.html",
+    "journal/coach-tablet": "core/coach-screens.html",
+    "journal/dashboard": "core/room-display.html",
+    "journal/scripts": "core/local/base-station.html",
+    "remote/directed-study": "../about/directed-study.html",
+    "stack/sphinx": "../about/these-docs.html",
+    "remote/access": "../journal/core/remote/access.html",
+    "remote/databases": "../journal/core/remote/databases.html",
+    "remote/deployments": "../journal/core/remote/deployments.html",
+    "remote/hosting": "../journal/core/remote/hosting.html",
+    "remote/sensors": "../journal/core/remote/sensors.html",
+    "remote/index": "../journal/core/remote/index.html",
+    "stack/chromium": "../journal/stack/chromium.html",
+    "stack/django": "../journal/stack/django.html",
+    "stack/docker": "../journal/stack/docker.html",
+    "stack/hardware-agents": "../journal/stack/hardware-agents.html",
+    "stack/mosquitto": "../journal/stack/mosquitto.html",
+    "stack/networkmanager": "../journal/stack/networkmanager.html",
+    "stack/nginx": "../journal/stack/nginx.html",
+    "stack/postgres": "../journal/stack/postgres.html",
+    "stack/react": "../journal/stack/react.html",
+    "stack/systemd": "../journal/stack/systemd.html",
+}

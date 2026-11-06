@@ -4,7 +4,7 @@
 // has to check that it is really talking to the school before it sends its token.
 // It carries Let's Encrypt's two long-lived roots (ISRG Root X1, valid to 2035, and
 // X2, to 2040), never the school's own certificate, which is renewed every few months
-// (docs/remote/sensors.md, "Trust the certificate authority's root"). These are public;
+// (docs/journal/core/remote/sensors.md, "Trust the certificate authority's root"). These are public;
 // copied from macOS's own trusted roots, sha256 96:BC:EC:06… (X1) and 69:72:9B:8E… (X2).
 #pragma once
 

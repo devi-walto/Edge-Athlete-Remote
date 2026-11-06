@@ -257,6 +257,6 @@ gains a chevron. No bars per rep, no compare, no charts.
 
 ## Docs to update when done
 
-`docs/remote/access.md` (what an athlete can see), the route table in
+`docs/journal/core/remote/access.md` (what an athlete can see), the route table in
 `docs/reference/`, and a short `docs/journal/` entry on why the athlete's home is a
 read-only view of the coach's calendar and not a second planner.

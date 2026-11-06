@@ -1,5 +1,5 @@
 # Everything both hardware agents need — kept as the "install the lot" file so the
-# manual instructions in docs/guides/base-station.md still work unchanged.
+# manual instructions in docs/handbook/guides/local-install.md still work unchanged.
 #
 # THE REAL LISTS ARE THE TWO FILES BELOW, and provisioning installs them
 # SEPARATELY on purpose. Each agent's dependencies can fail without taking the

@@ -283,6 +283,6 @@ Build them against the mockup, each with a render test. Use them nowhere yet.
 
 ## Docs to update when done
 
-`docs/journal/coach-tablet.md` — a short section on the focus rule: what forced it
+`docs/journal/core/coach-screens.md` — a short section on the focus rule: what forced it
 (everything read as equally loud), what was rejected (colour-coding sections; hiding
 actions behind menus), what it cost.

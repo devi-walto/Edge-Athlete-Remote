@@ -9,7 +9,7 @@
 - Next spec: 02 — roles (coach, athlete, everyone else refused)
 
 > Specs live in `specs/`, outside `docs/`, so they are never published to the public
-> docs site. Decisions that outlive a spec get written into `docs/remote/` in the last
+> docs site. Decisions that outlive a spec get written into `docs/journal/core/remote/` in the last
 > phase.
 
 ## Why this is first
@@ -168,7 +168,7 @@ No new screen is wired up yet.
    is kept.
 3. **His guide is `docs/_COACH_ACCOUNTS.md`, private, with a credit line.** It describes
    screens that are not attached yet, and anything in `docs/` without the underscore is
-   published. Its content moves into `docs/remote/` in the last phase.
+   published. Its content moves into `docs/journal/core/remote/` in the last phase.
 4. **His frontend tests got an in-memory `localStorage` when none works.** On Node 25
    and later, Node's own `localStorage` hides the test environment's and all 14 failed
    in setup. They pass on either now. No test's meaning changed.
@@ -487,14 +487,14 @@ person clicking through once is still worth doing before the merge.
 
 ## Phase 4 — Write it down, then merge
 
-- **Install guide** (`docs/guides/base-station.md`): replace "log in with `coach` /
+- **Install guide** (`docs/handbook/guides/local-install.md`): replace "log in with `coach` /
   `coachpass`" with claiming by setup code; add `make_admin` for upgrades.
-- **`docs/journal/apis.md`:** the new routes in the route table (regenerated, not
+- **`docs/handbook/reference/api.md`:** the new routes in the route table (regenerated, not
   hand-edited), and the permission notes updated.
-- **`docs/journal/coach-tablet.md`:** coach accounts — what forced it, what was chosen,
+- **`docs/journal/core/coach-screens.md`:** coach accounts — what forced it, what was chosen,
   what was rejected (a head/assistant hierarchy; letting any coach manage logins), what
   it cost. Fold in what is still true from his `docs/coach-accounts.md`.
-- **`docs/remote/access.md`:** "Setting up the coaches" says Administrator, states the
+- **`docs/journal/core/remote/access.md`:** "Setting up the coaches" says Administrator, states the
   one-coach-role decision, and says the operator hands over the setup code on a hosted
   installation.
 - Credit Braydon for the original work wherever it is described.
@@ -518,10 +518,10 @@ production build succeeds, no migration drift, docs build with warnings fatal.**
 
 | Page | What changed |
 |---|---|
-| `docs/guides/base-station.md` | New section "Claim it: the first administrator": the setup code, adding coaches, and the three commands that only work on the machine (`setup_code`, `make_admin`, `changepassword`), with a note for upgrading a box already in use. The two places that said "log in with `coach` / `coachpass`" now say there is no default login and that the demo one is development-only |
-| `docs/journal/apis.md` | New section "Signing in, and coach logins": the eight routes with their locks, then what forced it, what was chosen, what was rejected (a head/assistant hierarchy, any coach creating logins, first-visitor-wins, email recovery) and what it cost. The generated route table was refreshed (the People group changed) |
-| `docs/journal/coach-tablet.md` | New decision: a coach's own account lives in the corner, not in a tab |
-| `docs/remote/access.md` | "Setting up the coaches" says administrator, states the one-coach-role decision, and says the operator hands over the setup code on a hosted installation |
+| `docs/handbook/guides/local-install.md` | New section "Claim it: the first administrator": the setup code, adding coaches, and the three commands that only work on the machine (`setup_code`, `make_admin`, `changepassword`), with a note for upgrading a box already in use. The two places that said "log in with `coach` / `coachpass`" now say there is no default login and that the demo one is development-only |
+| `docs/handbook/reference/api.md` | New section "Signing in, and coach logins": the eight routes with their locks, then what forced it, what was chosen, what was rejected (a head/assistant hierarchy, any coach creating logins, first-visitor-wins, email recovery) and what it cost. The generated route table was refreshed (the People group changed) |
+| `docs/journal/core/coach-screens.md` | New decision: a coach's own account lives in the corner, not in a tab |
+| `docs/journal/core/remote/access.md` | "Setting up the coaches" says administrator, states the one-coach-role decision, and says the operator hands over the setup code on a hosted installation |
 | `README.md` | Points at the install guide |
 
 Braydon is credited in each of the four pages. His working note

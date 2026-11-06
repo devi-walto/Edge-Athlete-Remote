@@ -1,75 +1,47 @@
-# Edge Athlete — Developer Journal
+# Edge Athlete — Developer Docs
 
-A record of how this system was built and **why it is the way it is** — written by the
-developers who built it, for whoever picks it up next.
+How this system was built, why it is the way it is, and how to work on it day to day. Written for whoever picks it up next.
 
-Most documentation tells you what the code does. You can get that from the code. This
-site exists for the part you cannot: the decisions, the alternatives that were tried
-and rejected, and the reasons that are no longer obvious a month later.
+Most documentation tells you what the code does. You can get that from the code. These docs are for the part you can't: the decisions, what was tried and dropped, and the reasons that stop being obvious a month later. And, separately, the things you look up again and again.
 
-:::{note}
-**What is still thin.** Everything here is written; two things are knowingly
-incomplete. Most tables in {doc}`journal/database` show their columns but not the
-reasoning behind them, and {doc}`reference/spec` is the original build specification
-kept verbatim rather than rewritten — it describes the plan, and several phases of
-that plan were later rebuilt. {doc}`history` says which ones.
-:::
+## Pick your path
 
-## Get productive in an hour
+**New here? About an hour.**
 
-A guided path, in order. You do not need anything else to start being useful.
+1. {doc}`orientation` (20 min). What the system is, the four kinds of device, how one rep travels from the bar to a screen. Everything else assumes it.
+2. **One Journal page** (20 min), for whatever you're about to touch.
+3. {doc}`handbook/guides/local-install` (20 min). Get it running. Reading about it is no substitute for watching a rep land on a screen.
 
-1. **{doc}`orientation` — 20 minutes.** What the system is, the four kinds of device,
-   how a single rep travels from the barbell to a screen, and the vocabulary. Read
-   this one properly; everything else assumes it.
-2. **One journal page — 20 minutes.** Whichever part you are about to touch. Not all
-   seven. Each opens with what that piece is and why it exists.
-3. **{doc}`guides/base-station` — 20 minutes.** Get it running. Reading about a
-   distributed system is no substitute for watching a rep land on a screen.
+**Already working on it?** Go straight to the {doc}`Handbook <handbook/index>`.
 
-If you are joining to *maintain* rather than to add something specific, read
-{doc}`history` after step 1 — it is the narrative of how the project actually
-went, including the parts that changed course.
+## How it's organised
 
-## How this site is organised
+**{doc}`Handbook <handbook/index>`: "how do I…" and "what exactly is…"**
+: The pages you come back to. **Guides** walk through a task: set up a local install, run the remote server, change the database. **Reference** is for looking things up: `eactl`, the API, the database tables, the message contract.
 
-Three kinds of question, deliberately kept apart:
+**{doc}`Journal <journal/index>`: "why is it like this?"**
+: The decisions, read once, in order. **Timeline** is what happened, **Stack** is what it's built with and why, and **Core** is the decisions both installs stand on, with **Local only** and **Remote** as its children.
 
-**{doc}`The journal <journal/index>` — "why is it like this?"**
-: The decisions. What forced each one, what was chosen, **what was rejected and why**,
-  and what it cost. This is the heart of the site.
+**{doc}`About <about/index>`**
+: The directed study this work was part of, the original build spec, and how these docs are built.
 
-**Reference — "what exactly is it?"**
-: Precise shapes: message formats, database tables, API endpoints. Look things up
-  here; do not read it front to back.
+## How a decision is written
 
-**Guides — "how do I do a thing?"**
-: Install a base station, run a demo without hardware, change the database safely.
+Every Journal page follows the same shape:
 
-**{doc}`Remote <remote/index>` — "what is it becoming?"**
-: The same system run from anywhere instead of from a gym's own network. Decided, not
-  yet built — kept apart so a plan is never read as a description of the code.
+1. **The problem** I set out to solve.
+2. **Try 1, Try 2, …** in order, for the designs that mattered: what worked, and why I moved on.
+3. **Where I landed**, and why it fixes what the others couldn't.
+4. **Things I passed on**, and **what it cost**.
 
-## A note on how the decisions are written
-
-Every journal entry follows the same four beats:
-
-1. **What forced it** — the constraint, the bug, or the thing that broke
-2. **What we chose**
-3. **What we rejected, and why**
-4. **What it cost** — the trade accepted, and what to watch for
-
-The third beat is the one that matters. A decision recorded without its rejected
-alternatives is just a description of the code, and it will not stop the next person
-from re-opening a settled question.
+Tool and library changes are always named: the old one, what it blocked, and what replaced it. A decision written down without what it replaced won't stop the next person from walking back into it.
 
 ```{toctree}
 :maxdepth: 2
+:hidden:
 
 orientation
+handbook/index
 journal/index
-reference/index
-guides/index
-remote/index
-history
+about/index
 ```

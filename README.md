@@ -38,7 +38,7 @@ device** to choose a role:
 > there forever. Change it with **Change device** in the top right.
 
 Normal startup does not create a default login. Existing installations keep their
-accounts. See [the install guide](docs/guides/base-station.md) ("Claim it") for first-run
+accounts. See [the install guide](docs/handbook/guides/local-install.md) ("Claim it") for first-run
 setup, adding coaches, and the three commands that only work on the machine.
 
 For demonstration data in a development installation:
@@ -115,14 +115,14 @@ Two deliberate exclusions, both explained in `tuning.py`:
 
 | | |
 |---|---|
-| [`docs/reference/spec.md`](docs/reference/spec.md) | **The single authority.** Constraints, the hierarchy, the derivation rules, the decision log, and the full build timeline. Start here. |
-| [`docs/reference/message-contract.md`](docs/reference/message-contract.md) | Exact request/response shape of every endpoint and MQTT topic. The authority for wire formats. |
-| [`docs/guides/base-station.md`](docs/guides/base-station.md) | Services, start/stop, operational notes. |
+| [`docs/about/original-spec.md`](docs/about/original-spec.md) | **The single authority.** Constraints, the hierarchy, the derivation rules, the decision log, and the full build timeline. Start here. |
+| [`docs/handbook/reference/message-contract.md`](docs/handbook/reference/message-contract.md) | Exact request/response shape of every endpoint and MQTT topic. The authority for wire formats. |
+| [`docs/handbook/guides/local-install.md`](docs/handbook/guides/local-install.md) | Services, start/stop, operational notes. |
 | [`docs/_HANDOFF.md`](docs/_HANDOFF.md) | The non-obvious things, for whoever picks this up. Start here if you are new. |
 | [`docs/`](docs/) | Write-ups of finished work — patch notes, the database tour, the migration playbook, the import guide. |
 
-**Two documents are authoritative and everything else defers to them:** `docs/reference/spec.md`
-for *why the system is shaped this way*, `docs/reference/message-contract.md` for *what a request
+**Two documents are authoritative and everything else defers to them:** `docs/about/original-spec.md`
+for *why the system is shaped this way*, `docs/handbook/reference/message-contract.md` for *what a request
 looks like*. If another file disagrees with those two, those two are right.
 
 ---
@@ -147,7 +147,7 @@ About fifty routes, grouped:
 | **Analytics** | per-session summary, per-athlete history |
 | **Imports** | preview then commit — roster, maxes, and workout-plan CSVs |
 
-> **Route-by-route detail is in [`docs/reference/message-contract.md`](docs/reference/message-contract.md), not
+> **Route-by-route detail is in [`docs/handbook/reference/message-contract.md`](docs/handbook/reference/message-contract.md), not
 > here.** This README used to list every endpoint and quietly went out of date;
 > one copy is the fix.
 
@@ -156,7 +156,7 @@ About fifty routes, grouped:
 `IsCoach` currently means **"is authenticated"** — not "is a coach of *this*
 group". Coach assignment is recorded and used to *filter* views, and it is not
 enforced as a permission. That is a deliberate choice for a single-gym offline
-box, written up in `docs/reference/spec.md` §9 and Phase 16. Don't mistake it for an oversight,
+box, written up in `docs/about/original-spec.md` §9 and Phase 16. Don't mistake it for an oversight,
 and don't assume a group-coach row protects anything.
 
 ---
@@ -171,11 +171,11 @@ TrainingBlock (template) → TrainingProgram (deployed, dated) → TrainingGroup
 
 A plain-English tour of every table — what it is, why it exists, and the two or
 three things that surprise people — is in
-[`docs/reference/database.md`](docs/reference/database.md). The source of truth is
+[`docs/handbook/reference/database-tables.md`](docs/handbook/reference/database-tables.md). The source of truth is
 [`django/event_handler/models.py`](django/event_handler/models.py), which carries
 the reasoning in comments.
 
-Changing the schema? Read [`docs/guides/migrations.md`](docs/guides/migrations.md)
+Changing the schema? Read [`docs/handbook/guides/database-changes.md`](docs/handbook/guides/database-changes.md)
 first — the Django container **bakes its source at build time**, which makes
 `makemigrations` behave in a way that has already cost this project a migration.
 
