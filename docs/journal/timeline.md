@@ -1,10 +1,8 @@
 # Timeline
 
-The order things actually happened in, including the parts that changed course — and
-who did what.
+The order things actually happened in, including the parts that changed course, and who did what.
 
-This is the narrative half of the site. Where the journal explains *why* a decision was
-made, this explains *when*, and what it displaced.
+Where the rest of the Journal explains *why* a decision was made, this explains *when*, and what it displaced. There are two halves: **the local install** (June to August 2026, Phases 1–18 and the merge) and **the remote work** (September 17 to November 11, my directed study).
 
 ## Two numbering systems, both real
 
@@ -67,7 +65,7 @@ which is visible in how they were later absorbed and rewritten.
 | 11 · Rack screen end-to-end | Braydon | ✅ built — **frozen** |
 | **The merge (P0–P15)** | **Devin** | ✅ complete |
 | 12 · Team dashboard kiosk | Devin | ✅ built, reworked by the merge |
-| 13 · Real ESP32 firmware v1 | Derrilon | ⛔ **not in this repository** |
+| 13 · Real ESP32 firmware v1 | Derrilon | ⚠️ never landed here. **Rebuilt in October** as firmware 2.x (ESP32-C6 + BNO085), see the remote work below |
 
 ### Sprints 5–6 — the team alone
 
@@ -75,7 +73,7 @@ which is visible in how they were later absorbed and rewritten.
 |---|---|---|
 | 14 · Coach tablet | Braydon | ⚠️ built, **but not as written** — delivered by the merge instead |
 | 15 · Fatigue scaffold | Carl | ⛔ not built, deliberately still a stub |
-| 16 · Security hardening | whole team | ⚠️ partial — its premise was overturned by the merge |
+| 16 · Security hardening | whole team | ⚠️ partial: its premise was overturned by the merge. **Finished for the remote server** by remote specs 01–05 and 14 |
 | 17 · Firmware hardening & mounts | Derrilon | ⛔ not built |
 | 18 · Full integration test & demo prep | whole team | ⛔ not done |
 
@@ -113,22 +111,60 @@ Examples of the shape of it:
 
 **No behaviour changed.** Same data, same responses, same permissions — only names.
 
+## The remote work: Sep 17 – Nov 11
+
+The same app, reachable from anywhere: my CSC 4903 directed study with Dr. Prather ({doc}`../about/directed-study`). It started from the coach redesign merge on Sep 17 (`a50e3f7`), in its own repo, `Edge-Athlete-Remote`, which kept the full history.
+
+### Five weekly sprints
+
+Each sprint is one weekly report.
+
+| Dates | Sprint | What happened |
+|---|---|---|
+| Sep 17 – Oct 2 | **Spec & plan** | Designed the remote version, wrote the requirements, chose home hosting. The roles, login links, virtual racks and sensor-ownership decisions were made on Oct 5, before any spec was written |
+| Oct 3 – 9 | **Server** | Rebuilt the Dell, learned k3s, secured coach accounts (setup code, one coach role, an administrator flag) |
+| Oct 10 – 16 | **Online** | Public HTTPS, automatic tests, roles, many schools. One shared Postgres with a database per school (Oct 14); the Mac mini cut (Oct 14). **Live on Oct 16**, a few days late. The biggest win |
+| Oct 17 – 23 | **Join** | Login links, session links from any network, virtual racks, secure sensors. Sensors moved from 8883 to `wss` on 443 (Oct 19) |
+| Oct 24 – 30 | **Real sensor** | Live demo, firmware 2.x with the BNO085, the phone setup page. The WT901 dropped: MQTT sensors everywhere (Oct 27). Phantom lifters and the room display online (Oct 30) |
+
+### Releases
+
+| Version | Date | What it brought |
+|---|---|---|
+| v0.3.0 | Oct 2 | The fork point for the remote version, and the plan for it |
+| v0.3.1 | Oct 16 | The setup screen welcomes you to the school by name |
+| v0.4.0 | Oct 17 | Hosting on k3s (PR #3) |
+| v0.5.0 | Oct 17 | Live updates over `wss`. It crashed the demo school's broker (a root-only rules file); the release stopped at the demo school, as designed |
+| v0.5.1 | Oct 17 | The broker fix, named ports, and failed updates that undo themselves |
+| v0.6.0 | Oct 19 | Session links and virtual racks (PR #9) |
+| v0.7.0 | Oct 21 | Sensors online: claim codes, a token per sensor (PR #10) |
+| v0.7.1, v0.7.2 | Oct 22 | `eactl` on the system path; eactl keeps itself up to date (PRs #11, #12) |
+| v0.8.0 | Oct 27 | Sensors set up from a phone, and three PRs of fixes (PRs #13–15). **The build was locked here** for the presentation |
+| v0.8.1 | Nov 4 | The room display stays signed in online, and phantom lifters (PR #16). A planned exception to the lock |
+| v0.8.2 | Nov 4 | Sensor setup v2 after watching a real athlete set one up, taking over a sensor, and release pages (PR #17) |
+| *firmware 2.3.4, 2.3.5* | Nov 4–5 | Wi-Fi joins at full transmit power; a filled-in school code waits for Next (PR #18, firmware only, no app release) |
+
+### After the sprints
+
+- **Nov 4:** a load test with phantom athletes. Each school uses about a third of a gigabyte of memory, whether anyone's lifting or not.
+- **Nov 5:** an Ubuntu kernel update (7.0.0-42) broke every container after a test reboot: AppArmor started applying the host's rules inside them. Rolled back to the previous kernel and held kernel updates until after Nov 11.
+- **Nov 5–6:** these docs, rewritten as a journal and reorganised into Handbook and Journal.
+
 ## Where it actually stands
 
-Built and running: the data layer, the REST API, the real-time backbone, the rack
-screen, the wall display, the coach tools, spreadsheet import, reports, and the base
-station provisioning.
+**Built and running, local:** the data layer, the REST API, the real-time backbone, the rack screen, the room display, the coach tools, spreadsheet import, reports, and base station provisioning.
 
-Genuinely outstanding:
+**Built and running, remote:** k3s on the Dell with public HTTPS, a database per school, CI/CD with the demo school first, coach and athlete logins, login links, session links and virtual racks, and sensors set up from a phone, each with its own token.
 
-- **Phase 8** — insights generation is still a stub returning nothing
-- **Phase 13 / 17** — the ESP32 firmware is **not in this repository**; there is no
-  `firmware/` directory
-- **Phase 15** — fatigue detection has an interface and a call site, and returns a stub
-  value on purpose
-- **Phase 16** — security hardening is partial. `IsCoach` still means only "is
-  authenticated", and the broker still allows anonymous connections
-- **Phase 18** — no full integration test pass
+**Still outstanding:**
+
+- **Phase 8:** insights generation is still a stub returning nothing.
+- **Phase 15:** fatigue detection has an interface and a call site, and returns a stub value on purpose.
+- **Phase 17:** sensor mounts and firmware hardening (battery, an enclosure).
+- **Phase 18:** no full integration test pass.
+- **The local install's broker still allows anonymous connections.** Accepted on a closed network; online, only a sensor with its token can publish.
+- **Decided, not built:** shared racks online with a common login (spec 18), extra reps past the prescription not counting (spec 09), moving a program between a local install and the remote server (copy, then add-only merges).
+- **Leftover code to remove:** the WT901 Bluetooth path, and MQTT messages nothing listens to ({doc}`../handbook/reference/mqtt-topics`).
 
 ## Who built what
 
