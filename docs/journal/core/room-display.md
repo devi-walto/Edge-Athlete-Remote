@@ -1,144 +1,76 @@
+<!--
+this page — the big screen on the gym wall, and why it's the same file as the
+coach's live room.
+
+The live-room hook (react/src/useLiveRoomState.js) is mostly guards against showing
+the room something untrue. Each guard here came from a real way it went wrong;
+read the list before removing one.
+-->
+
 # Room display
 
-The big screen on the gym wall. Also, in a second mode, the coach's working tool —
-they are the same file.
+The big screen on the gym wall. In a second mode, it's also the coach's live room: they're the same file, `react/src/Dashboard.jsx`.
 
-## What it is
+## Tool changes at a glance
 
-`mode="wall"` is a room-scale scoreboard: current movement, a leaderboard, how the
-room is doing. Read-only, no login, mounted high on a wall where anyone in the gym can
-see it.
+| Job | First | Now | Where it lives |
+|---|---|---|---|
+| Wall and coach views | — | **one component, `mode="wall"` or `mode="coach"`** | `Dashboard.jsx` |
+| Knowing the room changed | MQTT messages only | **MQTT `room_state_changed`, plus a backstop poll every 20 seconds** | `useLiveRoomState.js` |
+| Online | — | **the wall view signs in as a coach**; still the no-names snapshot | `Dashboard.jsx` (since v0.8.1) |
 
-`mode="coach"` is the same live room feed plus everything the wall deliberately leaves
-out — names, history, planning, notes, reports — behind a login.
+## The problem
 
----
+The wall and the coach's screen show the same room, changing at the same moments. The wall is **public**: anyone walking past sees it, other athletes, visiting teams, parents. And a scoreboard that's quietly wrong is worse than no scoreboard: a coach who catches it lying once stops trusting it.
 
-## Decision: one file, two screens
+## Try 1: two separate screens
 
-**What forced it.** The wall and the coach view show the same room, changing at the
-same moments, from the same data.
+**Why I passed on it:** they'd drift. The same event would need handling twice, and the two views would eventually disagree about what the room looks like, which is exactly what a coach would notice.
 
-**What we chose.** One component with a `mode` prop. They share a file because **they
-share a heartbeat** — both are driven by the same live-room hook, and both ask the
-same endpoint for different amounts of detail.
+**Where I landed:** one component with a `mode` prop. They share a file because they share a heartbeat: the same live-room hook drives both, and both ask the same route for different amounts of detail. **The mode check matters**, not cosmetic: every change has to be thought through for both audiences.
 
-**What we rejected, and why.** Two separate screens. They would have drifted: the same
-event would have needed handling twice, and the two views would eventually disagree
-about what the room looked like — which is exactly the failure a coach would notice
-and lose trust over.
+## The wall shows no names
 
-**What it cost.** One file carries two audiences, so every change has to be considered
-twice. The mode check is load-bearing, not cosmetic.
+The wall gets an **anonymous** snapshot. Names, IDs and history are only in the coach view.
 
----
+Both views call {ref}`GET /api/room-state/ <mc-room-state>`. The coach view adds `?details=true`, and that needs a coach login. The wall can't receive names by accident: it never asks for them.
 
-## Decision: the wall shows no names
+**Online it's one step stricter (Oct 30, v0.8.1).** The server only shows the room to a coach, so the wall view now asks a coach to sign in, sends that login, and still asks for the no-names snapshot. Before this, the online wall got a `401`, and the refusal signed the coach out of that browser. On the local install nothing changed: no sign-in, and no login sent even if one is left in the browser.
 
-**What forced it.** A wall display in a weight room is **public**. Anyone walking past
-sees it — other athletes, visiting teams, parents, whoever is in the building.
+## How it finds out the room changed
 
-**What we chose.** The wall gets an **anonymous** snapshot. Names, ids and personal
-history are only in the coach view, and only behind a login.
+MQTT only ever says "look again," never "here's the data": a `room_state_changed` with a revision number, then the screen fetches the room. That design, and why, is in {doc}`real-time`.
 
-**How it is enforced.** Both views call the same endpoint; the coach view adds a flag
-that asks for the extra detail, and that flag requires the login. The wall cannot
-accidentally receive names, because it never asks for them and could not authenticate
-if it did.
+**Try 1: refresh only when a message says so.** Efficient while messages arrive, and a dead end when one goes missing. The screen sat on stale data until someone reloaded it. On Aug 11 the wall display never heard a session start.
 
-This is the counterweight to the open-API decision in {doc}`../../handbook/reference/api`. Read access is
-broad, so the surface that is *literally on public display* is where the line gets
-drawn.
+The trap: a 15-second staleness timer looked like a refresh timer, and wasn't. It only changes a status label.
 
----
-
-## Decision: MQTT says "look again," never "here is the data"
-
-This is the most important design choice on this page, and the least obvious.
-
-**What forced it.** The screen needs to update live. The obvious approach is to
-broadcast the new room state over MQTT and render whatever arrives.
-
-**What we chose.** The broadcast carries **no data at all**. It says only *"something
-changed, revision 47."* The browser then asks the database what the truth is.
-
-**Two reasons, both load-bearing:**
-
-1. **The database stays the single source of truth.** There is exactly one authority,
-   and screens converge on it. A message that carried data would be a second, competing
-   version of reality that could arrive late or out of order.
-2. **No athlete's name or numbers ever travel over a broadcast channel** that a gym
-   display is subscribed to. The broker allows anonymous connections; anything on the
-   network can listen. So nothing sensitive is ever put on it.
-
-**What it cost.** Every change costs a round trip — a message, then a fetch. On a
-local network that is cheap, and it buys correctness and privacy together.
-
----
+**Where I landed:** a **backstop poll every 20 seconds** calls the same refresh. It keeps the last good snapshot if the poll fails, and it yields to a fetch already running instead of stacking on top of one. Messages are still the fast path; the poll means a missed one can't freeze the room.
 
 ## The careful part: not lying to the room
 
-Most of the complexity in the live-room hook exists to stop a screen displaying
-something untrue. Each guard came from a specific way it could go wrong:
+Most of the live-room hook exists to stop a screen showing something untrue. Each guard came from a specific way it could go wrong:
 
-**A fetch already in flight blocks a second one** — but remembers that a newer
-revision arrived, and re-fetches once the first lands. Without this, a burst of
-changes could leave the screen settled on an older answer that happened to return
-last.
-
-**Answers meant for a previous mode or login are discarded.** Switching from wall to
-coach fires a new request; without a generation guard, the old reply could land after
-the new one and overwrite it.
-
-**A failed refresh keeps the last good snapshot** and marks the connection stale,
-rather than blanking a wall screen in the middle of a session. Stale-but-readable
-beats empty.
-
-**Incoming messages are validated hard before they are trusted** — schema version,
-message type, a revision that is a sane positive integer, an id matching a strict
-pattern, and a size cap. The broker is anonymous, so a malformed or hostile message is
-possible; it is rejected rather than acted on.
-
-**Revisions only move forward.** A reconcile happens only when the incoming revision
-is *greater* than the current one, so a replayed or out-of-order message cannot rewind
-the screen.
-
-**If the broker goes quiet for 15 seconds, the connection is shown as stale** — on the
-principle that *a frozen scoreboard that looks live is worse than one that admits it*.
-
----
-
-## Known bug: it can freeze, and the freshness label will not save it
-
-This screen refreshes **only** when a message tells it to. There is **no timer
-anywhere** in the live-room hook.
-
-That is efficient when messages arrive, and a dead end when one goes missing — and
-under the QoS 0 delivery described in {doc}`real-time`, messages do go missing. The
-screen then sits on stale data indefinitely.
-
-The trap for whoever fixes it: **the 15-second staleness constant looks like a refresh
-timer and is not.** It only changes a status label. The screen still never re-fetches.
-
-The fix is a slow backup timer calling the refresh function that already exists — the
-duplicate-request protection above means a timer cannot cause a pile-up. Unlike the
-same bug on the rack tablet, **this file is not frozen**, so it can be fixed directly.
-
----
+- **A fetch in flight blocks a second one**, but remembers a newer revision arrived and fetches again once the first lands. Without it, a burst of changes could leave the screen on an older answer that happened to return last.
+- **Answers meant for a previous mode or login are thrown away.** Switching wall to coach fires a new request; without a generation check, the old reply could land after the new one and overwrite it.
+- **A failed refresh keeps the last good snapshot** and marks the connection stale, rather than blanking a wall screen mid-session. Stale but readable beats empty.
+- **Incoming messages are checked hard before they're trusted:** schema version, message type, a sane positive revision, an ID matching a strict pattern, and a size cap. On the local install anything on the Wi-Fi can publish, so a malformed or hostile message is possible.
+- **Revisions only move forward.** A replayed or out-of-order message can't rewind the screen.
+- **If the broker goes quiet for 15 seconds, the connection shows as stale.** A frozen scoreboard that looks live is worse than one that admits it.
 
 ## The settings cog
 
-The wall display has a small settings control holding "change device role."
+The wall has a small settings cog holding one thing: **Change device role.** A wall-mounted screen has no keyboard and is often out of reach. Without an on-screen way to change what the device is, repurposing it means getting a keyboard up to a screen above head height. The cog is the difference between a two-minute change and a ladder.
 
-**Why it exists.** A wall-mounted screen has no keyboard and often no easy physical
-access. Without an on-screen way to change what the device is, repurposing it means
-getting a keyboard to a screen mounted above head height. The cog is the difference
-between a two-minute change and a ladder.
+## Things I passed on
 
----
+- **Two separate screens.** Try 1.
+- **Names on the wall.** It's public.
+- **Data in the broadcast.** See {doc}`real-time`.
+- **Assigning athletes to a rack ahead of time** on this screen. Who's at a rack is decided by who checks in there, not by a plan made earlier (see {doc}`rack-screen`).
 
-## Deliberately not here
+## What it cost
 
-Assigning athletes or workouts to a rack **ahead of time** is not part of this screen,
-on purpose. A rack's occupant is decided by who checks in at it, not by a plan made
-earlier — see the check-in model in {doc}`rack-screen`.
+- **One file, two audiences.** Every change gets thought through twice.
+- **A room update is a message and a fetch,** plus a fetch every 20 seconds per screen even when nothing changed. Cheap, and it buys a room that can't freeze.
+- **Online, the wall needs a coach signed in** on that screen.
