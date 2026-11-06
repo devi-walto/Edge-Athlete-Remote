@@ -514,7 +514,7 @@ Set      EXTENDED — is_makeup (Bool, default False) — excluded from
 > |---|---|
 > | Branch mechanics, `git show`/checkout recipes | The merge is done; git history |
 > | The P0–P15 phase plan and its gates | [`docs/_PATCH_NOTES.md`](https://github.com/devi-walto/Edge-Athlete-Remote/blob/main/docs/_PATCH_NOTES.md) |
-> | Endpoint reconciliation (which of his routes we kept) | [`docs/reference/message-contract.md`](../handbook/reference/mqtt-messages.md) has the real shapes |
+> | Endpoint reconciliation (which of his routes we kept) | [`docs/reference/message-contract.md`](../handbook/reference/message-contract.md) has the real shapes |
 > | Migration plan (`0008`→`0017`) | The migration files themselves |
 
 ## §4. The `Training*` hierarchy
@@ -2263,7 +2263,7 @@ Every file opens with a WHY comment.
 > the reason `react/src/rack/` is frozen. This is where it was decided and why.
 >
 > For what is true today: **§6** (the derivation rules) and
-> [`docs/reference/message-contract.md`](../handbook/reference/mqtt-messages.md).
+> [`docs/reference/message-contract.md`](../handbook/reference/message-contract.md).
 
 #### Built — Phase 11 minimal-path corrections (authoritative *as of July 2026* — see the banner above)
 The Phase 11 prompt above was written against the FULL Phase 5 contract (SessionExercise + percent×max + an athlete-maxes endpoint). The vertical slice was built on the MINIMAL models instead (see the design memory + the exercise-identity note in Data Models), so several steps above are stale. Build to THIS:

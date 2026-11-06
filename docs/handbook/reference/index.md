@@ -11,8 +11,8 @@ Exact shapes, for looking things up. Don't read these front to back.
 **{doc}`database-tables`**
 : Every table, collapsed, with its schema and the decisions attached to it. New here? Open the plain-English tour at the top first.
 
-**{doc}`mqtt-messages`**
-: The wire formats: what sensors publish, what the server broadcasts, and the request and response bodies the screens are built against.
+**{doc}`message-contract`**
+: What every message looks like: the MQTT topics sensors and the server publish, and the REST bodies the screens send and get back. All collapsed; open the one you need.
 
 **{doc}`versions`**
 : What the version numbers mean, when each part moves, and what `1.0.0` would take. Short.
@@ -24,6 +24,6 @@ Exact shapes, for looking things up. Don't read these front to back.
 eactl
 api
 database-tables
-mqtt-messages
+message-contract
 versions
 ```

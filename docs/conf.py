@@ -125,7 +125,7 @@ redirects = {
     "journal/apis": "../handbook/reference/api.html",
     "journal/database": "../handbook/reference/database-tables.html",
     "reference/index": "../handbook/reference/index.html",
-    "reference/message-contract": "../handbook/reference/mqtt-messages.html",
+    "reference/message-contract": "../handbook/reference/message-contract.html",
     "reference/versioning": "../handbook/reference/versions.html",
     "reference/spec": "../about/original-spec.html",
     "reference/database": "../handbook/reference/database-tables.html",

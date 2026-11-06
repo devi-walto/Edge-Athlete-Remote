@@ -40,7 +40,7 @@ losing the update outright.
 
 ## Known dead channel
 
-`edgeathlete/coach/state` is documented in `docs/handbook/reference/mqtt-messages.md` but
+`edgeathlete/coach/state` is documented in `docs/handbook/reference/message-contract.md` but
 `publish_coach_state()` is **defined and never called**, and nothing subscribes.
 Dead at both ends — plausibly reserved for Phase 15 fatigue alerts. Wire it or
 delete it; don't spend an afternoon debugging a message that was never sent.

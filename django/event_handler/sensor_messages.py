@@ -4,7 +4,7 @@ Why this file exists: two stand-ins for a real sensor send these messages. The
 simulator (management/commands/simulate_node.py) runs beside the server, and the fake
 sensor (scripts/sensor/fake_sensor.py) runs anywhere, like a sensor at someone's home.
 Both build their messages here, so they can't drift apart, or away from what the
-message contract says (docs/handbook/reference/mqtt-messages.md).
+message contract says (docs/handbook/reference/message-contract.md).
 
 Plain Python on purpose: no Django, so the fake sensor can use it without a server.
 """

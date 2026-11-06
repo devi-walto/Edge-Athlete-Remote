@@ -1,17 +1,30 @@
-# MQTT messages
+# Message contract
 
 :::{note}
-The authority on wire formats. For *why* the system is shaped this way — why the
-server ignores rep messages, why topics are keyed to the sensor and not the rack —
-see {doc}`../../journal/core/real-time`.
+The authority on what every message looks like. For *why* the system is shaped this way (why the server ignores rep messages, why topics are keyed to the sensor and not the rack), see {doc}`../../journal/core/real-time`. For every route's permission, see {doc}`api`.
 :::
 
+Two kinds of message, one page: the **MQTT** messages sensors and the server publish, and the **REST** bodies the screens send and get back. If you're building a screen, a simulator or an endpoint, build to the shapes here.
 
-The one place that says exactly what every message looks like: the reps and
-heartbeats coming off the nodes, the live broadcasts Django pushes to the
-screens, and the body of the batch set-complete request. If you're building a
-screen, a simulator, or an endpoint, build to the shapes here so nothing
-misreads anything else.
+**Everything is collapsed.** Find the topic or route you need and open it.
+
+## At a glance: every MQTT topic
+
+| Topic | Published by | Subscribed by |
+|---|---|---|
+| `edgeathlete/node/{node_id}/rep` | node / simulator | the rack tablet linked to that node |
+| `edgeathlete/node/{node_id}/pulse` | node / simulator | Django subscriber (`node/+/pulse` only) |
+| `edgeathlete/rack/{rack_number}/state` | Django | the rack tablet at that rack |
+| `edgeathlete/rack/command` | Django / a coach (Phase 14; `mosquitto_pub` today) | EVERY rack tablet, from boot |
+| `edgeathlete/dashboard/state` | Django | the team wall display |
+| `edgeathlete/coach/state` | Django | the coach tablet |
+
+**Online, the broker has two listeners**, each on its own path on 443 ({doc}`../../journal/core/remote/hosting`):
+
+| Listener | Who | May |
+|---|---|---|
+| `wss://<school>/mqtt` | any browser | listen only, to the app's topics |
+| `wss://<school>/sensors` | each sensor, with its own token | publish only under its own `edgeathlete/node/<its id>/` |
 
 This is the raw reference — Carl folds it into the shared-setup story; Derrilon's
 simulator and Braydon's tablet both publish/consume against it.
@@ -21,8 +34,6 @@ Two things changed here: the phase numbers below now match v2's numbering, and
 `velocity_color`'s zone lookup now sources from the session's planned exercise
 data instead of the old `Program` model (see §4). Every payload shape in this
 document is otherwise unchanged from v1.
-
----
 
 ## Global rules (apply to every message)
 
@@ -36,9 +47,9 @@ document is otherwise unchanged from v1.
 
 ---
 
-## 1. Device → broker (nodes / the simulator publish these)
+## 1. Sensor → broker (MQTT)
 
-### `edgeathlete/node/{node_id}/rep` — one message per completed rep
+:::::{dropdown} `edgeathlete/node/{node_id}/rep` — one message per completed rep
 ```json5
 {
   "node_id": "rack_1",
@@ -57,7 +68,9 @@ document is otherwise unchanged from v1.
 - **Consumed by:** the rack tablet, subscribed to *its own linked node's* rep topic.
 - **Not here:** `velocity_color`. The tablet computes that (see Derived values).
 
-### `edgeathlete/node/{node_id}/pulse` — heartbeat, every ~5s
+:::::
+
+:::::{dropdown} `edgeathlete/node/{node_id}/pulse` — heartbeat, every ~5s
 ```json5
 {
   "node_id": "rack_1",
@@ -74,14 +87,15 @@ document is otherwise unchanged from v1.
 - **Consumed by:** Django's MQTT subscriber, which listens to `edgeathlete/node/+/pulse`
   **only** and updates the matching `Node` row. Reps never reach Django this way.
 
----
+:::::
 
-## 2. Django → broker (broadcasts to the screens)
+
+## 2. Server → screens (MQTT)
 
 Every broadcast has a `"type"` string; consumers switch on it. Fields depend on
 the type.
 
-### `edgeathlete/rack/{rack_number}/state` — for the tablet at that rack
+:::::{dropdown} `edgeathlete/rack/{rack_number}/state` — for the tablet at that rack
 ```json5
 // a set was completed
 { "type": "set_complete", "set_id": 12, "athlete": {"id":4,"name":"Jordan Lee"},
@@ -91,7 +105,9 @@ the type.
 { "type": "athlete_checkin", "athlete": {"id":4,"name":"Jordan Lee"}, "rack_number": 3 }
 ```
 
-### `edgeathlete/dashboard/state` — for the team wall display
+:::::
+
+:::::{dropdown} `edgeathlete/dashboard/state` — for the team wall display
 ```json5
 { "type": "leaderboard_update",
   "athlete": {"id":4,"name":"Jordan Lee"},
@@ -104,14 +120,18 @@ the type.
   "is_weight_pr": false }     // set a new heaviest load for this exercise
 ```
 
-### `edgeathlete/coach/state` — for the coach tablet
+:::::
+
+:::::{dropdown} `edgeathlete/coach/state` — for the coach tablet
 ```json5
 { "type": "fatigue_alert", "athlete": {"id":4,"name":"Jordan Lee"}, "rack_number": 3 }
 ```
 - Fatigue detection is Phase 15 — treat this topic's exact fields as **provisional**
   until then. The envelope (`type` + `athlete`) is stable; extra fields may be added.
 
-### `edgeathlete/rack/command` — remote commands to tablets (any/all)
+:::::
+
+:::::{dropdown} `edgeathlete/rack/command` — remote commands to tablets (any/all)
 ```json5
 // send matching tablets to the /rack/setup screen
 { "type": "enter_setup", "target": "all" }
@@ -126,13 +146,14 @@ the type.
 - **`type` is an extensible envelope.** A future `identify` command (flash a tablet's
   screen so a coach can spot which physical rack it is) is reserved but not built.
 
----
+:::::
 
-## 3. REST — request/response bodies the tablet builds against
+
+## 3. REST — the rack screen and running a day
 
 Not MQTT, but the same data contract, so they live here too.
 
-### `GET /api/sessions/active/` — the rack tablet's one startup fetch (open)
+:::::{dropdown} `GET /api/sessions/active/` — the rack tablet's one startup fetch (open)
 ```json5
 {
   "session_id": 1,
@@ -163,7 +184,9 @@ Not MQTT, but the same data contract, so they live here too.
   that's the "no max on file" case the Phase 11 inline-entry prompt fills.
 - **No active session →** `{ "session_id": null, "label": null, "roster": [], "session_exercises": [] }`.
 
-### `GET /api/sessions/active/athlete/{athlete_id}/progress/` — the rack's athlete day-view (open)
+:::::
+
+:::::{dropdown} `GET /api/sessions/active/athlete/{athlete_id}/progress/` — the rack's athlete day-view (open)
 ```json5
 {
   "session_id": 1,
@@ -189,7 +212,9 @@ Not MQTT, but the same data contract, so they live here too.
 - **`current_exercise_id`** is a suggestion only; the athlete may pick any movement.
 - **No active session →** `{ "session_id": null, "athlete": {…}, "current_exercise_id": null, "movements": [] }`. **Athlete not in the session roster →** `404`.
 
-### `GET /api/sessions/active/status/` — room state: every athlete's live status (open)
+:::::
+
+:::::{dropdown} `GET /api/sessions/active/status/` — room state: every athlete's live status (open)
 Each session athlete's current status + when it started, so the rack's rest/check-in cards can show a ticking timer + status label, and a coach tablet can reuse the same data. **Derived** from `Set` + `RackCheckIn`; no new tables.
 ```json5
 {
@@ -205,7 +230,9 @@ Each session athlete's current status + when it started, so the rack's rest/chec
 - **The tablet turns `since` into a live timer** (ticks locally every second; the endpoint is polled, not the clock).
 - `rack_number` = the athlete's newest check-in rack (or `null`). No active session → `{ "session_id": null, "athletes": [] }`.
 
-### `DELETE /api/racks/{rack_number}/` — force-clear a wedged rack (coach)
+:::::
+
+:::::{dropdown} `DELETE /api/racks/{rack_number}/` — force-clear a wedged rack (coach)
 
 The escape hatch for a rack whose screen is physically gone: ends any open set on
 the rack as a **false set**, resets the rack runtime to idle (controller lease
@@ -221,7 +248,9 @@ The normal release (`PATCH /api/racks/{device_id}/` with `{ "rack_number": null 
 refuses while a set is open; this is the deliberate "kill the rack state" lever a
 coach pulls when nobody can finish that set because the screen is unreachable.
 
-### `POST /api/racks/{rack_number}/checkin/` — record an athlete signing in at a rack (open)
+:::::
+
+:::::{dropdown} `POST /api/racks/{rack_number}/checkin/` — record an athlete signing in at a rack (open)
 Body: `{ "athlete": 4 }`. Writes an append-only `RackCheckIn`, making THIS rack the athlete's current one for the session (newest-wins). Returns `201`:
 ```json5
 { "session_id": 1, "athlete": { "id": 4, "name": "Jordan Lee" }, "rack_number": 3 }
@@ -231,7 +260,9 @@ Body: `{ "athlete": 4 }`. Writes an append-only `RackCheckIn`, making THIS rack 
   `{ "code": "rack_sensor_required", "detail": "..." }`; no check-in is written.
 - Called when an athlete taps in on the rack's check-in screen (Phase 11 Step 2). This is the ONE thing that "moves" an athlete to a rack; a later NFC tap would shortcut into the same call.
 
-### `GET /api/racks/{rack_number}/checkins/` — the rack's hot list (open)
+:::::
+
+:::::{dropdown} `GET /api/racks/{rack_number}/checkins/` — the rack's hot list (open)
 The athletes this rack currently "owns" — those whose NEWEST `RackCheckIn` this session is this rack. Surfaced first on the check-in screen for fast re-pick; the full roster (from `/api/sessions/active/`) stays reachable below it.
 ```json5
 { "session_id": 1, "rack_number": 3, "athletes": [ { "athlete_id": 4, "name": "Jordan Lee" } ] }
@@ -239,7 +270,9 @@ The athletes this rack currently "owns" — those whose NEWEST `RackCheckIn` thi
 - **Derived** from `RackCheckIn` (newest-wins per athlete); session-scoped; nothing new stored. Polled (~5s) alongside the roster while the check-in screen is up.
 - No active session → `{ "session_id": null, "rack_number": 3, "athletes": [] }`.
 
-### `POST /api/racks/{rack_number}/nfc-tap/` — consume a wristband tap
+:::::
+
+:::::{dropdown} `POST /api/racks/{rack_number}/nfc-tap/` — consume a wristband tap
 
 The controlling rack browser polls with the four controller headers while its
 check-in list is visible. Two body shapes:
@@ -273,7 +306,9 @@ Responses contain no tag ID except where the client supplied it in the request:
 `tag_id` in the body above. The Unix socket remains for a reader attached to the
 base station.
 
-### `POST /api/sets/` — start a set (create) (open)
+:::::
+
+:::::{dropdown} `POST /api/sets/` — start a set (create) (open)
 Called when a set STARTS (Phase 11 Step 3). The server returns the created `Set` incl. its `id`, kept for the complete POST at set end.
 ```json5
 {
@@ -292,7 +327,9 @@ Called when a set STARTS (Phase 11 Step 3). The server returns the created `Set`
 - A sensor-backed start with no `rack_number` returns `400`; a node no longer
   assigned to that rack returns `409 node_assignment_changed` and creates no set.
 
-### `PUT /api/racks/node-assignment/` — select a legacy MQTT sensor (active staff)
+:::::
+
+:::::{dropdown} `PUT /api/racks/node-assignment/` — select a legacy MQTT sensor (active staff)
 Exact body: `{ "device_id": "...", "node_id": "rack_3" }`. The screen must
 already have a rack number. Node IDs use `[A-Za-z0-9_-]{1,64}`. Returns `200`:
 ```json5
@@ -311,7 +348,9 @@ already have a rack number. Node IDs use `[A-Za-z0-9_-]{1,64}`. Returns `200`:
 - Replacement at the same rack atomically unassigns the prior node. One non-null
   node mapping per rack is also enforced by the database.
 
-### `PUT /api/nodes/{node_id}/acquisition-kind/` — provision node transport (active staff)
+:::::
+
+:::::{dropdown} `PUT /api/nodes/{node_id}/acquisition-kind/` — provision node transport (active staff)
 
 Exact body: `{ "acquisition_kind": "mqtt" }` or
 `{ "acquisition_kind": "wt901_ble" }`. Extra fields return
@@ -322,7 +361,9 @@ Exact body: `{ "acquisition_kind": "mqtt" }` or
 value is idempotent and creates no second event. This narrow route does not restore
 the retired generic node PATCH.
 
-### Rack controller capability and mirrored state
+:::::
+
+:::::{dropdown} Rack controller capability and mirrored state
 
 The browser generates `controller_token` as exactly 32 random bytes encoded as
 canonical unpadded base64url (43 characters). Django stores only its SHA-256
@@ -377,7 +418,9 @@ Stable conflicts include `rack_controller_busy`, `rack_controller_required`,
 `open_set_exists`, and `rack_recovery_required`. A conflict that depends on current
 state returns its latest `state_version` and snapshot without the controller token.
 
-### Central WT901 discovery and health
+:::::
+
+:::::{dropdown} Central WT901 discovery and health
 
 Active staff use `POST /api/ble/scans/`, `POST /api/ble/verifications/`, and
 `PUT /api/racks/{rack_number}/ble-selection/`. Scan responses contain only an
@@ -419,7 +462,9 @@ limit and returns its stored result. Receipts remain retryable for one hour and
 older rows are pruned opportunistically when a new command arrives. The same
 `command_id` after one hour is expired before lookup and cannot return its old result.
 
-### `POST /api/sets/{id}/complete/` — the batch set-complete body
+:::::
+
+:::::{dropdown} `POST /api/sets/{id}/complete/` — the batch set-complete body
 ```json5
 // POST /api/sets/{id}/complete/
 {
@@ -443,7 +488,9 @@ older rows are pruned opportunistically when a new command arrives. The same
   row from that point on. Nothing about the batch-complete shape above changes
   for a makeup set.
 
-### `GET /api/room-state/` — the live room picture (wall: open · coach: `?details=true`)
+:::::
+
+:::::{dropdown} `GET /api/room-state/` — the live room picture (wall: open · coach: `?details=true`)
 
 The coach dashboard and the gym wall screen both read this. **One route serves
 both**, switched by a query flag — they were two routes on the branch this merged
@@ -512,7 +559,9 @@ advance, so there is nothing to store.
 **No live session is not an error.** `session` is `null`, counts are `0`, lists are
 empty, HTTP is still 200 — the wall has to render something before the day starts.
 
-### `PATCH /api/sessions/{id}/` — end a training day (coach)
+:::::
+
+:::::{dropdown} `PATCH /api/sessions/{id}/` — end a training day (coach)
 
 **There is no `sessions/{id}/end/` route.** Ending a day IS this PATCH — it
 already meant "set the end time", so a second route would be two ways to do one
@@ -543,7 +592,9 @@ panel could redraw looking identical — ending the top of several stacked sessi
 instantly promoted the next — so the button appeared to do nothing while working
 perfectly every time (canon D18).
 
-### `POST /api/training-programs/{id}/promote/` — turn a program into a block (coach)
+:::::
+
+:::::{dropdown} `POST /api/training-programs/{id}/promote/` — turn a program into a block (coach)
 
 For a plan a coach tuned until it beat the template it came from, or wrote from
 scratch for one group and now wants to run again. Returns the new `TrainingBlock`
@@ -570,7 +621,9 @@ Body: `{ "name": "Fall Strength v2" }` — optional, defaults to the program's n
 overwritten. The FK's job is to answer "what is this a copy of", and after
 promotion the honest answer is the new block.
 
-### `GET /api/scheduled-sessions/` — the calendar (coach)
+:::::
+
+:::::{dropdown} `GET /api/scheduled-sessions/` — the calendar (coach)
 
 A **slot** is a plan: "this program's Day 2, on the 14th". Slots are generated
 when a block is deployed — cadence picks the weekdays, `duration_weeks` says when
@@ -600,7 +653,9 @@ to stop — and are **frozen** after that.
 > to drifts from the block that produced it, and "where did this extra Tuesday
 > come from" is not a question worth creating.
 
-### `GET|PATCH /api/scheduled-sessions/{id}/` — move a day (coach)
+:::::
+
+:::::{dropdown} `GET|PATCH /api/scheduled-sessions/{id}/` — move a day (coach)
 
 `date` is the **only** writable field: moving a slot is one date write and
 regenerates nothing. Which day runs in a slot is decided when the schedule is
@@ -614,7 +669,9 @@ A slot whose session already exists can still be moved. The coach is correcting
 the calendar; the session keeps its own real start time. The plan and the record
 are separate things.
 
-### `POST /api/scheduled-sessions/{id}/session/` — turn a plan into a real day (coach)
+:::::
+
+:::::{dropdown} `POST /api/scheduled-sessions/{id}/session/` — turn a plan into a real day (coach)
 
 Creates the session, sets its roster from the group's current members, and writes
 the `SessionParticipation` row that points the group at the day this slot runs.
@@ -629,7 +686,9 @@ date.
 Idempotent — a slot that already has a session returns it (`200`) rather than
 making a second one. Two taps on a calendar must not produce two Thursdays.
 
-### `POST /api/sessions/{id}/start/` — start a prepared day (coach)
+:::::
+
+:::::{dropdown} `POST /api/sessions/{id}/start/` — start a prepared day (coach)
 
 > **Why a route and not a PATCH:** `PATCH /api/sessions/{id}/` with an empty body
 > already means "END the day now". Start and end are opposites, and one call's
@@ -641,7 +700,9 @@ making a second one. Two taps on a calendar must not produce two Thursdays.
 - Already started → **200**, unchanged. The caller wanted it running.
 - Already ended → **409**. Its report is frozen; reopening would make that a lie.
 
-### `POST /api/sessions/` — start a training day (coach)
+:::::
+
+:::::{dropdown} `POST /api/sessions/` — start a training day (coach)
 
 Body: `{ "label": "Monday — Upper", "athletes": [4, 7, 9] }`. **`athletes` is
 required and must not be empty** — a training day with nobody in it is refused.
@@ -665,7 +726,9 @@ required and must not be empty** — a training day with nobody in it is refused
 Auto-closing writes an immutable `DailyReport` with nobody watching, so it is not
 obviously safer than requiring a human to end it.
 
-### `GET /api/analytics/athlete/{id}/` — one athlete's performance context (coach)
+:::::
+
+:::::{dropdown} `GET /api/analytics/athlete/{id}/` — one athlete's performance context (coach)
 
 Answers both of a coach's questions about a person in one call: **how are they
 doing** (`summary`, `exercise_summaries`) and **what did they actually do**
@@ -732,7 +795,9 @@ non-zero first rep, else `null`.
 **An athlete who has never lifted** returns `200` with zeroed counts, `null`
 bests, and empty lists — a new signing is an ordinary state, not an error.
 
-### `GET /api/reports/` — finished training days (coach)
+:::::
+
+:::::{dropdown} `GET /api/reports/` — finished training days (coach)
 
 One family of routes. "This athlete's reports" is the same list **filtered**, not
 a parallel set of endpoints:
@@ -750,7 +815,9 @@ says what was true on the day it was generated even after programs or maxes
 change later. The PDF renders from that same snapshot, so print and screen can
 never disagree.
 
-### `POST /api/reference-maxes/` — record what athletes can lift (coach)
+:::::
+
+:::::{dropdown} `POST /api/reference-maxes/` — record what athletes can lift (coach)
 
 **The prescription lever.** Every target weight is a percentage of these numbers.
 Takes a list so a whole TrainingGroup's testing day goes in with one call.
@@ -769,7 +836,8 @@ are never rewritten.
 > Distinct from adjusting the load on a bar today: that rides on the set itself
 > and changes nothing about the plan. See §4.
 
----
+:::::
+
 
 ## 3b. REST — planning (coach only)
 
@@ -783,7 +851,7 @@ out per athlete from their reference max at read time (§4).
 > client that already existed rather than reshaping its code. Scheduled for
 > renaming in P9; see the P9 rename list.
 
-### `GET|POST /api/training-groups/` — TrainingGroups (coach)
+:::::{dropdown} `GET|POST /api/training-groups/` — TrainingGroups (coach)
 
 A TrainingGroup is a *subset* of the gym that trains together, not everyone on file.
 
@@ -804,7 +872,9 @@ A TrainingGroup is a *subset* of the gym that trains together, not everyone on f
 Whoever creates a group becomes its head coach; a group with no staff at all is
 never what someone meant to make.
 
-### `GET|POST|PATCH|DELETE /api/training-groups/{id}/coaches/` — who runs the group (coach)
+:::::
+
+:::::{dropdown} `GET|POST|PATCH|DELETE /api/training-groups/{id}/coaches/` — who runs the group (coach)
 
 | Method | Body | Effect |
 |---|---|---|
@@ -824,7 +894,9 @@ and can never leave two heads behind.
 > undoing any of this. A test asserts the current non-enforcement on purpose, so
 > that adding a boundary is a deliberate change rather than a broken build.
 
-### `POST /api/training-groups/{id}/athletes/` — set a TrainingGroup's members (coach)
+:::::
+
+:::::{dropdown} `POST /api/training-groups/{id}/athletes/` — set a TrainingGroup's members (coach)
 
 ```json5
 { "athletes": [3, 4, 7] }        // → the TrainingGroup's full member list
@@ -833,7 +905,9 @@ and can never leave two heads behind.
 Membership is **current-state only**. Adding or removing never rewrites history:
 past sessions and sets stay attached to whatever they ran under.
 
-### `GET|POST /api/training-blocks/` — reusable templates (coach)
+:::::
+
+:::::{dropdown} `GET|POST /api/training-blocks/` — reusable templates (coach)
 
 ```json5
 { "id": 1, "name": "Fall Strength", "duration_weeks": 8,
@@ -858,7 +932,9 @@ snapshot and has no link back.
 
 Filters combine: `?coach=me&category=2` is "my off-season blocks".
 
-### `GET|PATCH /api/training-blocks/{id}/` — one block's own fields (coach)
+:::::
+
+:::::{dropdown} `GET|PATCH /api/training-blocks/{id}/` — one block's own fields (coach)
 
 PATCH accepts `name`, `categories`, `duration_weeks`, `cadence_days_of_week`.
 The days and rows *inside* the block have their own routes (below).
@@ -870,7 +946,9 @@ created before P11 has no labels, and a create-only API could never give it any.
 > the filter-not-fence reasoning above partly rests on that. Adding one is a real
 > decision, not a convenience.
 
-### `GET|POST /api/block-categories/` — the catalog's label vocabulary (coach)
+:::::
+
+:::::{dropdown} `GET|POST /api/block-categories/` — the catalog's label vocabulary (coach)
 
 ```json5
 { "id": 1, "name": "Off-season", "block_count": 4 }
@@ -891,7 +969,9 @@ body region or a grade level depending on what it hangs off.
 > can still read and edit any block. If a real permission boundary is ever wanted,
 > it is additive on top of this and the filter does not have to be undone first.
 
-### `GET|POST /api/training-blocks/{id}/workouts/` — one day inside a template (coach)
+:::::
+
+:::::{dropdown} `GET|POST /api/training-blocks/{id}/workouts/` — one day inside a template (coach)
 
 ```json5
 { "name": "Day 1 — Lower", "position": 1,
@@ -904,7 +984,9 @@ body region or a grade level depending on what it hangs off.
 The block is in the URL, not the body — a day cannot exist without one.
 `position` orders the day and must run 1, 2, 3… with no gaps; omit it to append.
 
-### Editing a template (coach)
+:::::
+
+:::::{dropdown} Editing a template (coach)
 
 | Route | Does |
 |---|---|
@@ -935,7 +1017,9 @@ mid-flight. It is also idempotent and cannot leave a gap or a duplicate.
 - **Every edit here moves the block's `updated_at`**, because changing a day *is*
   changing the template. Editing a deployed program moves nothing on the block.
 
-### `GET|POST /api/training-programs/` — deploy a template for a TrainingGroup (coach)
+:::::
+
+:::::{dropdown} `GET|POST /api/training-programs/` — deploy a template for a TrainingGroup (coach)
 
 ```json5
 { "training_group": 4, "training_block": 1,
@@ -947,7 +1031,9 @@ editing the template next season cannot rewrite what this TrainingGroup already 
 `training_block` may be **null** — a one-off plan is a permanent first-class path,
 not a shim (D6).
 
-### `POST /api/sessions/{id}/participation/` — which TrainingGroups train today (coach)
+:::::
+
+:::::{dropdown} `POST /api/sessions/{id}/participation/` — which TrainingGroups train today (coach)
 
 ```json5
 { "training_group": 4, "training_program": 3 }
@@ -955,7 +1041,9 @@ not a shim (D6).
 
 This is what lets one session hold several TrainingGroups on different plans.
 
-### `GET|PUT|DELETE /api/athletes/{id}/program/` — one athlete's plan (coach)
+:::::
+
+:::::{dropdown} `GET|PUT|DELETE /api/athletes/{id}/program/` — one athlete's plan (coach)
 
 **Reads as "this athlete's program"; underneath it is TrainingGroup membership**, because
 a plan belongs to a TrainingGroup (D12/D13). `PUT { "workout_program_id": 3 }` puts them
@@ -983,7 +1071,9 @@ prescribing to them, leaving plan-less TrainingGroups alone.
 `groups_changed` appears on writes only, and says what actually moved — a write
 here has a **wider effect than the route name suggests**.
 
-### `GET|PUT|DELETE /api/athletes/{id}/program-exercises/{id}/override/` — one athlete's exception (coach)
+:::::
+
+:::::{dropdown} `GET|PUT|DELETE /api/athletes/{id}/program-exercises/{id}/override/` — one athlete's exception (coach)
 
 Rare by design: everyone in a TrainingGroup trains the TrainingGroup's plan unless a row like
 this says otherwise.
@@ -992,11 +1082,12 @@ this says otherwise.
 { "target_percent": 70, "sets": 3, "reps": 5 }   // any subset; omitted = inherit
 ```
 
----
+:::::
+
 
 ## 3c. REST — spreadsheet import (coach only)
 
-### `POST /api/imports/preview/` · `POST /api/imports/`
+:::::{dropdown} `POST /api/imports/preview/` · `POST /api/imports/`
 
 `multipart/form-data`. **Preview writes nothing**; import re-checks and then saves
 all-or-nothing. Which of three sheets was uploaded is detected from the **column
@@ -1069,7 +1160,8 @@ never trust a previous preview** (the gym changes between the two calls — some
 gets renamed, another coach imports first). Without them the app would forget the
 answer it just asked for.
 
----
+:::::
+
 
 ## 4. Derived values — who computes what (read this)
 
@@ -1082,16 +1174,3 @@ this wrong is the most likely way two parts disagree.
 | `rep_number` (saved) | **the rack tablet** | Numbered `1..N` within the set. The tablet owns set boundaries, so it assigns the authoritative number; the node's `rep_number` is only advisory ordering. |
 | `is_velocity_pr` | **Django**, at set-complete | `true` if this set's `peak_velocity` beats the athlete's previous best for that exercise. |
 | `is_weight_pr` | **Django**, at set-complete | `true` if this set's `weight_lbs` beats the athlete's previous heaviest for that exercise. |
-
----
-
-## 5. Who subscribes to what
-
-| Topic | Published by | Subscribed by |
-|---|---|---|
-| `edgeathlete/node/{node_id}/rep` | node / simulator | the rack tablet linked to that node |
-| `edgeathlete/node/{node_id}/pulse` | node / simulator | Django subscriber (`node/+/pulse` only) |
-| `edgeathlete/rack/{rack_number}/state` | Django | the rack tablet at that rack |
-| `edgeathlete/rack/command` | Django / a coach (Phase 14; `mosquitto_pub` today) | EVERY rack tablet, from boot |
-| `edgeathlete/dashboard/state` | Django | the team wall display |
-| `edgeathlete/coach/state` | Django | the coach tablet |

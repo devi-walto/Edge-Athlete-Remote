@@ -17,7 +17,7 @@ Most documentation tells you what the code does. You can get that from the code.
 ## How it's organised
 
 **{doc}`Handbook <handbook/index>`: "how do I…" and "what exactly is…"**
-: The pages you come back to. **Guides** walk through a task: set up a local install, run the remote server, change the database. **Reference** is for looking things up: `eactl`, the API, the database tables, the MQTT messages.
+: The pages you come back to. **Guides** walk through a task: set up a local install, run the remote server, change the database. **Reference** is for looking things up: `eactl`, the API, the database tables, the message contract.
 
 **{doc}`Journal <journal/index>`: "why is it like this?"**
 : The decisions, read once, in order. **Timeline** is what happened, **Stack** is what it's built with and why, and **Core** is the decisions both installs stand on, with **Local only** and **Remote** as its children.

@@ -16,7 +16,7 @@ It runs two doors into the same building:
 
 Same broker, same messages, two doors.
 
-For the exact message shapes, see {doc}`../../handbook/reference/mqtt-messages`. This page is
+For the exact message shapes, see {doc}`../../handbook/reference/message-contract`. This page is
 about *why* it is built this way.
 
 ---

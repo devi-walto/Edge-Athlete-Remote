@@ -116,13 +116,13 @@ Two deliberate exclusions, both explained in `tuning.py`:
 | | |
 |---|---|
 | [`docs/about/original-spec.md`](docs/about/original-spec.md) | **The single authority.** Constraints, the hierarchy, the derivation rules, the decision log, and the full build timeline. Start here. |
-| [`docs/handbook/reference/mqtt-messages.md`](docs/handbook/reference/mqtt-messages.md) | Exact request/response shape of every endpoint and MQTT topic. The authority for wire formats. |
+| [`docs/handbook/reference/message-contract.md`](docs/handbook/reference/message-contract.md) | Exact request/response shape of every endpoint and MQTT topic. The authority for wire formats. |
 | [`docs/handbook/guides/local-install.md`](docs/handbook/guides/local-install.md) | Services, start/stop, operational notes. |
 | [`docs/_HANDOFF.md`](docs/_HANDOFF.md) | The non-obvious things, for whoever picks this up. Start here if you are new. |
 | [`docs/`](docs/) | Write-ups of finished work — patch notes, the database tour, the migration playbook, the import guide. |
 
 **Two documents are authoritative and everything else defers to them:** `docs/about/original-spec.md`
-for *why the system is shaped this way*, `docs/handbook/reference/mqtt-messages.md` for *what a request
+for *why the system is shaped this way*, `docs/handbook/reference/message-contract.md` for *what a request
 looks like*. If another file disagrees with those two, those two are right.
 
 ---
@@ -147,7 +147,7 @@ About fifty routes, grouped:
 | **Analytics** | per-session summary, per-athlete history |
 | **Imports** | preview then commit — roster, maxes, and workout-plan CSVs |
 
-> **Route-by-route detail is in [`docs/handbook/reference/mqtt-messages.md`](docs/handbook/reference/mqtt-messages.md), not
+> **Route-by-route detail is in [`docs/handbook/reference/message-contract.md`](docs/handbook/reference/message-contract.md), not
 > here.** This README used to list every endpoint and quietly went out of date;
 > one copy is the fix.
 

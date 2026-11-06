@@ -23,7 +23,7 @@ Grouped by who uses them:
     - manage athletes, programs, sessions, and nodes; assign racks; and pull
       the analytics summaries.
 
-Open vs coach-only follows docs/about/original-spec.md; shapes live in docs/handbook/reference/mqtt-messages.md.
+Open vs coach-only follows docs/about/original-spec.md; shapes live in docs/handbook/reference/message-contract.md.
 """
 import json
 import base64
