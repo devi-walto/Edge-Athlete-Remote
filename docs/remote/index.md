@@ -72,7 +72,9 @@ that revisit.
 deployments
 databases
 access
+virtual-racks
 sensors
 hosting
+releases
 directed-study
 ```

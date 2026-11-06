@@ -1,271 +1,109 @@
 <!--
-this page — how the hosted service runs: the cluster, the certificates, and the two
-doors into the message broker.
+this page — how the app got from a box in one gym to a public HTTPS address,
+running on one PC at my house, and what broke on the way.
 
-The surprise in here is how little changes. Secure live updates in the browser sounded
-like a new real-time layer; it turned out to be encryption in front of the broker the
-system already has. That finding is recorded because the bigger plan was written down
-first, and someone will find it.
+The tool swaps are called out on purpose (nginx → Traefik, Compose → k3s, and
+k3s's built-in load balancer → Traefik on the machine's ports). Each one moved a job
+somewhere else, and the next person to change these files needs to know where
+it went.
 -->
 
 # Hosting
 
-## What forced it
+*Oct 2 – Oct 17, 2026 · spec 12 · PRs #3, #4*
 
-The gym box runs under Docker Compose on one machine, on a private network, over plain
-HTTP. The hosted service has to be reachable at a normal web address, encrypted end to
-end, and renew its own certificates without anyone visiting it.
+## Tool changes at a glance
 
-## What we chose
+| Job | Local install | Remote server | Why it changed |
+|---|---|---|---|
+| Running the containers | Docker Compose | **k3s** (small Kubernetes) | One copy per school from one template; restarts on its own |
+| Reverse proxy (sends `/api/` to Django, the rest to React) | nginx | **Traefik**, the one k3s ships with | It's already in the cluster and routes by school address |
+| Load balancer (takes the machine's ports 80/443 and hands visits to the proxy) | none; nginx listens on the box's ports | **none; Traefik listens on the Dell's ports itself** | k3s's built-in load balancer (ServiceLB) hid every visitor's address |
+| HTTPS certificates | none (closed Wi-Fi) | **cert-manager + Let's Encrypt** | Certificates that renew themselves |
+| Live updates in the browser | Mosquitto WebSockets, `ws://` | **the same Mosquitto**, behind TLS at Traefik | No new real-time layer needed |
 
-### k3s, running the same images
+:::{warning}
+**Two jobs nginx did that Traefik doesn't.** On a local install, `nginx/nginx.conf` limits wrong-password tries and tells browsers never to keep a copy of sign-in replies. Online, **Django does both itself** in remote mode (spec 05). If you ever put a different proxy in front, don't move them back into it and assume both installs are covered.
 
-The hosted service runs on **k3s**, a small Kubernetes distribution. Each installation
-({doc}`databases`) is one copy of the same stack the gym box runs — web server, Django,
-Postgres, the message broker — built from **the same images**, in its own namespace,
-**stamped out from one template**. The second installation is the demo shown to
-faculty ({doc}`access`), which makes the template prove itself from the first week.
+nginx still exists online in one place: inside the React image, handing out the built pages as plain files. It's a file server there, not the proxy.
+:::
 
-Learning k3s is itself one of the directed study's outcomes ({doc}`directed-study`).
+## The problem
 
-### Where the cluster runs: at home
+The app ran on one box in one gym: Docker Compose, nginx, plain HTTP, on the box's own Wi-Fi. The network was the security. Only people in the room could connect.
 
-The cluster runs on one machine at home: **a Dell OptiPlex**, as a single k3s node.
+Online, it has to be reachable at a normal web address from anywhere, encrypted end to end, with certificates that renew themselves. Each school needs its own copy, and it all runs on one PC at my house: a Dell OptiPlex.
 
-**A second machine was planned and then cut (October 14).** A Mac mini was going to
-join later as a second node. It was never part of the Definition of Done, which asks
-for the app on k3s at a public HTTPS link, not for a cluster of a given size. It would
-also have cost real work: k3s runs only on Linux, so the Mac could only join through a
-virtual machine, and an Apple-chip Mac would have meant building every image twice.
-Adding a node later is still possible; nothing here depends on there being one.
+## Starting point: the local install, as is
 
-**Getting traffic from the internet to the Dell:**
+**What works:** Compose is the right size for one machine running one school, and it already works. The local install still runs this way.
 
-| What | How |
-|---|---|
-| Web traffic (80, 443) | The home router forwards those two ports to the Dell. Nothing else is forwarded. Sensors come in on 443 too (spec 14; 8883 was the earlier plan) |
-| The home address changing | Home internet addresses change now and then. A small job in the cluster checks the address and updates the domain's records through Porkbun's API when it moves |
-| The cluster's own control port (6443) | **Never forwarded.** It is managed from inside the home network only |
+**Why it doesn't carry online:** nothing in it makes a second school from a template, renews a certificate, or restarts itself across a reboot without help. And I wanted to learn Kubernetes for my DevOps career. So the remote server runs the **same images** on k3s instead.
 
-**Before any of that works, two things about the home connection have to be true:**
+## Try 1: k3s with its defaults
 
-1. **It has its own public address.** Some providers share one public address between
-   many homes (called CGNAT), and then nothing outside can reach in. The check: the
-   internet address the router reports must match what a site like whatismyip.com
-   shows.
-2. **The provider does not block ports 80 and 443** on a home plan.
+k3s comes with Traefik as its reverse proxy, and a small built-in load balancer called **ServiceLB** (also known as Klipper). In the cloud, the provider gives a cluster a load balancer that faces the internet. A PC at home has no cloud, so ServiceLB takes the machine's ports 80 and 443 and forwards every visit to Traefik.
 
-If either fails, the fallback is a tunnel service — see the rejected options below for
-why it is the fallback and not the plan.
+So nginx came out as the proxy, and each school got an Ingress, a short routing file that does what `nginx.conf` did (`k8s/app/base/ingress.yaml`). Certificates came from cert-manager asking Let's Encrypt.
 
-### Keeping each visitor's real address
+**What worked:** a starter app, then the real stack, live on the internet on Oct 16. Kubernetes was super scary for me, even after learning containers. Getting this far was the biggest win of the project.
 
-Decided and built on October 16.
+**What broke, part 1: every visitor looked the same.** As ServiceLB forwards a visit, it writes its own address in place of the visitor's. The sign-in limit locks out an address after 10 wrong passwords in a minute. With every visitor sharing one address, one stranger's guesses would lock *everyone* out.
 
-**What forced it.** The **sign-in limit** depends on knowing **where each visitor is
-coming from**: online, the app refuses an address after 10 wrong passwords in a minute
-(spec 05, "hosted mode"). A Tailscale-only guard for schools in testing needed it too;
-that guard was later dropped (every school is public, protected by its setup code).
+I measured it instead of assuming. A tiny test app that reports the address it sees was visited from my laptop, and it saw ServiceLB's internal address instead of mine.
 
-k3s ships with a small built-in helper, **ServiceLB**. A cloud provider normally gives a
-cluster its front door to the internet; a machine at home has no cloud, so ServiceLB
-does the job: it takes the machine's ports 80 and 443 and forwards every visit to
-Traefik, the cluster's front door. But as it forwards a visit, it **writes its own
-address in place of the visitor's.** Every visitor looked identical, so one stranger's
-wrong guesses would have locked everyone out of signing in.
+The documented fix is ServiceLB's "keep the address" setting (`externalTrafficPolicy: Local`). I tried it first. It removed one rewrite, but ServiceLB rewrites the address again as it hands the visit on. The test app still saw the wrong one.
 
-It was measured, not assumed. A small test app that reports the address it sees was
-visited from a laptop on Tailscale (an address starting `100.`); it saw the helper's
-internal address (one starting `10.42.`) instead.
+**What broke, part 2: NAT hairpinning.** The certificates wouldn't finish. I ran `kubectl get pods` to check on the issuer, and it just sat there.
 
-**What we chose.** Take the helper out of the way. **Traefik answers on the machine's
-ports 80 and 443 itself**, so a visit arrives with its address intact:
+After some research and a conversation with Claude, I found it's a common problem on home routers. From inside the network, a request to my own public address goes out to the router, which is supposed to send it straight back in. Mine wouldn't, so cert-manager's self-check waited forever.
+
+It felt empowering. For the first time I was picturing the network and actually thinking about where my data was going.
+
+## Where I landed
 
 ```text
-before:  visitor ─▶ Dell ports ─▶ helper (rewrites address) ─▶ Traefik
-after:   visitor ─▶ Dell ports ───────────────────────────────▶ Traefik   (address intact)
+before:  visitor ─▶ Dell ports ─▶ ServiceLB (rewrites address) ─▶ Traefik
+after:   visitor ─▶ Dell ports ─────────────────────────────────▶ Traefik   (address intact)
 ```
 
-It is one settings file in the repo (`k8s/cluster/traefik-keep-visitor-address.yaml`),
-applied with the rest of the cluster's add-ons, so every new server gets it. Traefik's
-own Service becomes inside-only, which ServiceLB ignores; anything inside the cluster
-that looks Traefik up by name (the fix that lets the cluster reach its own public
-address) is unaffected. Tested after: the same visit arrived with the laptop's own address, and the
-practice site, its certificate and the in-cluster check that certificates rely on all
-still worked.
+- **Traefik holds ports 80 and 443 itself**, so every visit arrives with its real address. That's one file, `k8s/cluster/traefik-keep-visitor-address.yaml`.
+- **The cluster answers my public names with Traefik**, so a request to my own address never leaves the cluster. That's `k8s/cluster/coredns-hairpin.yaml`, a rule added to CoreDNS, the cluster's built-in DNS.
+- **Two forwarded ports, one entry point.** Everything, every school and every sensor, comes in through Traefik. The router forwards 443 to the Dell, plus 80, which only redirects to HTTPS and lets Let's Encrypt check the domain is mine. The cluster's control port (6443) is never forwarded.
+- **One school = one namespace**, stamped from one template, at its own subdomain. The demo school is the second copy, so the template had to prove itself from day one.
+- **The home address can change**, so a small job in the cluster updates the domain's records through Porkbun when it moves (`k8s/cluster/ddns-updater.yaml`).
 
-**What we rejected.** **ServiceLB's own "keep the address" setting**
-(`externalTrafficPolicy: Local`). It is the documented answer, and it was tried first. It
-removed one rewrite, but the helper rewrites the address again itself as it hands the
-visit on; the test app still saw the helper's address.
+:::{warning}
+**Changing Traefik's settings needs care.** k3s installs Traefik from a Helm chart, and these files change that chart's settings. A misspelled setting is silently ignored. One wrong name took the practice site down for about four minutes while I built this. Read the installed chart version's own `values.yaml` before changing anything.
+:::
 
-**What it cost.**
+## Live updates in the browser
 
-- **Only one Traefik per machine.** It holds the machine's ports itself, so an update
-  stops the old one before starting the new one: a few seconds offline, instead of
-  none.
-- **Changing it needs care.** k3s installs Traefik from a package, and this changes that
-  package's settings; a mistyped setting is silently ignored. A wrong name for one
-  setting took the practice site down for about four minutes while this was built.
-  Check the package's own settings file for the installed version before changing it.
-- **A cloud does this differently.** There, the cloud's load balancer is the front door
-  and offers its own way to keep the visitor's address. This file is for a machine with
-  no cloud in front of it.
+Screens already get live reps straight from Mosquitto over WebSockets. Online, that connection just needs encryption, and Traefik adds it. **No new real-time server.** I first planned a separate WebSocket server, and dropped it once I saw the browser already had what it needed.
 
-### HTTPS, with certificates that renew themselves
+Online, the broker has two WebSocket listeners, each on its own path on 443:
 
-The project uses **a domain Devin owns, registered with Porkbun.** Each installation
-gets its own sub-address under it — one for the real installation, one for the demo.
-
-Certificates come from Let's Encrypt and are **renewed automatically by the cluster**
-well before they expire — nobody logs in every few months to do it. Let's Encrypt
-proves the domain is ours by fetching a file over port 80, which is why port 80 is
-forwarded even though the site itself redirects to HTTPS. If port 80 ever cannot be
-opened, the same proof can be done through Porkbun's DNS API instead.
-
-### Two doors into one broker, both on 443
-
-| Door | Address | Used by | Speaks |
+| Listener | Address | Who | May |
 |---|---|---|---|
-| **Screens** | `wss://<school>/mqtt` | browsers — rack screens, coach screens, wall display | MQTT over WebSockets, over TLS; listen-only |
-| **Sensors** | `wss://<school>/sensors` | sensors, each with its own login | MQTT over WebSockets, over TLS; each sends only its own reps |
+| Screens | `wss://<school>/mqtt` | any browser | listen only |
+| Sensors | `wss://<school>/sensors` | each sensor, with its own token ({doc}`sensors`) | send its own reps only |
 
-*Changed 2026-10-19 (spec 14):* sensors were to use plain MQTT over TLS on 8883. They use
-443 with WebSockets instead: no extra router port, it gets through networks that block
-other ports, and the firmware's new MQTT library does WebSockets with one setting.
+**The v0.5.0 lesson:** the screens' listen-only rules file was readable by root only, so Mosquitto couldn't read it and stopped. It passed on my Mac because Docker there doesn't enforce file permissions. **Test anything permission-sensitive on real Linux.**
 
-The broker behind both doors is the same Mosquitto the gym box runs. It already has a
-WebSockets listener, which the browser uses today over plain `ws://`. **Encrypted
-WebSockets is TLS in front of that listener**, handled by the cluster's ingress — not a
-new real-time layer.
+## Things I passed on
 
-**The browser only ever listens.** Every screen subscribes; none publishes. So browser
-access to the broker is **read-only**, tied to the user's login, and limited to its
-installation's topics. The one screen that publishes — the connection-test page — is
-a development tool and must not be served by a hosted installation.
-
-**Built (October 2026, `v0.5.0`–`v0.5.1`).** Screens reach the broker at
-`wss://<school>/mqtt`: a routing rule on the school's own address, not a page and not an
-API route, so no new port. The page picks its address from its own scheme: `https` →
-`wss://<school>/mqtt`, plain `http` (a gym box) → `ws://<box>:9001` as before. **The
-screens door is listen-only online**: a remote school's broker has its own settings file
-that lets anyone read the app's topics on that door and nobody send; django's door is
-unchanged and never reachable from outside. A gym box keeps its own settings untouched,
-so its test page can still send. Logging in to the broker is still to come; until then
-it is read-only and public, which is acceptable while the data is test data.
-
-**The `v0.5.0` lesson.** The listen-only rules file was readable by root only, and the
-broker reads it after switching to its own user, so it stopped and took the demo
-school's live updates down. The release stopped at the demo school as designed. The
-test before it had passed on a Mac, where Docker doesn't enforce file permissions on
-shared folders. `v0.5.1` gave the file to the broker's group and named the two doors
-(`programs` 1883, `screens` 9001). **Since then, anything whose owner or mode matters is
-tested with real Linux permissions**, and a release that fails on a school now undoes
-itself (below).
-
-### Deploys come from CI
-
-Because the cluster sits behind a home router, CI cannot reach in to deploy — and the
-control port is deliberately never opened for it. Instead, the **rollout step runs on
-the Dell itself** (a self-hosted runner): it reaches out to collect the job, so nothing
-new is exposed. The gym box keeps installing from its own clone
-({doc}`../journal/scripts`).
-
-**How a release works (built October 2026):**
-
-- **Work reaches `main` only through `SprintBranch`.** Every change is a pull request
-  into `SprintBranch` with CI green; a job moves `main` forward to it every three days
-  (or on a button). **`main` is locked so only that job can move it**: the branch rule
-  admits only a deploy key, which the job pushes with. A pull request into `main` can't
-  be merged, by anyone.
-- **A version releases once its tag is on `main`.** Tag the merge on `SprintBranch`; when
-  it reaches `main`, the release builds it. Several versions arriving at once are all
-  built, so each can be rolled back to, and only the newest is deployed. A tag not on
-  `main` yet waits; nothing is released from a commit that skipped CI.
-- **The demo school goes first.** If it fails, no other school is touched, and every part
-  that changed is put back to its exact previous setup.
-- **A school can be held** at its release; automatic deploys skip it. Moving one school
-  back to an older release holds it automatically, after checking which database changes
-  the older release doesn't know and offering to undo them behind a safety copy.
-- **The deploy login can update schools and nothing else**: no secrets, no shared
-  database, no cluster add-ons.
-- **The server's own copy of the tools keeps itself current**: an hourly timer on the
-  Dell moves it to the newest release, using the Dell's read-only key, so the commands
-  typed there match what the schools run. Re-running the setup script is only for a new
-  machine.
-
-## What we rejected, and why
-
-**Moving `main` with the workflow's own login.** It can't be singled out by a branch rule,
-so locking `main` would lock the job out too, and its pushes never start another
-workflow, so a tag reaching `main` couldn't release itself. A write deploy key does
-both; it lives only in GitHub's secret store and is used by that one job.
-
-**Running the setup script from the release pipeline.** It runs as root, and the deploy
-runner was built to have no root at all; giving it root, or letting it change the copy
-root later runs, would let anything that reaches the runner own the machine. The hourly
-timer needs no new access.
-
-**Undoing a failed update by re-applying the old release.** It would re-apply the new
-template with old images, and the template can be what broke (`v0.5.0`). Each part goes
-back to its own previous setup instead.
-
-**One address with a path per school** (`<domain>/<school>/`) instead of a subdomain each.
-The browser keeps saved data per address, not per path, so schools would share one
-store: one school's sign-in would overwrite another's, and a bug on one school's page
-could read every school's tokens. A wildcard certificate and DNS record make subdomains
-as little work.
-
-**A separate WebSocket server with a message store behind it**, instead of the broker's
-own listener. This was the first plan. Checking the code showed the browser already
-speaks MQTT over WebSockets; a second transport would have been two real-time systems
-to keep in step, for no gain.
-
-**Running k3s on the gym box too**, so both shapes use the same orchestration. A gym
-box is one machine running one installation; Compose is the right size for that, and
-it already works. The cost is recorded in {doc}`deployments`.
-
-**Certificates renewed by hand.** Certificate lifetimes are getting shorter, not
-longer. Anything that needs a person to renew it will eventually lapse.
-
-**A rented server.** It avoids every home-network question above, for a monthly bill.
-Hardware already on hand does the same job, and running the cluster on it — router,
-addresses and all — is part of what the directed study is for.
-
-**A tunnel service instead of forwarding ports.** It hides the home address and needs
-no router changes, and it handles websites well. It handled the sensors' raw MQTT
-connection on port 8883 poorly (the plan at the time): most tunnels expect web traffic,
-or need their own software on the connecting device, which an ESP32 cannot run. Since
-spec 14 sensors use 443 too, so that reason is gone; forwarding is kept because it
-works and is part of what the study is for. The tunnel stays the fallback if the home connection cannot
-take incoming traffic.
+- **A rented server.** It skips every home-network question, for a monthly bill. I had the hardware, and running it myself, router and all, was the point.
+- **A tunnel service.** No router changes, and it hides my home address. But the sensors were going to use raw MQTT on 8883 then, and most tunnels only expect web traffic. Sensors moved to 443 later, so that reason is gone. I kept port forwarding because it works, and learning the networking was the point. The tunnel stays the fallback if my provider ever blocks the ports.
+- **A second node.** A Mac mini was going to join. I cut it on Oct 14: k3s only runs on Linux, so the Mac would need a VM, and an Apple chip would mean building every image twice. Nothing assumes one node.
+- **One address with a path per school** (`<domain>/<school>/`). The browser keeps saved data per address, not per path, so schools would share one store, and one school's sign-in would overwrite another's.
+- **k3s on the local install too.** One machine, one school. Compose is the right size.
 
 ## What it cost
 
-- **Two orchestration setups for the same images** — Compose on the gym box,
-  manifests on the cluster.
-- **The browser's broker login is new work.** Today the broker trusts everyone on the
-  box's Wi-Fi; hosted, it has to check a credential the site issued.
-- **One machine, so no failover.** If the Dell is down, the site is down. The cluster
-  can still restart a crashed container on its own; it cannot move work to a machine
-  that is not there.
-- **The site is only as available as the house.** A power cut, a router reboot or an
-  outage at the provider takes it down. Fine for a directed study; worth saying out
-  loud before a live demo.
-- **The home network is now partly public.** Three ports point at the Dell, so the
-  Dell needs to be kept updated, and nothing else in the house should depend on it.
-- **A write deploy key to look after.** If it is ever exposed, it is deleted under the
-  repo's deploy keys and replaced; the setup steps are in `scripts/remote/README.md`.
-- **Two broker settings files** (gym and remote) that say the same thing apart from the
-  screens door, so a change to one must be made to both.
+- **Two setups for the same images:** Compose on the local install, manifests on the remote server.
+- **One server, so no failover.** k3s restarts a crashed container on its own, but if the Dell or the house's internet is down, the site is down.
+- **Only one Traefik per machine.** It holds the ports itself, so an update stops the old one before starting the new one: a few seconds offline.
+- **Two Mosquitto settings files** (local and remote) that say the same thing apart from the screens listener. Change one, change both.
+- **The screens listener is open to read.** Anyone can listen on the app's topics. Fine while the data is test data; it gets logins before a real program uses it.
 
-**Checked, October 5:** the home connection has its own public address (no CGNAT). A
-traceroute to the public address reaches it in one hop, so the router holds that
-address itself.
-
-**Checked, October 14:** the provider allows incoming traffic on 80 and 443; the sites
-are served over HTTPS with certificates that renew themselves.
-
-**Decided, October 17:** the project's own domain (with a wildcard record and
-certificate) waits until after the class, and is then the test of rebuilding the whole
-setup from scratch.
+How each change gets onto the Dell is its own page: {doc}`releases`.

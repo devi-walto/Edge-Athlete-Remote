@@ -1,144 +1,83 @@
 <!--
-this page — one database per installation, and how a program moves between a gym box
-and the hosted service.
+this page — why every school gets its own database, why they all share one
+Postgres, and how a program would move between a local install and the remote
+server.
 
-The decision here is small to state and decides a lot: it is why the hosted code can
-be the gym box's code, why the fence between programs cannot be forgotten, why the demo
-cannot leak real data, and why moving a program from one shape to the other starts
-with a copy. Read it before adding anything that has to know about more than one
-program.
+Read it before adding anything that has to know about more than one school. The
+short version: the app never knows another school exists, and that's on purpose.
 -->
 
-# One database per installation
+# One database per school
 
-An **installation** is one program's copy of the system: its roster, its plans, its
-history. A gym box is one installation. On the hosted service, each program is one
-installation too — and so is the demo shown to faculty ({doc}`access`).
+*Oct 2 – Oct 16, 2026 · spec 12 · PR #3*
 
-## What forced it
+## Tool changes at a glance
 
-The hosted service will run more than one installation — at the very least the real
-one and the demo. There were two ways to hold that:
+| Job | Local install | Remote server | Where it lives |
+|---|---|---|---|
+| The database server | a Postgres container next to the app | **one shared Postgres 15.18** for every school, in the `edge-athlete` namespace | `k8s/db/postgres/` |
+| A school's data | the only database there | **its own database** (`school_<short name>`) with **its own login that can open only that one** | made by `eactl new` |
+| How the app finds it | the name `postgres` | **the same name**: each school gets an alias called `postgres` that forwards to the shared one | `k8s/app/base/postgres-alias.yaml` |
+| Safety copies | — | **`pg_dump` snapshots** on the Dell, root only, last 5 per school, none older than 30 days | `eactl backup`, `eactl restore` |
 
-1. **One shared database**, with a column on every table saying which program a row
-   belongs to, and a filter on every query.
-2. **One database per installation**, each looking exactly like a gym box's.
+:::{warning}
+**Don't point the app at the shared Postgres by its real name.** `settings.py` asks for `postgres`, on both installs. Online, that's an alias (an ExternalName Service) to `postgres.edge-athlete`. Keep it that way, and the local install and the remote server keep running the same code.
+:::
 
-Two further facts pushed towards the second. A program may later want **both** a gym
-box and the hosted service, and moving data between them must be safe. And the code
-must stay one codebase ({doc}`deployments`).
+## The problem
 
-## What we chose
+The remote server runs more than one school, at the very least the real one and the demo. One school's athletes must never show up in another's, and real athletes must never leak into the demo. It all has to be the same code as the local install. And a program might someday run both a local install and the remote server, so moving data between them has to be safe.
 
-**One database per installation. The code never knows another installation exists.**
+## Try 1: one shared database, with a school column on every table
 
-- Every installation — gym box or hosted — has the same schema, created by the same
-  migrations.
-- On the hosted service, each installation is its own copy of the app, deployed from
-  **one template**: its own database, its own message broker, its own address
-  ({doc}`hosting`). Many installations share **one server**, and on it **one database
-  server** (Postgres): each installation has its own database inside it, with a login
-  that can open only that one. A gym box, by contrast, is a server of its own.
-- **The fence between programs is structural.** Program B's rows are not in program
-  A's database, so there is no query that can leak them.
+The usual way to hold many customers: one set of tables, a column saying whose row it is, and a filter on every query.
 
-### The first move between shapes is a copy
+**Why I passed on it:** every query in the codebase would have to remember that filter, forever. One forgotten filter leaks another school's athletes, or real athletes into the demo. And the remote code would carry an idea the local install doesn't have, which is exactly how two installs drift apart.
 
-Because both sides have the same schema and each holds exactly one program:
+## Try 2: a Postgres per school
 
-- **Hosted first, adding a gym box later:** the new box is empty. Copy the database
-  onto it — row IDs, timestamps and history arrive unchanged.
-- **Gym box first, moving online:** the hosted installation is new and empty. Same
-  copy, the other direction.
+The first hosting plan gave each school its own Postgres, the same as a local install: a database server per school, each with its own storage.
 
-A plain database dump and restore does this. **Both sides must run the same schema
-version** — the copy refuses to run across versions rather than guess. Upgrade first,
-then copy.
+**What worked:** total separation, and it matched the local install exactly.
 
-**Only the first move is a copy.** After that, both sides hold real data, and restoring
-one over the other would erase whatever the overwritten side recorded since.
+**Why I moved on (Oct 14, before it was built):** every Postgres takes its own slice of the Dell's memory, and every one needs its own backup job. With one PC running every school, that adds up fast.
 
-### Right after the first copy: move the counters apart
+## Try 3: one database per school, in one shared Postgres
 
-Every table numbers its rows with an auto-incrementing counter. Straight after a copy,
-both sides' counters stand at the same number — so the next set recorded on the box and
-the next set recorded online would **both be number 501**, and could never be combined.
+Postgres is the database *server*, one running program. A *database* is one separate set of tables inside it. So the server runs one Postgres, and each school gets its own database in it, with its own login that can only open that database.
 
-So the copy has one more step: **the receiving side's counters are moved to a distant
-range** (start at a trillion, say). From then on, a new row on one side can never
-share a number with a new row on the other. It is part of the copy, not a separate
-chore, so it cannot be forgotten.
+**Why it fixes both:**
 
-### After that: add, don't overwrite
+- **From Try 1:** the code never knows another school exists. Every school has the same tables, made by the same migrations. Program B's rows aren't in program A's database, so there's no query that can leak them. The wall between schools is structural, not a filter.
+- **From Try 2:** one Postgres to run and back up, instead of one per school eating the Dell's memory.
 
-A program's sessions normally run on one side at a time, and each side syncs before
-running one — a **hand-off**. The case that matters is when that does not happen: the
-gym box is offline, a remote session runs online, and a gym session runs on the box
-before they have synced.
+`eactl new` makes the school's database and login, and writes the school's settings to point at them. `eactl remove` takes a safety copy before deleting anything.
 
-That still works, because **everything a workout creates is new rows** — the session,
-its sets, its reps, its check-ins, its report. Merging back is **adding the other
-side's new rows**: both workouts are kept, and because the counters were moved apart,
-none of their numbers clash. The athletes they point at already exist on both sides,
-with the same numbers, from the first copy.
+**This is where I landed.**
 
-What can genuinely conflict is a **shared record edited on both sides** — the same
-athlete renamed differently, the same plan changed twice. Those get an owner:
+## Moving between a local install and the remote server
 
-| Record | On a merge | Why |
-|---|---|---|
-| Sessions, sets, reps, check-ins, reports | **added from both sides** | new rows; they never overwrite each other |
-| New athletes, groups, plans created on either side | **added** | new rows, and their numbers cannot collide |
-| Edits to an existing athlete, group or training group membership | **hosted wins** | the coach manages the roster from anywhere |
-| Edits to an existing plan or program | **hosted wins** | the coach plans from anywhere; the box runs what it was last given |
-| Athlete logins and login links | **hosted only** | the gym box has no athlete logins ({doc}`access`) |
+*Decided, not built.* Nothing needs it until a program runs both.
 
-### What a merge must carry, and what re-derives
+**The first move is a copy.** Both sides have the same tables, and each holds exactly one program, so a plain dump and restore moves it. The new side is empty, and IDs, timestamps and history arrive unchanged. Both sides must be on the same schema version. Upgrade first, then copy.
 
-Most of the history derives from sets; a few things do not, and a merge that drops
-them is silently wrong:
+**Right after the copy, move the ID sequences apart.** Every table's `id` is a Django `BigAutoField`: Postgres hands out the next number from that table's **sequence**. A dump copies the sequences too, so straight after a copy both sides' sequences stand at the same value, and the next set recorded on each side would *both* get `id` 501. The copy runs `setval()` on every table's `id` sequence on the receiving side, moving it to a distant range (a trillion, say), so new rows on the two sides can never share an `id`. It's part of the copy, so it can't be forgotten.
 
-- **Carry:** sets and reps; **manual** maxes (a coach typed them — deriving would
-  discard that judgment); end-of-day reports (frozen on purpose, and regenerating one
-  later gives a different answer); and **original timestamps** on all of it.
-- **Watch:** maxes are add-only, newest wins. Stamped with the time of the merge
-  instead of the time of the lift, every athlete's *current* max comes out wrong — and
-  every prescribed weight with it, because plans store percentages.
+**After that: add, don't overwrite.** Everything a workout makes is new rows: the session, sets, reps, check-ins, report. Merging is adding the other side's new rows, so both workouts are kept. What can actually conflict is a shared record edited on both sides, like the same athlete renamed twice. **The remote server wins those**, because the coach manages the roster and plans from anywhere.
 
-## What we rejected, and why
+:::{warning}
+**A merge has to carry original timestamps.** Maxes are add-only, and the newest one wins. Stamp merged maxes with the time of the merge instead of the time of the lift, and every athlete's current max comes out wrong, and every prescribed weight with it, since plans store percentages. Manual maxes and end-of-day reports get carried as they are, never re-worked out.
+:::
 
-**One shared database with a program column on every table.** Every query in the
-codebase would have to remember the filter, forever, and one forgotten filter leaks
-another program's athletes — or real athletes into the faculty demo. And the hosted
-code would carry a concept the gym box does not have, which is exactly the drift
-{doc}`deployments` rules out.
+## Things I passed on
 
-**Restoring one side over the other after the first copy.** It is the simplest merge,
-and it deletes a workout whenever both sides recorded one.
-
-**Switching every table to random IDs (UUIDs).** It also prevents collisions, but it
-means rewriting every primary and foreign key in the schema. Moving the counters
-apart gets the same guarantee from one step at copy time.
-
-**Live two-way sync.** Unnecessary: new rows are added, and shared records have an
-owner.
+- **Live two-way sync between a local install and the remote server.** Rejected outright. Two copies editing the same data puts data integrity at risk.
+- **Restoring one side over the other after the first copy.** The simplest merge, and it deletes a workout whenever both sides recorded one.
+- **Random IDs (UUIDs) on every table.** They'd prevent clashes too, but it means rewriting every key in the schema. Moving the ID sequences apart gets the same guarantee in one step.
 
 ## What it cost
 
-- **Migrations and backups run once per installation**, not once. Fine at tens of
-  installations; it is what the cluster's automation is for.
-- **Anything that spans programs needs its own layer.** An athlete who trains with two
-  programs has two athlete records in two databases. Linking them is a separate sign-in
-  service, not a column — see {doc}`access`.
-- **Each hosted installation costs its own copy of the app** in memory, not a few rows.
-  Sharing one database server between them (still one database each) keeps that down;
-  the price is that if that one database server is down, every installation is.
-- **"Hosted wins" can discard a roster edit made on an offline box** when the same
-  record was also edited online. Rare, and the reason the hand-off — sync before
-  switching sides — stays the normal path.
-
-**Status.** Binding **now**, for the directed study: installations are deployed from one
-template (the demo is the second one); creating an installation **from a copy** of
-another — counters moved apart included — is part of that template; and nothing makes
-the hosted schema differ from the gym box's. The merge itself is not built — there is
-nothing to merge until a program runs both shapes.
+- **If the shared Postgres is down, every school is down.** That's the trade for one copy instead of one per school.
+- **Migrations run once per school,** not once. Fine at tens of schools; that's what `eactl update --all` is for.
+- **Anything that spans schools needs its own layer.** An athlete in two programs has two records in two databases. One sign-in across them is future work.
+- **"The remote server wins" can throw away a roster edit** made on an offline local install, if the same record was also edited online. That's why syncing before switching sides stays the normal path.
