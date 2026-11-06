@@ -295,7 +295,7 @@ function ConnectionTestPage() {
         </Card>
 
         <p style={{ color: C.ink3, fontSize: 12, marginTop: 28, textAlign: 'center' }}>
-          Full docs: README.md · docs/reference/spec.md · docs/
+          Full docs: README.md · docs/about/original-spec.md · docs/
         </p>
       </div>
     </div>

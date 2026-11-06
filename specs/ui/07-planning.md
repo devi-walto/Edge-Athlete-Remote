@@ -82,7 +82,7 @@ A program can be **saved as a new Training Block** at any time.
 
 So a receiver gets football's lifts and the receivers' lifts in one session **if both
 programs are on that session.** The journal explains the rule and why:
-`docs/journal/database.md`, "One session, several groups".
+`docs/handbook/reference/database-tables.md`, "One session, several groups".
 
 **What was missing is the interface.** Nothing in the front end calls
 `POST sessions/{id}/participation/`, and setting up a calendar day
@@ -427,6 +427,6 @@ Mockup `V4c`. `ScheduleWorkspace.jsx`.
 
 ## Docs to update when done
 
-`docs/journal/coach-tablet.md` (planning), `docs/journal/database.md` (a program is
-scheduled as a second step, and why), `docs/journal/apis.md` route table, and
+`docs/journal/core/coach-screens.md` (planning), `docs/handbook/reference/database-tables.md` (a program is
+scheduled as a second step, and why), `docs/handbook/reference/api.md` route table, and
 `docs/orientation.md`'s vocabulary if it still says "deploy".

@@ -10,7 +10,7 @@
 ## Why
 
 On a gym box the network is the lock: only devices on the box's own Wi-Fi can connect,
-so 21 endpoints are open to anyone and a rack tablet needs no login. `docs/journal/apis.md`
+so 21 endpoints are open to anyone and a rack tablet needs no login. `docs/handbook/reference/api.md`
 records that trade and says it must be revisited "if this ever runs on a network that
 is not private". A hosted installation is that network.
 
@@ -296,7 +296,7 @@ through in a real browser is left for Devin.
 
 ## Docs to update when done
 
-`docs/journal/apis.md` — *The permission rule* (the "15 routes open" count there is
-already stale; it is 21). `docs/remote/access.md` — "the open routes behave differently
+`docs/handbook/reference/api.md` — *The permission rule* (the "15 routes open" count there is
+already stale; it is 21). `docs/journal/core/remote/access.md` — "the open routes behave differently
 in the two shapes" becomes a description of `EA_DEPLOYMENT`. Regenerate the route table
 with `docs/refresh-routes.py`.

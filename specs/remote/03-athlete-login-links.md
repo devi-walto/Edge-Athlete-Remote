@@ -72,7 +72,7 @@ that just sign in.
 
 - The athlete's rack screen and what they see after signing in (spec 04 and the athlete
   screens, not yet designed).
-- One login across several programs (future; `docs/remote/access.md`).
+- One login across several programs (future; `docs/journal/core/remote/access.md`).
 - Sending the link for the coach. The coach copies it and sends it themselves.
 
 ---
@@ -280,6 +280,6 @@ needed for Definition of Done #4. This spec is complete without them.
 
 ## Docs to update when done
 
-`docs/remote/access.md` section 4 becomes a description of the code.
-`docs/journal/apis.md` route table (regenerate). `docs/journal/coach-tablet.md` — the
+`docs/journal/core/remote/access.md` section 4 becomes a description of the code.
+`docs/handbook/reference/api.md` route table (regenerate). `docs/journal/core/coach-screens.md` — the
 roster's new column.

@@ -226,7 +226,7 @@ own tests. The last-administrator rule now counts coach logins only.
   nothing sees the server's sentence; a coach sees the workspace and Room Layout and no
   Coaches entry; an administrator sees Coaches, which lists the two coaches and neither
   of the other logins.
-- Docs updated: `docs/journal/apis.md`, `docs/remote/access.md`, `docs/reference/spec.md`.
+- Docs updated: `docs/handbook/reference/api.md`, `docs/journal/core/remote/access.md`, `docs/about/original-spec.md`.
 
 ---
 
@@ -248,7 +248,7 @@ own tests. The last-administrator rule now counts coach logins only.
 
 ## Docs to update when done
 
-`docs/journal/apis.md` — the section titled *"Coach" means "logged in", and nothing
+`docs/handbook/reference/api.md` — the section titled *"Coach" means "logged in", and nothing
 more* is no longer true; rewrite it with what forced the change and what was rejected.
-`docs/remote/access.md` — section 5 (two kinds of login) becomes a description of the
+`docs/journal/core/remote/access.md` — section 5 (two kinds of login) becomes a description of the
 code rather than a plan.

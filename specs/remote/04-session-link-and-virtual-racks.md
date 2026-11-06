@@ -224,7 +224,7 @@ render the existing `RackLive` → `RackScreen` for the returned rack number, sk
 snapshot gain `owner_athlete: {id, name} | null`. It is added, nothing is renamed or
 removed. **Before building, check this against the merge canon's frozen rack contract
 (§6.3)**: that freeze covers the plan the rack reads, but confirm an added field on
-rack state is allowed, and update `docs/reference/message-contract.md`.
+rack state is allowed, and update `docs/handbook/reference/mqtt-messages.md`.
 
 **3c. What an owner changes on the screen.** One value, `owned = snapshot.owner_athlete != null`,
 read in `RackScreen.jsx` and passed to `Idle.jsx`:
@@ -326,7 +326,7 @@ their login.
   whether this session is still the open one.
 - The rack screen sends the athlete's sign-in on every call when an athlete is signed in
   (`signInHeaders()` in `api/client.js`); a gym tablet sends what it always did.
-- `owner_athlete` added to the rack's state; `docs/reference/message-contract.md`
+- `owner_athlete` added to the rack's state; `docs/handbook/reference/mqtt-messages.md`
   updated. (The merge canon isn't in this repo; the field is additive and names only the
   athlete already in `selected_athlete`.)
 - The join reply's sensor carries its `id` (the rack screen starts sets with it); the
@@ -629,6 +629,6 @@ rack screen listening to its sensor only while a set is running (`RackScreen.jsx
 
 ## Docs to update when done
 
-`docs/remote/access.md` section 3, `docs/remote/sensors.md` (a sensor belongs to an
-athlete), `docs/journal/rack-tablet.md` (my-rack mode), `docs/reference/message-contract.md`
+`docs/journal/core/remote/access.md` section 3, `docs/journal/core/remote/sensors.md` (a sensor belongs to an
+athlete), `docs/journal/core/rack-screen.md` (my-rack mode), `docs/handbook/reference/mqtt-messages.md`
 if room state gains fields, the route table.

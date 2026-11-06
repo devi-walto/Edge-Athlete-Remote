@@ -9,8 +9,8 @@
 - Depends on: [05 Hosted mode](05-hosted-mode.md). Phases 0–3 need only spec 05's CI phase;
   **Phase 4 (going public) needs all of spec 05.** Runs alongside specs 03 and 04
 - Branch: `feature-hosting`
-- Design it builds: `docs/remote/hosting.md`, `docs/remote/databases.md`,
-  `docs/remote/deployments.md`
+- Design it builds: `docs/journal/core/remote/hosting.md`, `docs/journal/core/remote/databases.md`,
+  `docs/journal/core/remote/deployments.md`
 
 ## Why
 
@@ -263,7 +263,7 @@ image and printed `v0.3.1-test.1`; a pod without it got `ImagePullBackOff`.
   `k8s/cluster/traefik-keep-visitor-address.yaml`): k3s's ServiceLB rewrote every
   visitor's address, which breaks both the guard and the per-address sign-in limit.
   Traefik now binds ports 80/443 itself and its Service is `ClusterIP`. See
-  `docs/remote/hosting.md`, "Keeping each visitor's real address".
+  `docs/journal/core/remote/hosting.md`, "Keeping each visitor's real address".
 - **The first school is made with `eactl new`**, which: creates its namespace with the
   directory labels; creates its database and database login in the shared Postgres;
   writes its ConfigMap (from `.env.example`'s names, pointing at its own database);
@@ -586,7 +586,7 @@ What v0.5.1 changes:
 - [ ] A backup appears off the Dell every night.
 - [ ] *(By hand)* A restore into a scratch namespace brings back the same athletes, sets
       and reports, with original timestamps.
-- [ ] A restore refuses a dump from a different schema version (`docs/remote/databases.md`).
+- [ ] A restore refuses a dump from a different schema version (`docs/journal/core/remote/databases.md`).
 
 **Stop. Devin reviews.**
 
@@ -677,7 +677,7 @@ the Dell.
 ## If there is time: moving a database between a gym box and hosted
 
 Tabled into this spec on 2026-10-06; not in the Definition of Done. The model is in
-`docs/remote/databases.md`: the first move is a copy (same schema version, counters
+`docs/journal/core/remote/databases.md`: the first move is a copy (same schema version, counters
 moved apart), after which merges add rows and never overwrite. **Gap to close when it is
 built:** athlete logins are hosted only, so a copy from hosted down to a gym box must
 strip them (or the box must ignore them), and a gym box must never hold a working
@@ -724,9 +724,9 @@ athlete login. Would become `eactl copy-db`.
 
 ## Docs to update when done
 
-`docs/remote/hosting.md` becomes a description of what was built: Ubuntu Server, Tailscale
+`docs/journal/core/remote/hosting.md` becomes a description of what was built: Ubuntu Server, Tailscale
 for management, Traefik and why, cert-manager over HTTP-01, the DDNS job, the NAT hairpin
 and its DNS fix, one namespace per installation, runners, and the rebuild rule.
-`docs/guides/hosting.md` (new) is the operator's guide. `docs/journal/scripts.md` gains why
-`eactl` is separate from `ea.sh`. `docs/remote/deployments.md`: Compose for a gym box,
+`docs/guides/hosting.md` (new) is the operator's guide. `docs/journal/core/local/base-station.md` gains why
+`eactl` is separate from `ea.sh`. `docs/journal/core/remote/deployments.md`: Compose for a gym box,
 manifests for hosted, the same images.

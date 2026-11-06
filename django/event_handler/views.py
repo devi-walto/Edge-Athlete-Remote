@@ -23,7 +23,7 @@ Grouped by who uses them:
     - manage athletes, programs, sessions, and nodes; assign racks; and pull
       the analytics summaries.
 
-Open vs coach-only follows docs/reference/spec.md; shapes live in docs/reference/message-contract.md.
+Open vs coach-only follows docs/about/original-spec.md; shapes live in docs/handbook/reference/mqtt-messages.md.
 """
 import json
 import base64
@@ -51,7 +51,7 @@ from .models import (Node, RackScreen, Athlete, TrainingSession, Set, Rep, Athle
                      AthleteWorkoutExerciseOverride, BlockCategory, TrainingGroupCoach,
                      ScheduledSession, MonitoringEvent, RackRuntime, RackCommandReceipt)
 
-# Coaches are Django users; there is no separate coach table. See docs/reference/spec.md.
+# Coaches are Django users; there is no separate coach table. See docs/about/original-spec.md.
 User = get_user_model()
 from .permissions import (
     COACH_ROLES, ONLINE_ANY_ROLE, ONLINE_COACH, ONLINE_COACH_OR_RACK_OWNER,
@@ -3403,7 +3403,7 @@ def session_start(request, session_id):
     # than a mutation that never announced itself.
     #
     # Screens do not poll; they refetch when told something changed (see the
-    # invalidation decision in docs/journal/rack-tablet.md). That design is only as
+    # invalidation decision in docs/journal/core/rack-screen.md). That design is only as
     # complete as its emitters, and it fails silently by showing correct-looking
     # stale data. Any mutation the room can see needs one of these, in the same
     # transaction as the change.
