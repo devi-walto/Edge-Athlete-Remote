@@ -6,7 +6,7 @@ Every tool this is built with, what it does here, and why I picked it. Each link
 |---|---|---|---|
 | {doc}`django` | The API, logins and roles | The easiest way to get the server and login logic working. I'd used it on Privacy Dots, my freshman expo design winner, and this project is a descendant of it | both |
 | {doc}`react` | One app (a PWA) on any phone, tablet or laptop | I learned it at my internship at the Cyber Innovation Center in Bossier, where they also taught me to use IndexedDB in a PWA to keep app state | both |
-| {doc}`postgres` | The database: one per local install; one shared Postgres with a database per school online | Django's best-supported database | both |
+| {doc}`postgres` | The database: one per local install; one shared Postgres with a database per school online | The standard choice for Django | both |
 | {doc}`mosquitto` | Carries every rep to the screens live (MQTT) | Built for small devices: tiny messages, delivery guarantees (QoS), WebSockets for the browser, and TLS | both |
 | {doc}`docker` | Every part runs in its own container | I wanted to learn it for my DevOps career | both |
 | {doc}`k3s` | Runs the containers on the remote server, one copy per school | Same reason as Docker: Kubernetes for my DevOps career | remote |
@@ -15,7 +15,7 @@ Every tool this is built with, what it does here, and why I picked it. Each link
 | {doc}`nginx` | The reverse proxy on the local install | Sends `/api/` to Django and the rest to React on one box | local |
 | {doc}`networkmanager` | The base station's own Wi-Fi | Devices join the base station, never the gym's network | local |
 | {doc}`systemd` | Starts things at boot and restarts them when they die | The Linux service manager; nothing extra to install | local |
-| {doc}`chromium` | The browser every screen runs, locked full screen as a kiosk | No native app to build: a rack screen is a locked browser | local |
+| {doc}`chromium` | The browser every screen runs, locked full screen as a kiosk | So I could download the web app as a clickable icon and "install" the project on a device | local |
 | {doc}`hardware-agents` | The NFC wristband reader on a rack laptop (and the unused WT901 agent) | A browser can't talk to a USB card reader | local |
 | {doc}`tailscale` | Private access to the Dell from anywhere | For my career, and it makes working away from home easy | remote |
 | {doc}`github-actions` | Tests every pull request, builds every release | I learned it in CSC 450, Cloud Computing | both |

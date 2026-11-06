@@ -2,7 +2,7 @@
 
 *Local install*
 
-**Why I picked it.** No native app to build: every screen is the same web app in a locked browser.
+**Why I picked it.** So I could download the web app onto a device as a clickable icon and "install" the project like an app. Chromium installs a PWA that way. It also means there's no native app to build: every screen is the same web app.
 
 **What it is.** The browser every screen runs. There is no native app — a rack
 screen is a locked browser in full screen.

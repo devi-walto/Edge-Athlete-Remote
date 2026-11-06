@@ -2,7 +2,7 @@
 
 *Both installs*
 
-**Why I picked it.** It's Django's best-supported database, and the local install already ran on it.
+**Why I picked it.** The standard choice: it's Django's best-supported database.
 
 **What it is.** The database. The permanent record of everything that happened.
 
