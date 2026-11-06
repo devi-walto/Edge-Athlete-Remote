@@ -4,42 +4,13 @@
 The authority on what every message looks like. For *why* the system is shaped this way (why the server ignores rep messages, why topics are keyed to the sensor and not the rack), see {doc}`../../journal/core/real-time`. For every route's permission, see {doc}`api`.
 :::
 
-Two kinds of message, one page: the **MQTT** messages sensors and the server publish, and the **REST** bodies the screens send and get back. If you're building a screen, a simulator or an endpoint, build to the shapes here.
+What every REST route takes and returns: the bodies the screens send and get back. If you're building a screen or an endpoint, build to the shapes here. **Live messages are on their own page:** {doc}`mqtt-topics`, with what starts each one and who hears it.
 
-**Everything is collapsed.** Find the topic or route you need and open it.
+**Everything is collapsed.** Find the route you need and open it.
 
 **Who may call a route** isn't on this page: it's in {doc}`api`, which is generated from the code, so it can't drift.
 
-## At a glance: every MQTT topic
-
-| Topic | Published by | Subscribed by | QoS |
-|---|---|---|---|
-| `edgeathlete/node/{node_id}/rep` | sensor firmware / `simulate_node` | the rack screen linked to that sensor | 1 |
-| `edgeathlete/node/{node_id}/pulse` | sensor firmware / `simulate_node` | Django's subscriber (`node/+/pulse` only) | 0 |
-| `edgeathlete/node/{node_id}/motion` | sensor firmware, 10 a second | **nothing yet** | 0 |
-| `edgeathlete/rack/{rack_number}/state` | Django, when a set starts or ends | the rack screen at that rack | 1 |
-| `edgeathlete/dashboard/state` | Django (`monitoring-publisher`, retained) | the room display | 1 |
-| `edgeathlete/rack/command` | Django, when a coach releases a rack or all racks | every rack screen, from boot | 1 |
-| `edgeathlete/system/wifi` | Django, local only, before a Wi-Fi password change | rack screens and the room display | 1 |
-| `edgeathlete/coach/state` | **nothing yet** (reserved) | nothing | — |
-
-**Online, the broker has two listeners**, each on its own path on 443 ({doc}`../../journal/core/remote/hosting`):
-
-| Listener | Who | May |
-|---|---|---|
-| `wss://<school>/mqtt` | any browser | listen only, to the app's topics |
-| `wss://<school>/sensors` | each sensor, with its own token | publish only under its own `edgeathlete/node/<its id>/` |
-
-This is the raw reference — Carl folds it into the shared-setup story; Derrilon's
-simulator and Braydon's tablet both publish/consume against it.
-
-**v2 note:** updated against the v2 spec's Phase 5–8 insertion and renumbering.
-Two things changed here: the phase numbers below now match v2's numbering, and
-`velocity_color`'s zone lookup now sources from the session's planned exercise
-data instead of the old `Program` model (see [Who computes what](database-tables.md#who-computes-what)). Every payload shape in this
-document is otherwise unchanged from v1.
-
-## Global rules (apply to every message)
+## Rules for every body
 
 - **Everything is JSON.**
 - **All topics live under `edgeathlete/`.** Never `rack/{n}/...`.
@@ -51,119 +22,7 @@ document is otherwise unchanged from v1.
 
 ---
 
-## 1. Sensor → broker (MQTT)
-
-:::::{dropdown} `edgeathlete/node/{node_id}/rep` — one message per completed rep
-```json5
-{
-  "node_id": "ea-169a84",   // "ea-" + the last 3 bytes of the chip's Wi-Fi address
-  "rep_number": 1,          // 1 to 100, then wraps. Advisory ordering only
-  "mean_velocity": 0.72,
-  "peak_velocity": 0.91,
-  "duration_ms": 640,
-  "timestamp": "2026-07-07T07:23:55Z"
-}
-```
-- **Published by:** the sensor firmware and Derrilon's `simulate_node`, at **QoS 1**. The firmware keeps a rep that ended while it was offline and sends it when it reconnects. A rep can arrive twice; the rack screen drops the repeat.
-- **Consumed by:** the rack screen, subscribed to *its own linked sensor's* rep topic. Django never sees reps here.
-- **Not sent:** until the sensor's clock is set, a rep is dropped rather than sent without a time.
-- **Not here:** `velocity_color`. The rack screen computes that (see [Who computes what](database-tables.md#who-computes-what)).
-
-:::::
-
-:::::{dropdown} `edgeathlete/node/{node_id}/pulse` — heartbeat, every 5 s
-```json5
-{
-  "node_id": "ea-169a84",
-  "event_type": "pulse",
-  "battery_level": 100,      // fixed at 100 for now: the sensor is USB-powered
-  "signal_strength": -55,    // Wi-Fi RSSI, -120 to 0
-  "firmware_version": "2.3.5",
-  "timestamp": "2026-07-07T07:23:55Z"
-}
-```
-- **Published by:** the sensor firmware and `simulate_node`, at QoS 0. A lost one is replaced 5 seconds later.
-- **Consumed by:** Django's MQTT subscriber, which listens to `edgeathlete/node/+/pulse` **only** and updates the matching `Node` row.
-
-:::::
-
-:::::{dropdown} `edgeathlete/node/{node_id}/motion` — live bar speed, 10 a second
-```json5
-{ "node_id": "ea-169a84", "event_type": "motion", "velocity": 0.412, "timestamp": "2026-07-07T07:23:55Z" }
-```
-- **Published by:** the sensor firmware, at QoS 0.
-- **Consumed by:** nothing yet. It's there for a live speed readout on the rack screen.
-
-:::::
-
-
-## 2. Server → screens (MQTT)
-
-Every broadcast has a `"type"` string; consumers switch on it. Fields depend on the type.
-
-:::::{dropdown} `edgeathlete/rack/{rack_number}/state` — for the rack screen at that rack
-```json5
-// a set ended (POST /api/sets/{id}/complete/)
-{ "type": "set_complete", "set_id": 12, "athlete": {"id":4,"name":"Jordan Lee"},
-  "reps_completed": 5, "avg_velocity": 0.70, "peak_velocity": 0.91, "is_false_set": false }
-
-// a set started (POST /api/sets/). Named athlete_checkin for history; it is NOT sent by the check-in route
-{ "type": "athlete_checkin", "athlete": {"id":4,"name":"Jordan Lee"}, "rack_number": 3 }
-```
-- Both need the set's sensor to be on a rack. A set with no sensor sends neither.
-
-:::::
-
-:::::{dropdown} `edgeathlete/dashboard/state` — for the room display
-The message screens actually act on is the **room invalidation**: "something changed, fetch `GET /api/room-state/` again." It carries no athlete data, so it's safe on a listen-only topic. It's **retained**, so a screen that connects late still gets the newest one.
-
-```json5
-{ "schema_version": 1, "type": "room_state_changed",
-  "reason": "set_completed",               // why: set_started, set_completed, session_started, rack_state_changed, …
-  "revision": 418,                          // goes up each time; a screen ignores any revision it has already seen
-  "event_id": "6f1c…", "occurred_at": "2026-07-07T07:23:55Z" }
-```
-- **Published by:** the `monitoring-publisher` worker, one per `MonitoringEvent` row, in order, until the broker confirms each.
-- **Consumed by:** the room display (`roomMonitor.js`, `useLiveRoomState.js`), which ignores anything but `room_state_changed`.
-
-Django also sends a **`leaderboard_update`** on the same topic after every completed set. **Nothing subscribes to it at the moment:**
-
-```json5
-{ "type": "leaderboard_update", "athlete": {"id":4,"name":"Jordan Lee"}, "rack_number": 3,
-  "avg_velocity": 0.70, "peak_velocity": 0.91, "reps_completed": 5, "is_false_set": false,
-  "is_velocity_pr": true, "is_weight_pr": false }
-```
-
-:::::
-
-:::::{dropdown} `edgeathlete/rack/command` — commands to rack screens
-```json5
-{ "type": "enter_setup", "target": "all" }
-```
-- **`target`** is `"all"`, a rack number, or a screen's `device_id`. Every rack screen gets the message and acts only if it matches.
-- **Published by:** Django, when a coach releases one rack (`DELETE /api/racks/{rack_number}/`, target = that rack) or all of them (`POST /api/racks/release-all/`, target = `"all"`). Fire-and-forget: a screen that's off finds out the next time it asks the server.
-- **Subscribed by:** every rack screen from boot, assigned or not, since an unassigned screen has no rack topic yet.
-- **`type` is an envelope.** An `identify` command (flash a screen so a coach can spot it) is reserved but not built.
-
-:::::
-
-:::::{dropdown} `edgeathlete/system/wifi` — the Wi-Fi password is about to change (local only)
-```json5
-{ "type": "wifi_password_changing", "password": "the-new-password" }
-```
-- **Published by:** Django, when a coach changes the base station's Wi-Fi password (`POST /api/system/wifi-password/`). The host agent waits a few seconds after this before it restarts the access point.
-- **Consumed by:** rack screens and the room display (`WifiChangeOverlay.jsx`), so each can show the new password after it drops off the network. The coach typed it, so the coach's screen doesn't need it.
-- **Not retained**, and it **puts the password on the broker in the clear**: anything on the gym's Wi-Fi can read it. That's an accepted trade on a closed network with trusted screens.
-
-:::::
-
-:::::{dropdown} `edgeathlete/coach/state` — reserved, nothing sends it
-`publish_coach_state()` exists in `realtime/broadcast/publisher.py` but nothing calls it, and no screen subscribes. It was meant for a fatigue alert. Don't build against it until something sends it.
-
-:::::
-
-
-## 3. REST — the rack screen and running a day
+## 1. The rack screen and running a day
 
 Not MQTT, but the same data contract, so they live here too.
 
@@ -247,6 +106,7 @@ Each session athlete's current status + when it started, so the rack's rest/chec
 :::::
 
 :::::{dropdown} `DELETE /api/racks/{rack_number}/` — force-clear a wedged rack
+:name: mc-rack-remove
 
 The escape hatch for a rack whose screen is physically gone: ends any open set on
 the rack as a **false set**, resets the rack runtime to idle (controller lease
@@ -323,6 +183,7 @@ base station.
 :::::
 
 :::::{dropdown} `POST /api/sets/` — start a set (create)
+:name: mc-set-create
 Called when a set STARTS (Phase 11 Step 3). The server returns the created `Set` incl. its `id`, kept for the complete POST at set end.
 ```json5
 {
@@ -358,6 +219,7 @@ already have a rack number. Node IDs use `[A-Za-z0-9_-]{1,64}`. Returns `200`:
 :::::
 
 :::::{dropdown} Rack controller capability and mirrored state
+:name: mc-rack-controller
 
 The browser generates `controller_token` as exactly 32 random bytes encoded as
 canonical unpadded base64url (43 characters). Django stores only its SHA-256
@@ -429,6 +291,7 @@ older rows are pruned opportunistically when a new command arrives. The same
 :::::
 
 :::::{dropdown} `POST /api/sets/{id}/complete/` — the batch set-complete body
+:name: mc-set-complete
 ```json5
 // POST /api/sets/{id}/complete/
 {
@@ -455,6 +318,7 @@ older rows are pruned opportunistically when a new command arrives. The same
 :::::
 
 :::::{dropdown} `GET /api/room-state/` — the live room picture (`?details=true` adds the coach's detail)
+:name: mc-room-state
 
 The coach dashboard and the gym wall screen both read this. **One route serves
 both**, switched by a query flag — they were two routes on the branch this merged
@@ -803,7 +667,7 @@ are never rewritten.
 :::::
 
 
-## 3b. REST — planning
+## 2. Planning
 
 The hierarchy these serve: a **TrainingGroup** (`TrainingGroup`) trains a **plan**
 (`TrainingProgram`), which is usually a copy of a reusable **template**
@@ -1049,7 +913,7 @@ this says otherwise.
 :::::
 
 
-## 3c. REST — spreadsheet import
+## 3. Spreadsheet import
 
 :::::{dropdown} `POST /api/imports/preview/` · `POST /api/imports/`
 
@@ -1126,7 +990,7 @@ answer it just asked for.
 
 :::::
 
-## 3d. REST — sign-in and accounts
+## 4. Sign-in and accounts
 
 Every reply here is marked `Cache-Control: no-store` where it carries a secret. Wrong tries are slowed down on the remote server: 10 wrong in a minute from one address returns `429` `{"code": "too_many_attempts"}`.
 
@@ -1219,7 +1083,7 @@ No body. Returns the coach with a new `temporary_password`, and they must change
 
 :::::
 
-## 3e. REST — remote: athletes and sensors
+## 5. Remote: athletes and sensors
 
 The join and sensor routes are **remote only**: a local install answers `404`. The login-link routes exist on both installs, but only the remote screens use them.
 
@@ -1259,6 +1123,7 @@ The join and sensor routes are **remote only**: a local install answers `404`. T
 :::::
 
 :::::{dropdown} `POST /api/sessions/{id}/join/` — join a session from home
+:name: mc-session-join
 No body.
 ```json5
 // 200: your own rack, checked in, with your sensor on it
@@ -1300,6 +1165,7 @@ Joining again returns the same rack. See {doc}`../../journal/core/remote/virtual
 :::::
 
 :::::{dropdown} `POST /api/sensors/claim/` — a sensor claims itself (called by the sensor, not a person)
+:name: mc-sensor-claim
 ```json5
 // request, from the sensor's setup page
 { "code": "K7MQ-2XPR", "node_id": "ea-169a84", "take_over": false }

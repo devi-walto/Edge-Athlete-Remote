@@ -34,4 +34,4 @@ browsers (the same MQTT wrapped in WebSockets). Config in
 publish. That is a known, accepted gap.
 
 **More:** {doc}`../core/real-time` for why there is no WebSocket layer in Django ·
-{doc}`../../handbook/reference/message-contract` for exact topics and payloads
+{doc}`../../handbook/reference/mqtt-topics` for every topic, its payload, and who hears it

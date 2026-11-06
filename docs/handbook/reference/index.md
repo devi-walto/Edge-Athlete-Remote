@@ -12,7 +12,10 @@ Exact shapes, for looking things up. Don't read these front to back.
 : Every table, collapsed, with its schema and the decisions attached to it. New here? Open the plain-English tour at the top first.
 
 **{doc}`message-contract`**
-: What every message looks like: the MQTT topics sensors and the server publish, and the REST bodies the screens send and get back. All collapsed; open the one you need.
+: What every REST route takes and returns: the bodies the screens send and get back. All collapsed; open the one you need.
+
+**{doc}`mqtt-topics`**
+: Everything that moves live: how one rep travels, how a room update travels, and for each topic what starts it, how it travels, who hears it and what they do next.
 
 **{doc}`versions`**
 : What the version numbers mean, when each part moves, and what `1.0.0` would take. Short.
@@ -25,5 +28,6 @@ eactl
 api
 database-tables
 message-contract
+mqtt-topics
 versions
 ```

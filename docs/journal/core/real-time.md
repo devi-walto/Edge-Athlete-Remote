@@ -16,7 +16,7 @@ It runs two doors into the same building:
 
 Same broker, same messages, two doors.
 
-For the exact message shapes, see {doc}`../../handbook/reference/message-contract`. This page is
+For every topic, what starts it and who hears it, see {doc}`../../handbook/reference/mqtt-topics`; for the REST bodies, {doc}`../../handbook/reference/message-contract`. This page is
 about *why* it is built this way.
 
 ---
