@@ -339,6 +339,19 @@ Two deliberate exclusions, both documented in that file:
   Moving it means editing the frozen rack contract *and* accepting that every colour
   already stored was computed under the old rule.
 
+## Who computes what
+
+Some fields in the {doc}`message-contract` are worked out, not sent raw by the hardware.
+
+Getting this wrong is the most likely way two parts disagree.
+
+| Field | Who computes it | How |
+|---|---|---|
+| `velocity_color` | **the rack tablet**, per rep | Compare the rep's velocity to the *exercise's* velocity zone (`velocity_zone_min/max`), sourced from `session_exercises[]` in the `GET /api/sessions/active/` response the tablet already fetched once at rack-assignment time (Phase 10/11) — **not** `GET /api/prescriptions/`, which the v2 rack-screen flow no longer calls. `green` = on target, `yellow` = dropping, `red` = fatigued. Included when the tablet sends the set-complete body. |
+| `rep_number` (saved) | **the rack tablet** | Numbered `1..N` within the set. The tablet owns set boundaries, so it assigns the authoritative number; the node's `rep_number` is only advisory ordering. |
+| `is_velocity_pr` | **Django**, at set-complete | `true` if this set's `peak_velocity` beats the athlete's previous best for that exercise. |
+| `is_weight_pr` | **Django**, at set-complete | `true` if this set's `weight_lbs` beats the athlete's previous heaviest for that exercise. |
+
 ## One session, several groups — and an athlete in two of them
 
 **What forced it.** A weight room is rarely one group. Varsity football lifts as a

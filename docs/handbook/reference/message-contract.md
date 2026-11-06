@@ -10,14 +10,16 @@ Two kinds of message, one page: the **MQTT** messages sensors and the server pub
 
 ## At a glance: every MQTT topic
 
-| Topic | Published by | Subscribed by |
-|---|---|---|
-| `edgeathlete/node/{node_id}/rep` | node / simulator | the rack tablet linked to that node |
-| `edgeathlete/node/{node_id}/pulse` | node / simulator | Django subscriber (`node/+/pulse` only) |
-| `edgeathlete/rack/{rack_number}/state` | Django | the rack tablet at that rack |
-| `edgeathlete/rack/command` | Django / a coach (Phase 14; `mosquitto_pub` today) | EVERY rack tablet, from boot |
-| `edgeathlete/dashboard/state` | Django | the team wall display |
-| `edgeathlete/coach/state` | Django | the coach tablet |
+| Topic | Published by | Subscribed by | QoS |
+|---|---|---|---|
+| `edgeathlete/node/{node_id}/rep` | sensor firmware / `simulate_node` | the rack screen linked to that sensor | 1 |
+| `edgeathlete/node/{node_id}/pulse` | sensor firmware / `simulate_node` | Django's subscriber (`node/+/pulse` only) | 0 |
+| `edgeathlete/node/{node_id}/motion` | sensor firmware, 10 a second | **nothing yet** | 0 |
+| `edgeathlete/rack/{rack_number}/state` | Django, when a set starts or ends | the rack screen at that rack | 1 |
+| `edgeathlete/dashboard/state` | Django (`monitoring-publisher`, retained) | the room display | 1 |
+| `edgeathlete/rack/command` | Django, when a coach releases a rack or all racks | every rack screen, from boot | 1 |
+| `edgeathlete/system/wifi` | Django, local only, before a Wi-Fi password change | rack screens and the room display | 1 |
+| `edgeathlete/coach/state` | **nothing yet** (reserved) | nothing | — |
 
 **Online, the broker has two listeners**, each on its own path on 443 ({doc}`../../journal/core/remote/hosting`):
 
@@ -32,7 +34,7 @@ simulator and Braydon's tablet both publish/consume against it.
 **v2 note:** updated against the v2 spec's Phase 5–8 insertion and renumbering.
 Two things changed here: the phase numbers below now match v2's numbering, and
 `velocity_color`'s zone lookup now sources from the session's planned exercise
-data instead of the old `Program` model (see §4). Every payload shape in this
+data instead of the old `Program` model (see [Who computes what](database-tables.md#who-computes-what)). Every payload shape in this
 document is otherwise unchanged from v1.
 
 ## Global rules (apply to every message)
@@ -52,99 +54,109 @@ document is otherwise unchanged from v1.
 :::::{dropdown} `edgeathlete/node/{node_id}/rep` — one message per completed rep
 ```json5
 {
-  "node_id": "rack_1",
-  "rep_number": 1,          // advisory ordering only — see note below
+  "node_id": "ea-169a84",   // "ea-" + the last 3 bytes of the chip's Wi-Fi address
+  "rep_number": 1,          // 1 to 100, then wraps. Advisory ordering only
   "mean_velocity": 0.72,
   "peak_velocity": 0.91,
   "duration_ms": 640,
   "timestamp": "2026-07-07T07:23:55Z"
 }
 ```
-- **Published by:** the node firmware (Phase 13), Derrilon's `simulate_node`, the
-  central WT901 Agent when provisional rep publishing is explicitly enabled for
-  demo/qualification, **and — in the per-rack-laptop deployment — the WT901 agent
-  that runs on each rack screen** (registered as an ordinary `mqtt`-kind node).
-  WT901 raw IMU frames and BLE addresses never appear in this payload.
-- **Consumed by:** the rack tablet, subscribed to *its own linked node's* rep topic.
-- **Not here:** `velocity_color`. The tablet computes that (see Derived values).
+- **Published by:** the sensor firmware and Derrilon's `simulate_node`, at **QoS 1**. The firmware keeps a rep that ended while it was offline and sends it when it reconnects. A rep can arrive twice; the rack screen drops the repeat.
+- **Consumed by:** the rack screen, subscribed to *its own linked sensor's* rep topic. Django never sees reps here.
+- **Not sent:** until the sensor's clock is set, a rep is dropped rather than sent without a time.
+- **Not here:** `velocity_color`. The rack screen computes that (see [Who computes what](database-tables.md#who-computes-what)).
 
 :::::
 
-:::::{dropdown} `edgeathlete/node/{node_id}/pulse` — heartbeat, every ~5s
+:::::{dropdown} `edgeathlete/node/{node_id}/pulse` — heartbeat, every 5 s
 ```json5
 {
-  "node_id": "rack_1",
+  "node_id": "ea-169a84",
   "event_type": "pulse",
-  "battery_level": 87,
-  "signal_strength": -55,
-  "firmware_version": "1.0.0",
+  "battery_level": 100,      // fixed at 100 for now: the sensor is USB-powered
+  "signal_strength": -55,    // Wi-Fi RSSI, -120 to 0
+  "firmware_version": "2.3.5",
   "timestamp": "2026-07-07T07:23:55Z"
 }
 ```
-- **Published by:** node firmware + `simulate_node`, **and — in the per-rack-laptop
-  deployment — the WT901 agent on each rack screen**, which publishes the same
-  heartbeat with `battery_level`/`signal_strength` null (a WT901 has neither).
-- **Consumed by:** Django's MQTT subscriber, which listens to `edgeathlete/node/+/pulse`
-  **only** and updates the matching `Node` row. Reps never reach Django this way.
+- **Published by:** the sensor firmware and `simulate_node`, at QoS 0. A lost one is replaced 5 seconds later.
+- **Consumed by:** Django's MQTT subscriber, which listens to `edgeathlete/node/+/pulse` **only** and updates the matching `Node` row.
+
+:::::
+
+:::::{dropdown} `edgeathlete/node/{node_id}/motion` — live bar speed, 10 a second
+```json5
+{ "node_id": "ea-169a84", "event_type": "motion", "velocity": 0.412, "timestamp": "2026-07-07T07:23:55Z" }
+```
+- **Published by:** the sensor firmware, at QoS 0.
+- **Consumed by:** nothing yet. It's there for a live speed readout on the rack screen.
 
 :::::
 
 
 ## 2. Server → screens (MQTT)
 
-Every broadcast has a `"type"` string; consumers switch on it. Fields depend on
-the type.
+Every broadcast has a `"type"` string; consumers switch on it. Fields depend on the type.
 
-:::::{dropdown} `edgeathlete/rack/{rack_number}/state` — for the tablet at that rack
+:::::{dropdown} `edgeathlete/rack/{rack_number}/state` — for the rack screen at that rack
 ```json5
-// a set was completed
+// a set ended (POST /api/sets/{id}/complete/)
 { "type": "set_complete", "set_id": 12, "athlete": {"id":4,"name":"Jordan Lee"},
   "reps_completed": 5, "avg_velocity": 0.70, "peak_velocity": 0.91, "is_false_set": false }
 
-// an athlete checked in at this rack
+// a set started (POST /api/sets/). Named athlete_checkin for history; it is NOT sent by the check-in route
 { "type": "athlete_checkin", "athlete": {"id":4,"name":"Jordan Lee"}, "rack_number": 3 }
 ```
+- Both need the set's sensor to be on a rack. A set with no sensor sends neither.
 
 :::::
 
-:::::{dropdown} `edgeathlete/dashboard/state` — for the team wall display
+:::::{dropdown} `edgeathlete/dashboard/state` — for the room display
+The message screens actually act on is the **room invalidation**: "something changed, fetch `GET /api/room-state/` again." It carries no athlete data, so it's safe on a listen-only topic. It's **retained**, so a screen that connects late still gets the newest one.
+
 ```json5
-{ "type": "leaderboard_update",
-  "athlete": {"id":4,"name":"Jordan Lee"},
-  "rack_number": 3,
-  "avg_velocity": 0.70,
-  "peak_velocity": 0.91,
-  "reps_completed": 5,
-  "is_false_set": false,
-  "is_velocity_pr": true,     // set a new best peak velocity for this exercise
-  "is_weight_pr": false }     // set a new heaviest load for this exercise
+{ "schema_version": 1, "type": "room_state_changed",
+  "reason": "set_completed",               // why: set_started, set_completed, session_started, rack_state_changed, …
+  "revision": 418,                          // goes up each time; a screen ignores any revision it has already seen
+  "event_id": "6f1c…", "occurred_at": "2026-07-07T07:23:55Z" }
+```
+- **Published by:** the `monitoring-publisher` worker, one per `MonitoringEvent` row, in order, until the broker confirms each.
+- **Consumed by:** the room display (`roomMonitor.js`, `useLiveRoomState.js`), which ignores anything but `room_state_changed`.
+
+Django also sends a **`leaderboard_update`** on the same topic after every completed set. **Nothing subscribes to it at the moment:**
+
+```json5
+{ "type": "leaderboard_update", "athlete": {"id":4,"name":"Jordan Lee"}, "rack_number": 3,
+  "avg_velocity": 0.70, "peak_velocity": 0.91, "reps_completed": 5, "is_false_set": false,
+  "is_velocity_pr": true, "is_weight_pr": false }
 ```
 
 :::::
 
-:::::{dropdown} `edgeathlete/coach/state` — for the coach tablet
+:::::{dropdown} `edgeathlete/rack/command` — commands to rack screens
 ```json5
-{ "type": "fatigue_alert", "athlete": {"id":4,"name":"Jordan Lee"}, "rack_number": 3 }
-```
-- Fatigue detection is Phase 15 — treat this topic's exact fields as **provisional**
-  until then. The envelope (`type` + `athlete`) is stable; extra fields may be added.
-
-:::::
-
-:::::{dropdown} `edgeathlete/rack/command` — remote commands to tablets (any/all)
-```json5
-// send matching tablets to the /rack/setup screen
 { "type": "enter_setup", "target": "all" }
 ```
-- **`target`** selects who acts: `"all"`, a specific `device_id`, or a `rack_number`.
-  Every tablet receives the message and acts ONLY if it matches itself.
-- **Published by:** a coach action → Django (Phase 14). Testable today with
-  `mosquitto_pub -t edgeathlete/rack/command -m '{"type":"enter_setup","target":"all"}'`.
-- **Subscribed by:** EVERY rack tablet from boot — assigned or not. Unassigned racks
-  have no `rack/{rack_number}/state` topic yet, so this shared channel is the only
-  way to reach them.
-- **`type` is an extensible envelope.** A future `identify` command (flash a tablet's
-  screen so a coach can spot which physical rack it is) is reserved but not built.
+- **`target`** is `"all"`, a rack number, or a screen's `device_id`. Every rack screen gets the message and acts only if it matches.
+- **Published by:** Django, when a coach releases one rack (`DELETE /api/racks/{rack_number}/`, target = that rack) or all of them (`POST /api/racks/release-all/`, target = `"all"`). Fire-and-forget: a screen that's off finds out the next time it asks the server.
+- **Subscribed by:** every rack screen from boot, assigned or not, since an unassigned screen has no rack topic yet.
+- **`type` is an envelope.** An `identify` command (flash a screen so a coach can spot it) is reserved but not built.
+
+:::::
+
+:::::{dropdown} `edgeathlete/system/wifi` — the Wi-Fi password is about to change (local only)
+```json5
+{ "type": "wifi_password_changing", "password": "the-new-password" }
+```
+- **Published by:** Django, when a coach changes the base station's Wi-Fi password (`POST /api/system/wifi-password/`). The host agent waits a few seconds after this before it restarts the access point.
+- **Consumed by:** rack screens and the room display (`WifiChangeOverlay.jsx`), so each can show the new password after it drops off the network. The coach typed it, so the coach's screen doesn't need it.
+- **Not retained**, and it **puts the password on the broker in the clear**: anything on the gym's Wi-Fi can read it. That's an accepted trade on a closed network with trusted screens.
+
+:::::
+
+:::::{dropdown} `edgeathlete/coach/state` — reserved, nothing sends it
+`publish_coach_state()` exists in `realtime/broadcast/publisher.py` but nothing calls it, and no screen subscribes. It was meant for a fatigue alert. Don't build against it until something sends it.
 
 :::::
 
@@ -329,7 +341,7 @@ Called when a set STARTS (Phase 11 Step 3). The server returns the created `Set`
 
 :::::
 
-:::::{dropdown} `PUT /api/racks/node-assignment/` — select a legacy MQTT sensor (active staff)
+:::::{dropdown} `PUT /api/racks/node-assignment/` — link a sensor to a gym rack (active staff)
 Exact body: `{ "device_id": "...", "node_id": "rack_3" }`. The screen must
 already have a rack number. Node IDs use `[A-Za-z0-9_-]{1,64}`. Returns `200`:
 ```json5
@@ -338,28 +350,8 @@ already have a rack number. Node IDs use `[A-Za-z0-9_-]{1,64}`. Returns `200`:
 ```
 - Inactive/simulated nodes, implicit transfers, open sets, and concurrent changes
   return stable `409` conflicts without changing the mapping.
-- `acquisition_kind` is provisioning-owned: `mqtt` or `wt901_ble`, with `mqtt` as
-  the default. Migration `0021` performs a one-time backfill for firmware beginning
-  `wt901ble-`; runtime pulse metadata never changes the kind.
-- This endpoint rejects unassigned `wt901_ble` nodes as
-  `409 wt901_verification_required`. WT901 selection must use the staff-authorized
-  scan, verification, and `PUT /api/racks/{rack_number}/ble-selection/` flow.
-  MQTT nodes retain the active, non-simulated usability rule.
 - Replacement at the same rack atomically unassigns the prior node. One non-null
   node mapping per rack is also enforced by the database.
-
-:::::
-
-:::::{dropdown} `PUT /api/nodes/{node_id}/acquisition-kind/` — provision node transport (active staff)
-
-Exact body: `{ "acquisition_kind": "mqtt" }` or
-`{ "acquisition_kind": "wt901_ble" }`. Extra fields return
-`400 invalid_acquisition_request`; another value returns
-`400 invalid_acquisition_kind`. An open set returns
-`409 node_acquisition_has_open_set`. A changed value creates one
-`MonitoringEvent` with reason `node_acquisition_changed`; retrying the current
-value is idempotent and creates no second event. This narrow route does not restore
-the retired generic node PATCH.
 
 :::::
 
@@ -417,36 +409,6 @@ Stable conflicts include `rack_controller_busy`, `rack_controller_required`,
 `rack_controller_stale`, `rack_state_changed`, `duplicate_checkin`,
 `open_set_exists`, and `rack_recovery_required`. A conflict that depends on current
 state returns its latest `state_version` and snapshot without the controller token.
-
-:::::
-
-:::::{dropdown} Central WT901 discovery and health
-
-Active staff use `POST /api/ble/scans/`, `POST /api/ble/verifications/`, and
-`PUT /api/racks/{rack_number}/ble-selection/`. Scan responses contain only an
-advertised label and random, short-lived `device_handle`. Verification returns a
-short-lived token and bounded derived movement. Selection returns the assigned
-logical node and advertised label; no browser request or response contains a BLE
-address.
-
-Rack browsers read `GET /api/racks/{rack_number}/sensor-health/` with the stable
-screen identity in `X-Rack-Device-ID`. Query parameters return `400`; a screen not
-assigned to that rack returns `403`. Nginx access logs therefore contain no screen ID.
-
-```json5
-{
-  "node_id": "wt901_<random>",
-  "label": "WT901BLE68",
-  "state": "reconnecting|live|stale",
-  "movement_g": 0.184,
-  "sample_age_ms": 42
-}
-```
-
-Internally, Django calls the Agent's fixed HTTP/JSON API through a private Unix
-socket. Successful live health reads update server freshness. MQTT pulses are
-rejected for WT901 nodes, so forgeable payload metadata cannot establish trusted
-BLE health. No BLE address or raw frame appears in HTTP, MQTT, or normal logs.
 
 Controller-fenced check-in, sensor-backed set start, and controlled set completion
 also require the four headers plus UUID `command_id` and integer
@@ -834,7 +796,7 @@ history stays intact. **Applies forward only** — targets already trained again
 are never rewritten.
 
 > Distinct from adjusting the load on a bar today: that rides on the set itself
-> and changes nothing about the plan. See §4.
+> and changes nothing about the plan. See {doc}`database-tables`.
 
 :::::
 
@@ -844,7 +806,7 @@ are never rewritten.
 The hierarchy these serve: a **TrainingGroup** (`TrainingGroup`) trains a **plan**
 (`TrainingProgram`), which is usually a copy of a reusable **template**
 (`TrainingBlock`). Plans store a **percent**, never pounds — the weight is worked
-out per athlete from their reference max at read time (§4).
+out per athlete from their reference max at read time ({doc}`database-tables`).
 
 > **Route names lag the model names.** `training-blocks/` is the template and
 > `workouts/` is a day inside one, because these URLs were bent to fit the coach
@@ -1161,16 +1123,3 @@ gets renamed, another coach imports first). Without them the app would forget th
 answer it just asked for.
 
 :::::
-
-
-## 4. Derived values — who computes what (read this)
-
-These fields are *not* sent raw by the hardware; something computes them. Getting
-this wrong is the most likely way two parts disagree.
-
-| Field | Who computes it | How |
-|---|---|---|
-| `velocity_color` | **the rack tablet**, per rep | Compare the rep's velocity to the *exercise's* velocity zone (`velocity_zone_min/max`), sourced from `session_exercises[]` in the `GET /api/sessions/active/` response the tablet already fetched once at rack-assignment time (Phase 10/11) — **not** `GET /api/prescriptions/`, which the v2 rack-screen flow no longer calls. `green` = on target, `yellow` = dropping, `red` = fatigued. Included when the tablet sends the set-complete body. |
-| `rep_number` (saved) | **the rack tablet** | Numbered `1..N` within the set. The tablet owns set boundaries, so it assigns the authoritative number; the node's `rep_number` is only advisory ordering. |
-| `is_velocity_pr` | **Django**, at set-complete | `true` if this set's `peak_velocity` beats the athlete's previous best for that exercise. |
-| `is_weight_pr` | **Django**, at set-complete | `true` if this set's `weight_lbs` beats the athlete's previous heaviest for that exercise. |
