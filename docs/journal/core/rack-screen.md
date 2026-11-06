@@ -1,504 +1,136 @@
+<!--
+this page — the tablet at each rack: where reps are kept safe, the set lifecycle,
+and how a sensor gets to a rack.
+
+The rack screen is the one place where losing data can't be undone, so the
+durability decision comes first. The kiosk decisions (HTTPS, trusted origin,
+browser profiles, manifests) only exist because the local install is served over
+plain HTTP; they're on the Local only > Kiosk screens page.
+-->
+
 # Rack screen
 
-The tablet at each rack. The only surface an athlete actually touches, and the one
-part of the system where losing data is unrecoverable.
+The tablet at each rack. The only screen an athlete actually touches, and the one part of the system where losing data can't be undone.
 
 :::{admonition} Who built this
 :class: note
-**Bluetooth sensor acquisition** — the host agent, sensor selection at the rack, and
-the NFC groundwork — **Braydon**. The design record behind it is
-`docs/_ADR_RACK_BLE_LIVE_WORKFLOW.md`.
+**Bluetooth sensor acquisition** (the host agent, sensor selection at the rack, and the NFC groundwork): **Braydon**. The design record behind it is `docs/_ADR_RACK_BLE_LIVE_WORKFLOW.md`.
 
-**Everything else on this page** — the set lifecycle, on-device rep buffering, the
-install and offline work — **Devin**.
+**Everything else on this page** (the set lifecycle, on-device rep buffering, the install and offline work): **Devin**.
 :::
 
-## What it is
+## Tool changes at a glance
 
-A web app running full-screen on a tablet at each rack. It shows the athlete their
-workout, lets them check in, and displays each rep's speed as they lift.
+| Job | First | Now | Where it lives |
+|---|---|---|---|
+| Keeping reps safe mid-set | — | **the browser's own database (IndexedDB)**, cleared only after the server confirms | `react/src/db/repBuffer.js` |
+| How a sensor reaches the rack | Wi-Fi (MQTT), then Bluetooth too (WT901, through a program on the base station) | **MQTT sensors everywhere**, local and remote (since Oct 27) | {doc}`remote/sensors` |
+| Linking a sensor to a rack | a coach, on the coach's screens | **local:** a coach, in Room Layout or on the rack card · **remote:** the athlete's own sensor, attached on join | {doc}`remote/virtual-racks` |
+| Who's lifting online | — | **the rack's owner**, on a virtual rack | {doc}`remote/virtual-racks` |
+| The athlete's plan | read once at check-in | **re-read after every set** | `RackScreen.jsx` |
+| Releasing a tablet | nothing could | **"no rack" means release** (Aug 12) | Room Layout |
 
-It is also, unusually, **where the system's durability lives**. Not the server.
+## The problem
 
----
+Reps arrive one at a time over a wireless connection, in a room full of metal, and they're only useful as a complete set. Something has to hold a partial set safely while it's being built. And the screen has to know which sensor is on its bar.
 
-## Decision: the tablet is the durability boundary, not the server
+## Where reps are kept safe
 
-**What forced it.** Reps arrive one at a time over a wireless connection in a room
-full of metal, and they are only useful as a complete set. Something has to hold a
-partial set safely while it is being built.
+**Try 1: in the server's memory.** **Why I passed on it:** a browser tab surviving a Wi-Fi drop is a far better bet than a server process surviving a restart while holding unfinished sets for every rack. One loses a rack; the other loses the room.
 
-**What we chose.** Every rep is written to the browser's own on-device database
-**the instant it arrives** — before the screen updates, before the server hears
-anything. When the set ends, the whole set is sent to the server in **one request**.
-The local copy is cleared only after the server confirms the save.
+**Try 2: on the sensor**, a full set stored in its flash and sent directly. **Why I passed on it:** the sensor has no idea whose set it is. The session, athlete and exercise only exist on the rack screen, so the sensor would need a whole new channel just to learn who it's recording. And the browser gives durable storage for free; doing it in firmware means a hand-written flash queue with acknowledgement, replay and flash-wear handling, to save a network hop that isn't a bottleneck.
 
-Think of it as writing each rep in a notebook as it happens, so that even if the
-phone line drops before you can call it in, you still have every rep.
+**Where I landed: the rack screen is where reps are kept safe, not the server.** Every rep is written to the browser's own database **the instant it arrives**, before the screen updates and before the server hears anything. When the set ends, the whole set goes to the server in **one request**. The local copy is cleared only after the server confirms.
 
-**What we rejected, and why.**
+Think of it as writing each rep in a notebook as it happens, so even if the phone line drops before you call it in, you still have every rep.
 
-*Buffering in the server's memory.* A browser tab surviving a Wi-Fi drop is a far
-better bet than a server process surviving a restart while holding unflushed sets for
-every active rack. The failure modes are not comparable: one loses a rack, the other
-loses the room.
+*Since firmware 2.0 the sensor does keep reps for a moment:* ESP-MQTT holds a rep that ended while it was offline and sends it when it reconnects. That's a few reps waiting for a connection, not a set, so Try 2's reasons still stand.
 
-*Buffering on the sensor itself* — storing a full set in the node's flash memory and
-submitting it directly. Rejected for two concrete reasons. First, **the node has no
-idea whose set it is**: session, athlete and exercise context exists only in the
-tablet's UI, so the node would need a whole new downstream channel just to learn who
-it is recording. Second, the browser gives durable storage for free; replicating it in
-firmware means hand-writing a flash-backed queue with acknowledgement, replay and
-flash-wear handling — real engineering cost to save a network hop that is not a
-bottleneck on a single-machine network.
-
-**What it cost — stated plainly.** If a specific tablet crashes or loses power
-mid-set, **that rack's current set is lost.** This is accepted, not solved. The loss
-is isolated to one rack rather than the room, and it was explicitly ruled out of scope
-rather than left as an open bug.
-
----
-
-## Decision: this code was frozen, and the freeze is now lifted
-
-:::{note}
-**Lifted on 10 August 2026.** `react/src/rack/`, `react/src/db/repBuffer.js`, and
-`react/src/device.js` are ordinary files again and can be edited normally. The rest
-of this section is kept because the reasoning still applies the next time several
-people build against one contract at once — and because the freeze's cost, described
-below, is what eventually ended it.
-:::
-
-For most of the project these files must not be edited, reformatted, or tidied.
-
-**What forced it.** Several people were building against this behaviour at once,
-during the period it was also the demo. Small "improvements" to a shared contract
-produce breakage that is very hard to attribute.
-
-**What we chose.** A named set of files that ship as-is. Build alongside them.
-
-**What it cost — and this is what ended it.** Two known bugs sat inside the frozen
-boundary and could not be fixed there:
-
-- The screen's periodic refresh is **switched off during an active set**, so live reps
-  have no fallback if a message is missed.
-- An athlete's workout is loaded **once** when they check in and never re-read, so a
-  coach editing a plan mid-session does not reach the rack.
-
-Neither could be fixed without either unfreezing a file or pushing the recovery into
-non-frozen code — and a freeze that prevents fixing known bugs has stopped paying for
-itself. **The lesson worth keeping is not "never freeze code."** It is that a freeze
-needs an expiry condition stated when it starts, or it outlives its reason and nobody
-feels entitled to end it.
-
----
+**What it cost:** if a tablet crashes or loses power mid-set, **that rack's current set is lost.** It's accepted, not solved, and ruled out of scope rather than left as an open bug. The loss stays at one rack instead of the room.
 
 ## The set lifecycle
 
 Worth knowing before changing anything nearby:
 
-1. **Check in.** Tapping a name is the check-in. It is append-only and newest-wins —
-   the most recent check-in is what decides which rack "owns" an athlete. This is
-   also the path a future tag-scan would call.
-2. **Idle.** The athlete's workout for the day is loaded, with a suggested current
-   movement and a resolved target weight (or a blank one they can fill in).
-3. **Active.** The screen subscribes to its linked sensor **only while a set is
-   running**. Reps arriving at any other time are deliberately ignored, so a bumped
-   bar between sets does not become data.
-4. **Complete.** Exactly one submission per set, guarded so a double-tap cannot
-   produce two.
-5. **Rest.** The check-in list returns, so the next lifter can take the rack.
+1. **Check in.** Tapping a name (or a wristband) is the check-in. It's append-only and newest wins: the most recent check-in decides which rack an athlete is at. Online, joining a session does the same check-in, through the same function ({doc}`remote/virtual-racks`).
+2. **Idle.** The athlete's workout for the day loads, with a suggested movement and a target weight worked out from their max, or a blank one they can fill in.
+3. **Active.** The screen listens to its sensor **only while a set is running.** Reps at any other time are ignored, so a bumped bar between sets doesn't become data.
+4. **Complete.** Exactly one submission per set, guarded so a double-tap can't make two. The plan is re-read afterwards, so a coach's edit mid-session reaches the rack by the next set, and a finished movement moves on to the next one by itself.
+5. **Rest.** The check-in list comes back, so the next lifter can take the rack.
 
----
+**Next (decided Oct 27, not built):** reps past the prescription won't count. The screen will say "Reps past 5 won't count," and the server will decide which reps count, not the firmware: *the sensor just reports what happened.* A set with bad reps is what False Set is for.
 
-## Decision: a tablet can be released, not only assigned
+## Reps in progress aren't results
 
-:::{note}
-**Fixed on 12 August 2026.** This was a known bug for most of the project. The
-description of the deadlock is kept because the shape of it is worth recognising
-again, and because the workaround people found made things quietly worse.
+Live reps have to show up instantly, and a bar somebody bumped between sets moves exactly like lifting.
+
+So there are two different things with two different standards. Reps arriving *during* a set are **live activity**: shown right away, kept only as a recoverable snapshot, never counted as anything. Records, rankings and history are written only when a set is **completed**, from the saved set.
+
+**Nothing becomes a number anyone is judged on until a person ends the set.**
+
+The cost is two copies of the same reps, and a real chance of mixing them up when reading the code. The alternative was a knocked barbell setting a personal record, which is the kind of bug that ruins trust in the whole system.
+
+## How a sensor gets to a rack
+
+**Try 1: Wi-Fi sensors through the broker.** The original sensors reported over Wi-Fi, through Mosquitto. A coach linked each one to a rack.
+
+**Try 2: add Bluetooth (the WT901), per sensor.** Each sensor recorded its own transport (`Node.acquisition_kind`: `mqtt` or `wt901_ble`), so rack 1 could be Bluetooth while rack 2 was Wi-Fi, in the same session. Three decisions came with it:
+
+- **A program on the base station owned the radio, not the browser.** Browser Bluetooth needs a secure context (the local install is plain HTTP), a person's tap to pair every time (a rack screen boots unattended), and doesn't exist on iPhone or iPad. The cost: that program was a single point of failure for every Bluetooth rack at once.
+- **Raw motion data never left the base station.** The server saw confirmed reps, never the stream.
+- **Sensors were chosen at the rack, by a coach, before anyone signed in.** Bluetooth sensors show up as anonymous nearby radios; you have to stand at rack 3, watch one move, and confirm *that's* the one. Choosing used scan-scoped handles, so a Bluetooth address never reached the browser or the database.
+
+**Why I moved on (Oct 27):** one kind of sensor everywhere, local and remote, simplifies the hardware story. The new sensor (ESP32-C6 + BNO085) speaks MQTT over Wi-Fi in the gym and over the internet from home ({doc}`remote/sensors`).
+
+**Where I landed: MQTT sensors everywhere.** On a local install, a coach links a sensor to a rack in **Room Layout**, or from the **rack card in Session** while looking at it. Online, an athlete's own sensor attaches to their virtual rack when they join.
+
+:::{warning}
+**The Bluetooth code is still in the repo, unused:** `rack/rackAgent.js`, `rack/RackNodeSetup.jsx`, `/api/racks/{n}/sensor-health/`, the `/api/ble/…` routes, `services/ble_agent.py`, `scripts/hardware/wt901_rack_agent.py`, and `Node.acquisition_kind`. Don't build on it. It's leftover, to be removed.
+
+One lesson from it is worth keeping: when sensor selection moved to the rack, the coach-side linking route was removed, and work written against it compiled and merged cleanly, then failed when someone pressed the button. A removed route fails at runtime, not at merge.
 :::
 
-A tablet and its sensor are separate identities, each told "you are rack 3"
-independently by a coach — see {doc}`coach-screens` for why that is a screen rather
-than configuration.
-
-**The deadlock.** Nothing ever cleared a tablet's rack number, and the coach's list of
-waiting tablets only shows ones with *no* number. So a tablet sent back to setup kept
-the rack it already had, never reappeared in the list, and could not be reassigned. It
-was still working, still on the network, and completely unreachable from the coach's
-side.
-
-**The workaround that made it worse.** Clearing the tablet's browser data appeared to
-fix it, and became folklore. It works for a reason nobody liked once it was said out
-loud: it erases the tablet's stored identity, so the tablet comes back as a device the
-server has never seen and is created fresh with no rack. You were not repairing the
-tablet — you were replacing it, and abandoning the old record every time.
-
-**What we chose.** Assignment now accepts an explicit "no rack" to mean *release this
-tablet*, and the coach's room layout has a button for it. A released tablet reappears
-in the waiting list within a few seconds and can be assigned again.
-
-**The half that is easy to miss.** Releasing the server-side record is not enough. The
-tablet only leaves its waiting screen when the rack it is told about *differs* from the
-one it already knew — so a tablet freed from rack 3 and put straight back on rack 3
-would have waited forever, which is exactly what someone sorting out a mislabelled room
-would try first. Being released now also makes the tablet forget its old rack, so any
-assignment moves it.
-
-**What it cost.** A meaningful null. "No rack number in the request" and "rack number
-is deliberately empty" are different statements and now have to be told apart, which is
-a small sharp edge in an otherwise dull endpoint.
-
----
-
-## A trap: this app is not served over HTTPS
-
-The base station serves plain HTTP, which browsers treat as a **non-secure context**.
-A handful of browser features are switched off there, and one of them was being used:
-the built-in unique-id generator is simply absent, which crashed the screen on first
-load in the gym while working perfectly on a laptop — because `localhost` counts as
-secure and `http://basestation` does not.
-
-The fix was a small local replacement for that one function, not switching to HTTPS.
-**HTTPS is not available as a fix here**: a secure page refuses the plain `ws://`
-connection the live rep feed depends on, so turning it on would trade a crash for a
-dead sensor feed. See {doc}`real-time`.
-
-The same constraint switches off every other feature that needs a secure context —
-offline caching, tag scanning, and direct-to-sensor wireless. Those could not be
-polyfilled the way the id generator was, so they stayed blocked until the decision
-below.
-
----
-
-## Decision: tell the browser to trust the origin, rather than switch to HTTPS
-
-**What forced it.** Replacing one missing function papered over the symptom but left
-the cause: the origin itself is untrusted, so *everything* gated on a secure context
-stayed off. The offline cache had never once worked on a rack screen — and, worse, had
-never said so. The registration code checked whether the browser supported the feature,
-which it does, and then discarded the error when the browser refused to use it. It
-looked healthy and did nothing.
-
-**What we chose.** The kiosk browser is launched with the base station's origin
-explicitly marked as trusted. This is a *local* declaration — a statement by that one
-screen about one address on a closed network — not a certificate anyone else honours.
-It turns on offline caching, tag scanning, and direct-to-sensor wireless in one move.
-
-We also made the failed registration **log a warning that names the cause**, because
-the silence was worse than the breakage. A screen that has no offline cache and says
-so is a known state; one that pretends otherwise is a debugging trap.
-
-**Why not HTTPS, again.** It remains the wrong answer for the reason above — it would
-kill the live rep feed — plus a self-signed certificate warns on every phone that
-joins the gym network, and a real certificate needs a public domain the base station
-does not have.
-
-**What it cost.** The trust declaration only applies to the browser that was launched
-with it. A coach opening the site on their own phone is still in a non-secure context
-and still has no offline cache. The gym screens are covered; visiting devices are not,
-and that is the honest limit of this fix.
-
----
-
-## Decision: the coach tablet gets the same fix, but is not a kiosk
-
-**What forced it.** The coach tablet needs the offline copy for the same reason the
-rack screen does — and more so once note-taking arrives, since notes are written on
-the tablet and a dropout mid-note should not lose them. It also needs the app properly
-*installed*, which a browser refuses to do outside a trusted context. Both point at the
-same fix the rack screens got.
-
-But a coach is not an unattended screen. Full-screen kiosk mode hides the menu, and the
-menu is where "install this app" lives — so the mechanism that delivers the fix would
-also have blocked the thing it was needed for. A coach also navigates, logs in, and
-legitimately puts the tablet down.
-
-**What we chose.** The same launcher, with the *lock* removed rather than the
-full-screen. Trusted origin and on-disk profile kept; the cage and the relaunch loop
-dropped. A coach tablet is provisioned with a **tappable icon** rather than something
-that seizes the screen at every login.
-
-**The word that was doing two jobs.** "Full-screen" turned out to mean two different
-things, and conflating them is what made this look like a trade-off in the first place.
-One flavour is a *lock*: no toolbar, no window buttons, no way out, and no menu — which
-is exactly right for a rack screen an athlete must not be able to leave, and which
-hides the very menu the coach needs. The other simply *starts* full-screen while
-remaining an ordinary window: hover the top edge and the toolbar returns, and it can be
-closed or minimised like anything else.
+## A sensor announces itself (local)
 
-Once those were separated, the coach did not have to give up full-screen to stay
-installable. The first version of this decision made them choose, and it did not need
-to.
+**The problem:** nothing could put a Wi-Fi sensor into the system. A message from a sensor the database had never heard of was rejected, so a second simulated rack published into nothing while its log looked healthy. With real hardware, eight sensors on eight racks had no way in short of typing database rows by hand.
 
-**The part that makes this cheap.** It is a one-time door. Once the coach installs the
-app from the browser menu, the browser writes its *own* launcher — full-screen, its own
-name and icon, no browser chrome. The launcher exists to get them through that once,
-not to be the daily route in.
-
-**What we deliberately did not do.** Nothing was built for offline *writing*. The
-offline cache keeps the app loading without a network; it does not make a coach's edits
-survive being made while disconnected. That is a genuinely harder problem — it needs a
-queue and a conflict story — and pretending a cache solves it would be the worst
-outcome, because it would look like it worked right up until it lost something.
-
-**What it cost.** More launch modes to keep straight, and one more thing that differs
-by role. The alternative was giving the coach a kiosk they could not install from, or a
-plain browser shortcut with no offline copy at all.
+**Where I landed:** the pattern the system already used. A rack tablet has always *announced itself* ("I exist, here's my ID") and waited for a coach to give it a rack. Now sensors do too (`POST /api/nodes/register/`), and the simulator does it on startup.
 
----
+**Why leaving it open is safe:** announcing gets a sensor a row and nothing else: no rack, no data path. The step that matters is linking, and that's a coach action. **The one rule that would be a hole if it broke:** announcing must never change a sensor that already exists, or anything on the gym's Wi-Fi could take over a linked sensor's rack. There's a test whose only job is that.
 
-## Decision: a kiosk is the opposite of incognito
+**Online it's different:** registering is coach-only, and a sensor claims itself with an athlete's one-time code instead ({doc}`remote/sensors`).
 
-**What forced it.** The kiosk launcher ran the browser in private mode. It reads as a
-sensible default for an unattended screen, and it was quietly destroying the two things
-the rack screen is built on.
+## A tablet can be released, not only assigned
 
-The tablet's identity — the id that tells the server *which* screen this is, and the
-rack number it was assigned — is stored in the browser. Private mode discards that
-storage when the browser closes. The launcher also relaunches the browser after any
-crash, by design, so a screen would come back **as a device the server had never
-seen**, having silently lost its rack assignment. The setup script's own promise that
-"every reboot goes straight to the live screen" could not have been true.
+*Fixed Aug 12.* For most of the project, nothing ever cleared a tablet's rack number, and the coach's list of waiting tablets only showed ones with *no* number. So a tablet sent back to setup kept its old rack, never reappeared in the list, and couldn't be reassigned: still working, still on the network, unreachable from the coach's side.
 
-Worse, the on-device rep database — the whole reason a Wi-Fi drop mid-set loses nothing
-(see the durability decision above) — is held in memory in private mode rather than
-written to disk. The guarantee this page opens with was void on every rack screen.
+**The workaround that made it worse:** clearing the tablet's browser data seemed to fix it, and became folklore. It works because it erases the tablet's identity, so it comes back as a device the server has never seen. You weren't repairing the tablet; you were replacing it, and abandoning the old record every time.
 
-**What we chose.** Private mode removed, with the reasoning written into the script so
-it does not get reintroduced by someone applying the same reasonable-sounding default.
-
-**What it cost.** Nothing operationally. The uncomfortable part is what it says about
-verification: this was in place for months, and nothing failed loudly enough to catch
-it, because a screen that reinvents itself looks identical to a new screen.
-
----
+**Where I landed:** assignment accepts an explicit "no rack" to mean *release this tablet*, and Room Layout has a button for it. The tablet gets `enter_setup` over MQTT and reappears in the waiting list within seconds.
 
-## Decision: one browser profile per role
+**The half that's easy to miss:** a tablet only left its waiting screen when the rack it was told about *differed* from the one it knew. So a tablet freed from rack 3 and put straight back on rack 3 would have waited forever, which is exactly what someone fixing a mislabelled room tries first. Being released now also makes it forget its old rack.
 
-**What forced it.** Browser storage is scoped to *(profile, site)*. Everything the app
-uses to know what it is — device id, role, rack number — lives there. So two roles
-running in one browser profile are not two devices sharing a machine; they are one
-device that keeps overwriting its own identity.
+**What it cost:** a meaningful null. "No rack number in the request" and "rack number deliberately empty" now have to be told apart.
 
-This blocked something we wanted: running the rack screen, the coach tablet, and the
-wall display on a single machine for a demo, without three pieces of hardware.
+## The freeze, and why it ended
 
-**What we chose.** Each role gets its own browser profile directory, named for the role
-and the user running it. One machine can now present as several independent devices,
-each registering separately with the server, exactly as if they were separate tablets.
+For most of the project, `react/src/rack/`, `react/src/db/repBuffer.js` and `react/src/device.js` were **frozen**: ship as-is, build alongside them. Several people were building against this behaviour at once while it was also the demo, and small "improvements" to a shared contract break things in ways that are hard to trace.
 
-**What it cost.** Three profiles means three copies of the browser's cache and three
-sets of stored state, and clearing "the" browser data no longer means anything specific
-— you have to say which role. Worth it: the alternative was three tablets.
-
----
+**It was lifted on Aug 10**, because two known bugs sat inside it and couldn't be fixed there: the screen's periodic refresh is off during an active set, and an athlete's plan was read once at check-in and never again. The second is fixed (the plan is re-read after every set). The first matters much less now that reps arrive at QoS 1 and the broker holds them for a screen that blinks off ({doc}`real-time`).
 
-## Decision: three manifests, three identities
+**The lesson isn't "never freeze code."** A freeze needs an expiry condition stated when it starts, or it outlives its reason and nobody feels entitled to end it.
 
-**What forced it.** The app ships three installable versions — rack, coach, wall —
-each with its own name and icon, and the page swaps between them depending on the
-screen's role. Installing more than one never worked, and the reason was not obvious.
+## Things I passed on
 
-A browser identifies an installed web app by an explicit identity string, and falls
-back to the app's start address when none is given. All three declared the same start
-address and none declared an identity, so **all three were the same app**. Installing
-the coach version after the rack version did not add a second icon; it renamed the
-first one in place.
+- **Keeping a partial set in the server's memory, or on the sensor.** The rack screen keeps it.
+- **A second rack screen for remote athletes.** Same screen ({doc}`remote/virtual-racks`).
+- **Bluetooth in the browser.** No secure context locally, no one to tap pair, no iPhone.
+- **Two kinds of sensor.** MQTT everywhere since Oct 27.
 
-**What we chose.** Each version declares its own identity string, so the browser can
-tell them apart. Coach and wall also got their own start addresses, so launching an
-installed app lands on the right screen instead of routing through the picker. The rack
-version deliberately kept the shared start address: a rack's number is not known at
-install time, so it still goes through the dispatcher.
+## What it cost
 
-**The bug this uncovered.** The code that points the page at the right version only ran
-when a device *changed* role — at the picker, at setup. None of those happen on a
-reboot. So a wall display that restarted was still advertising itself as the rack app,
-and giving the three versions distinct identities would have achieved nothing without
-fixing that first. It now updates on every navigation, which also matches what the
-router already claimed about itself: the address decides what the screen is.
+- **A tablet that dies mid-set loses that set.**
+- **Two copies of the same reps** (live and saved), easy to mix up in the code.
+- **Leftover Bluetooth code** that looks live and isn't.
 
-**What it cost.** Nothing yet. The risk to know about is that changing an installed
-app's identity or start address **orphans existing installations** — the browser treats
-it as a different app. That was free this time only because the offline cache had never
-worked, so nothing was installed anywhere to orphan. It will not be free next time.
-
----
-
-## Decision: sensors can talk two different ways, and a node says which
-
-**What forced it.** The original sensors report over Wi-Fi, through the message broker.
-A second kind of sensor was added that reports over **Bluetooth** instead. The obvious
-framings were both wrong: "switch to Bluetooth" throws away working hardware, and
-"support Bluetooth as a mode" implies the whole gym is one or the other.
-
-**What we chose.** Each sensor records **its own** transport, in the database, as an
-ordinary field. Rack 1 can be on Bluetooth while rack 2 is on Wi-Fi, in the same
-session, with no setting anywhere that says which the gym is using. New sensors default
-to Wi-Fi, so nothing that existed before had to change or even know.
-
-**Why this is the important sentence in this whole page.** Bluetooth did not *replace*
-anything. Reading the code and assuming one transport won is the single easiest way to
-misunderstand this system.
-
----
-
-## Decision: a program on the base station owns the radio, not the browser
-
-**What forced it.** The natural place to put Bluetooth is the rack screen — it is right
-there, it already shows the reps. Browsers can speak Bluetooth. It does not survive
-contact with this product.
-
-Three reasons, and the first one alone is fatal:
-
-- Browser Bluetooth needs a **secure context**, the same gate that blocks the offline
-  cache (see above). The gym is served over plain HTTP.
-- It requires **a human tap to pair, every single time**. A rack screen boots
-  unattended into a locked full-screen browser. There is nobody to tap it.
-- It only exists in Chrome-family browsers, and never on iPhone or iPad.
-
-**What we chose.** A small program running on the base station owns the radio for every
-rack: it finds sensors, connects, decodes their frames, and decides what counts as a
-rep. The rack screen never touches Bluetooth — it gets finished reps the same way it
-always did.
-
-**The consequence worth stating plainly.** That program is now a **single point of
-failure for every Bluetooth rack at once**, where before each rack failed on its own.
-That is a real cost, accepted deliberately in exchange for the three problems above,
-which have no workaround.
-
-**What it also bought.** Raw motion data never leaves the base station. Sending it to
-the server was considered and rejected: high-rate private data, a dependence on the
-network for something that works fine locally, and a much larger surface to get wrong.
-The server sees confirmed reps, never the stream they came from.
-
----
-
-## Decision: sensors are chosen at the rack, by a coach, before anyone signs in
-
-**What forced it.** Bluetooth sensors are discovered as anonymous nearby radios. You
-cannot tell from a list which physical box is bolted to rack 3 — you have to be standing
-at rack 3, watch a sensor produce movement, and confirm *that* is the one.
-
-**What we chose.** Sensor selection happens **on the rack screen it belongs to**,
-requires a coach login, and is only available before an athlete has signed in. Selection
-shows scan-scoped handles rather than hardware addresses, so a Bluetooth identity never
-reaches the browser or the database.
-
-**What it cost, and this bit has already bitten us.** It **replaced** the old
-coach-side "assign this sensor to that rack" screen, and the endpoint behind it was
-removed. Work written against the old endpoint compiles, merges without conflict, and
-then fails at runtime — which is exactly what happened to the sensor-linking task built
-from an older branch. If you are reading old code or an old task description that
-assigns a node from the coach console, it is describing a system that no longer exists.
-
----
-
-## Decision: reps in progress are not results
-
-**What forced it.** Live reps have to appear instantly, and a sensor on a bar that
-somebody bumped between sets produces movement that looks exactly like lifting.
-
-**What we chose.** Two different things with two different standards. Reps arriving
-*during* a set are **live activity** — shown immediately, kept only as a recoverable
-snapshot, and never counted as anything. Records, rankings and history are written only
-when a set is **completed**, from the saved set.
-
-The rule: nothing becomes a number anyone is judged on until a human ends the set.
-
-**What it cost.** Two representations of the same reps, and a real chance of confusing
-them when reading the code. The alternative was letting a knocked barbell set a personal
-record, which is the kind of bug that destroys trust in the whole system.
-
----
-
-## Decision: tell screens that something changed, do not tell them what
-
-**What forced it.** When anything in the room changes, several screens need to catch up.
-The obvious approach is to broadcast the new state to everyone.
-
-**What we chose.** Broadcasts carry only **"something changed, here is the new revision
-number."** Each screen then asks the server for the real answer through the normal API.
-
-Two reasons, and the second is the one that generalises:
-
-- Those broadcasts are **not private**. Athlete names and numbers must not be on a
-  channel anything on the gym Wi-Fi can subscribe to. A revision number leaks nothing.
-- It keeps **one source of truth**. Pushing state means the same facts exist in two
-  places that can disagree, and reconnecting screens have to guess which is right.
-  Asking the server always converges, including after a disconnection.
-
-**What it cost.** Every change that a screen might care about has to remember to emit
-one of these notices, in the same transaction as the change itself. Miss one and a
-screen silently shows stale data — a known live bug of exactly this shape is described
-in {doc}`room-display`.
-
----
-
-## Decision: a sensor announces itself, the way a screen already does
-
-**What forced it.** Nothing could put an MQTT sensor into the system. The demo seeder
-created exactly one, Bluetooth sensors got theirs through verified enrollment at the
-rack, and a message from any sensor the database had never heard of was **rejected**.
-
-So a second simulated rack published into nothing — the process ran, its log looked
-healthy, and no sensor ever appeared for a coach to link. That is a demo annoyance.
-The real problem is what happens with hardware: bolt eight sensors to eight racks and
-there is no way to get them into the system at all, short of typing rows into the
-database by hand.
-
-**What we chose.** The pattern the system already used everywhere else. A rack tablet
-has always *announced itself* — it says "I exist, here is my id" and waits for a coach
-to give it a rack. Sensors were the one device type without that story, and there was
-no reason for the difference. Now they announce themselves too, and the simulator does
-it on startup exactly as real firmware should.
-
-**Why leaving it open is safe.** Announcing gets a sensor a row and nothing else — no
-rack, no data path, no effect on anything. It sits in a list until a coach links it.
-That is the same bargain already accepted for tablets, and the guard that matters is
-the *linking* step, which is a coach action either way.
-
-**The one rule that would be a hole if it broke.** Announcing must never modify a
-sensor that already exists. Otherwise anything on the gym network could re-announce a
-Bluetooth sensor that a coach verified in person, and inherit the rack it was trusted
-with. There is a test whose only job is that.
-
-**What it cost.** One more endpoint, and a decision we deliberately did not make:
-whether a *simulated* sensor may drive a real rack. It may, for now, because the demo
-depends on it — but that is a judgment worth revisiting with real hardware in the room.
-
----
-
-## Where these decisions live in the code
-
-The kiosk work above touched two areas: the scripts that launch a screen, and the
-handful of app files that decide what a screen *claims to be*.
-
-| File | What changed | Which decision |
-|---|---|---|
-| `scripts/rack-screen/kiosk.sh` | Takes a **role** instead of a URL; private mode removed; per-role profile; marks the origin trusted; three launch modes, only one of which is a cage | kiosk vs incognito, profile per role, trusted origin, coach is not a kiosk |
-| `scripts/rack-screen/rack-kiosk-setup.sh` | Autostart entry is system-wide; no hardcoded user; creates the shared profile directory; a coach gets a tappable icon instead of an autostart | profile per role, coach is not a kiosk |
-| `react/public/manifest.*.json` | Each declares its own identity; coach and wall get their own start addresses | three manifests, three identities |
-| `react/src/device.js` | New `roleFromPath()` — works out a screen's role from the address | three manifests, three identities |
-| `react/src/App.jsx` | Applies the role's identity on **every** navigation, not only on role change | three manifests, three identities |
-| `react/src/main.jsx` | Offline-cache registration failure now logs why instead of vanishing | trusted origin |
-| `react/src/roleFromPath.test.js` | **New.** Pins the address-to-role mapping | three manifests, three identities |
-| `django/event_handler/services/ble_agent.py` | The program that owns the radio and turns frames into reps | a program on the base station owns the radio |
-| `react/src/rack/RackNodeSetup.jsx` | Choosing a sensor at the rack, coach-gated | sensors are chosen at the rack |
-| `django/event_handler/models.py` | `Node.acquisition_kind` — per-sensor transport | sensors can talk two different ways |
-| `docs/_ADR_RACK_BLE_LIVE_WORKFLOW.md` | The original decision record, in its formal form | all of the above |
-
-:::{admonition} If you only remember one thing
-:class: tip
-Two of these bugs — the discarded identity and the silently failed offline cache —
-had been live for months without anyone noticing, because **both failure modes look
-exactly like normal operation**. A screen that reinvents itself looks like a new
-screen. A cache that never installed looks like a cache that is working. When a
-feature has no visible failure state, that is the feature to go and verify by hand.
-
-The Bluetooth work has the same shape in a different place: an endpoint was replaced,
-and code written against the old one still merges cleanly and only fails when someone
-presses the button.
-:::
+The kiosk decisions (why the local install isn't HTTPS, the trusted origin, kiosk vs incognito, a browser profile per role, three app manifests) are on {doc}`local/kiosk-screens`.
