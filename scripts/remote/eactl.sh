@@ -45,7 +45,8 @@
 #
 #   DEMO DATA  (invented athletes and simulated sensors; only ever adds)
 #     eactl seed "Name"           fill it with demo data (asks for the short name;
-#                                 --reset removes the earlier demo rows first)
+#                                 --reset removes the earlier demo rows first;
+#                                 --guest-logins adds guest seats and demo logins)
 #     eactl sim "Name"            wake the demo athletes' sensors for 2 hours
 #     eactl sim "Name" --phantom  ...and have them lift on their own (not Jordan Lee)
 #                                 (--hours N; --stop ends them early)
@@ -966,15 +967,26 @@ seed)
     # with their own simulated sensor, a plan, a live session, a few finished sets.
     # The seeder only adds and recognises its own rows; it refuses on a school with
     # no coach yet, with another session running, or with a real athlete under a
-    # demo name. --reset removes its own earlier demo rows first.
+    # demo name. --reset removes its own earlier demo rows first. --guest-logins adds
+    # guest seats for a live demo (a rack waiting for each) and gives them and Jordan
+    # Lee demo logins, first name / first name + pass123; the repo is public, so only
+    # when asked.
     short="$(find_school "${1:-}")" || exit 1
-    reset=""
-    [ "${2:-}" = --reset ] && reset="--reset"
+    shift
+    reset="" guests=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --reset) reset="--reset"; shift ;;
+            --guest-logins) guests="--guest-logins"; shift ;;
+            *) echo 'usage: eactl seed "School Name" [--reset] [--guest-logins]'; exit 1 ;;
+        esac
+    done
     echo "==> demo data for $(school_info "$short" display-name) ($short): invented athletes,"
     echo "    their simulated sensors, a plan and a live demo session.${reset:+ Earlier demo rows are removed first.}"
+    [ -n "$guests" ] && echo "    Plus guest seats, and demo logins for them and Jordan Lee (shown when done)."
     read -r -p "Type the short name ($short) to go ahead: " typed
     [ "$typed" = "$short" ] || { echo "nothing seeded"; exit 0; }
-    kube -n "ea-$short" exec deploy/django -- python manage.py seed_active_session $reset
+    kube -n "ea-$short" exec deploy/django -- python manage.py seed_active_session $reset $guests
     ;;
 
 sim)

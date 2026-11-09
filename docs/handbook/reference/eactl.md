@@ -58,6 +58,7 @@ Only ever adds. It recognizes its own rows and never touches real ones.
 | Command | What it does | Changes anything? |
 |---|---|---|
 | `eactl seed "Name"` | Four invented athletes, each with a simulated sensor, a plan, a live session and a few finished sets. Refuses on a school with no coach yet, with another session running, or with a real athlete under a demo name. Asks for the short name. `--reset` removes its earlier demo rows first | adds rows |
+| | `--guest-logins` (remote only) adds three guest seats for a live demo, Taylor Grant, Morgan Hayes and Sam Ortiz, each with a rack waiting in the room before anyone signs in. They and Jordan Lee get demo logins: first name / first name + `pass123` (`jordan` / `jordanpass123`). Someone who already has a login keeps it. A guest is never a phantom, so a seat nobody takes stays an empty rack | adds rows and logins |
 | `eactl sim "Name"` | Wakes the demo athletes' sensors for 2 hours. Each sends reps while its athlete's set is running | adds rows |
 | | `--phantom` the athletes also lift on their own, set after set (except the hands-on demo athlete) · `--hours N` · `--stop` ends it early | |
 

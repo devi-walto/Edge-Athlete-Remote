@@ -39,7 +39,7 @@ from datetime import timedelta
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Max, Q
 from django.utils import timezone
 from django.utils.text import slugify
 
@@ -47,8 +47,9 @@ from event_handler.deployment import is_hosted
 
 from django.contrib.auth.models import User
 
-from event_handler.models import (Athlete, AthleteReferenceMax, DailyReport, Exercise,
-                                  Node, Rep, TrainingSession, SessionParticipation, Set,
+from event_handler.models import (VIRTUAL_RACK_BASE, Athlete, AthleteReferenceMax,
+                                  DailyReport, Exercise, Node, RackRuntime, Rep,
+                                  TrainingSession, SessionParticipation, Set,
                                   TrainingBlock, TrainingBlockExercise, TrainingBlockWorkout,
                                   TrainingGroup, TrainingGroupCoach, TrainingProgram)
 from event_handler.services.planning import generate_schedule, instantiate_block
@@ -90,8 +91,36 @@ RILEY = "Riley Brooks"
 # Jordan is already the one the gym demo taps a wristband for. Jordan gets no simulated
 # sensor (a real one is added from Jordan's own page), and `simulate_node --phantom`
 # never plays Jordan, so a real sensor can lift beside the phantom lifters. A coach
-# sends Jordan a login link like any athlete; the seeder still makes no login.
+# sends Jordan a login link like any athlete; the seeder makes no login (unless asked
+# with --guest-logins, below).
 MANUAL_ATHLETE = JORDAN
+
+# Guest seats, online only, and only with --guest-logins: athletes kept free for
+# visitors to sign in as during a live demo (Devin, 2026-11-08). Each has a simulated
+# sensor that sends reps while THEIR set runs, so a guest presses Start on their phone
+# and sees reps arrive. They come with logins, and a phantom never plays an athlete
+# someone can sign in as, so an empty seat stays an empty rack: the point is to show
+# the slots were provisioned for people. Their racks are made when the session is
+# seeded, not when they join, so the room shows them waiting from the start.
+GUEST_ATHLETES = ["Taylor Grant", "Morgan Hayes", "Sam Ortiz"]
+
+# --guest-logins also gives these a login: first name / first name + "pass123"
+# ("jordan" / "jordanpass123"), Devin's convention for the demo slide. These passwords
+# are in a PUBLIC repo, which is why they are only ever made when asked for, on demo
+# data, for athletes (who can join and lift, nothing more). An athlete who already has
+# a login keeps it, and a username someone else holds is never taken.
+LOGIN_ATHLETES = [MANUAL_ATHLETE, *GUEST_ATHLETES]
+
+
+def demo_login(name):
+    """The (username, password) --guest-logins gives this athlete."""
+    first = name.split()[0].lower()
+    return first, f"{first}pass123"
+
+
+# Every name this seeder may own, for the refusal check and --reset (a gym box never
+# gets the guests, but a reset there still recognises them).
+ALL_DEMO_NAMES = ATHLETES + GUEST_ATHLETES
 
 # The prescription, written once for the whole group. 72% of a 315 squat is 227,
 # which rounds to 225 — the same bar the old per-athlete seed put in front of
@@ -120,6 +149,9 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--reset", action="store_true",
                             help="Remove this command's own earlier demo rows first, then reseed.")
+        parser.add_argument("--guest-logins", action="store_true",
+                            help="Remote only: add guest seats (athletes with a rack waiting) and "
+                                 "give them and the hands-on athlete demo logins.")
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -127,7 +159,11 @@ class Command(BaseCommand):
         # (All of this runs in one transaction, so a refusal anywhere leaves
         # nothing behind.)
         coach = self._coach()
-        clash = list(Athlete.objects.filter(name__in=ATHLETES, is_simulated=False)
+        guest_seats = options["guest_logins"]
+        if guest_seats and not is_hosted():
+            raise CommandError("--guest-logins is for a remote server: a gym box has no "
+                               "athlete logins.")
+        clash = list(Athlete.objects.filter(name__in=ALL_DEMO_NAMES, is_simulated=False)
                      .values_list("name", flat=True))
         if clash:
             raise CommandError(
@@ -158,8 +194,10 @@ class Command(BaseCommand):
 
         # Invented athletes, marked simulated: that label is how the seeder (and
         # --reset) recognises its own rows, never by name alone.
+        # With --guest-logins, the guest seats too.
+        roster = ALL_DEMO_NAMES if guest_seats else ATHLETES
         athletes = {name: Athlete.objects.get_or_create(name=name, is_simulated=True)[0]
-                    for name in ATHLETES}
+                    for name in roster}
         # Wristband tags must survive re-seeding: get_or_create keeps an existing
         # athlete, so only assign when the row has none. (A coach may have
         # retagged someone by hand; never clobber that.) And never take a tag a
@@ -249,7 +287,7 @@ class Command(BaseCommand):
         if closed:
             self.stdout.write(f"  ended the earlier demo session ({closed})")
 
-        # The live session, roster = all four athletes.
+        # The live session, roster = every athlete seeded above.
         session = TrainingSession.objects.create(label=SESSION_LABEL, started_at=timezone.now())
         session.athletes.set(athletes.values())
 
@@ -278,10 +316,73 @@ class Command(BaseCommand):
         self._record_max(athletes[CASEY],  bench, 175.0, days_ago=10)
         self._record_max(athletes[RILEY],  squat, 275.0, days_ago=14)
 
+        # Guests get maxes too, so their rack shows real pounds rather than "set your
+        # max" in front of a visitor. Only added once: re-seeding keeps them.
+        guests = [athletes[name] for name in GUEST_ATHLETES if name in athletes]
+        for guest in guests:
+            if not AthleteReferenceMax.objects.filter(athlete=guest).exists():
+                self._record_max(guest, squat, 285.0, days_ago=6)
+                self._record_max(guest, bench, 195.0, days_ago=6)
+        provisioned = self._provision_guest_racks(session, guests, own_sensor)
+        logins = ([self._give_demo_login(athletes[name]) for name in LOGIN_ATHLETES]
+                  if guest_seats else [])
+
         self.stdout.write(self.style.SUCCESS(
             f"Seeded demo session '{session.label}' (id={session.id}) with "
             f"{len(athletes)} invented athletes in '{GROUP_NAME}', each but {MANUAL_ATHLETE} "
             f"(hands-on) with their own simulated sensor, 2 finished sets, and maxes."))
+        if provisioned:
+            self.stdout.write(f"Guest seats ({', '.join(provisioned)}): a rack waiting for each.")
+        for line in logins:
+            self.stdout.write(f"  {line}")
+        if guest_seats:
+            self.stdout.write(f"Session link: /session/{session.id}")
+
+    def _give_demo_login(self, athlete):
+        """Give one athlete the convention login, unless they have a login already or
+        someone else holds the username. Returns a line saying which."""
+        from event_handler.phantom_lifter import is_phantom_login
+        username, password = demo_login(athlete.name)
+        current = athlete.user if athlete.user_id else None
+        if current is not None and is_phantom_login(current):
+            # A phantom's no-password login, left by a run cut short: not a person's.
+            athlete.user = None
+            athlete.save(update_fields=["user"])
+            current.delete()
+            current = None
+        if current is not None:
+            return f"{athlete.name}: kept their login '{current.username}'"
+        if User.objects.filter(username__iexact=username).exists():
+            return (f"{athlete.name}: no login made, the username '{username}' is someone "
+                    f"else's (send a login link instead)")
+        # Set directly, not through the password rules a person's own choice must pass:
+        # these are known demo passwords on purpose.
+        user = User(username=username)
+        user.set_password(password)
+        user.save()
+        athlete.user = user
+        athlete.save(update_fields=["user"])
+        return f"{athlete.name}: {username} / {password}"
+
+    def _provision_guest_racks(self, session, guests, own_sensor):
+        """Make each guest's rack now, with their sensor on it, so the room shows the
+        seat waiting before anyone signs in. Joining finds this rack and reuses it
+        (services/session_join.py), and ending the session removes it like any other
+        virtual rack. Returns the names given a rack."""
+        done = []
+        for guest in guests:
+            sensor = own_sensor.get(guest.name)
+            if sensor is None:   # their sensor name belongs to someone else: no seat
+                continue
+            highest = (RackRuntime.objects.filter(rack_number__gte=VIRTUAL_RACK_BASE)
+                       .aggregate(n=Max("rack_number"))["n"])
+            rack = RackRuntime.objects.create(
+                rack_number=VIRTUAL_RACK_BASE if highest is None else highest + 1,
+                owner_athlete=guest, session=session)
+            sensor.rack_number = rack.rack_number
+            sensor.save(update_fields=["rack_number"])
+            done.append(guest.name)
+        return done
 
     # ── what is ours, and who owns the plan ───────────────────────────────────
 
@@ -311,7 +412,7 @@ class Command(BaseCommand):
         a Set and a DailyReport both PROTECT their session, on purpose, so the
         seeder has to say plainly that it is removing its own.
         """
-        demo = Athlete.objects.filter(is_simulated=True, name__in=ATHLETES)
+        demo = Athlete.objects.filter(is_simulated=True, name__in=ALL_DEMO_NAMES)
         sessions = TrainingSession.objects.filter(pk__in=self._own_sessions())
         for session in sessions:
             release_session_racks(session)
@@ -324,6 +425,12 @@ class Command(BaseCommand):
         from event_handler.phantom_lifter import is_phantom_login
         for athlete in demo.filter(user__isnull=False).select_related("user"):
             if is_phantom_login(athlete.user):
+                athlete.user.delete()
+                continue
+            # A login --guest-logins made: its convention username AND password. A
+            # login a person chose (through a login link) never matches both.
+            username, password = demo_login(athlete.name)
+            if athlete.user.username == username and athlete.user.check_password(password):
                 athlete.user.delete()
         Node.objects.filter(is_simulated=True).filter(
             Q(owner__in=demo) | Q(node_id=NODE_ID)).delete()
