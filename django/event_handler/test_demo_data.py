@@ -17,10 +17,12 @@ from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
 from .management.commands.seed_active_session import (ATHLETES, BLOCK_NAME, GROUP_NAME,
-                                                       MANUAL_ATHLETE, NFC_TAG_BY_ATHLETE,
+                                                       GUEST_ATHLETES, LOGIN_ATHLETES,
+                                                       MANUAL_ATHLETE, demo_login, NFC_TAG_BY_ATHLETE,
                                                        NODE_ID, SESSION_LABEL, sensor_id)
-from .models import (Athlete, CoachProfile, Node, RackRuntime, Set, TrainingBlock,
-                     TrainingGroup, TrainingSession)
+from .models import (Athlete, AthleteReferenceMax, CoachProfile, Node, RackRuntime, Set,
+                     TrainingBlock, TrainingGroup, TrainingSession)
+from .services.room_state import room_state_snapshot
 from .services.session_join import join
 
 User = get_user_model()
@@ -178,6 +180,121 @@ class GymOnlyPiecesTests(TestCase):
         self.assertEqual(Node.objects.get(node_id=NODE_ID).rack_number, 1)
 
 
+@override_settings(EA_DEPLOYMENT='remote')
+class GuestSeatTests(TestCase):
+    """Guest seats (Devin, 2026-11-08, `seed --guest-logins`): athletes kept free for
+    visitors during a live demo. Each has a rack waiting from the moment the session is
+    seeded, joining lands on it, and the demo logins are made only when asked for."""
+
+    def setUp(self):
+        make_admin()
+        seed('--guest-logins')
+        self.session = TrainingSession.objects.get(label=SESSION_LABEL, ended_at__isnull=True)
+
+    def test_each_guest_has_a_sensor_on_a_rack_of_their_own_before_joining(self):
+        racks = RackRuntime.objects.filter(session=self.session)
+        self.assertEqual(sorted(r.owner_athlete.name for r in racks), sorted(GUEST_ATHLETES))
+        for rack in racks:
+            sensor = Node.objects.get(owner=rack.owner_athlete)
+            self.assertEqual((sensor.node_id, sensor.is_simulated, sensor.rack_number),
+                             (sensor_id(rack.owner_athlete.name), True, rack.rack_number))
+
+    def test_the_live_room_shows_the_empty_seats(self):
+        shown = {r['rack_number'] for r in room_state_snapshot(include_details=True)['racks']}
+        for rack in RackRuntime.objects.filter(session=self.session):
+            self.assertIn(rack.rack_number, shown)
+
+    def test_joining_lands_on_the_waiting_rack(self):
+        taylor = Athlete.objects.get(name=GUEST_ATHLETES[0])
+        waiting = RackRuntime.objects.get(session=self.session, owner_athlete=taylor)
+        rack, sensor = join(self.session.pk, taylor)
+        self.assertEqual(rack.pk, waiting.pk)
+        self.assertEqual(sensor.rack_number, waiting.rack_number)
+
+    def test_guests_are_on_the_session_with_maxes(self):
+        for name in GUEST_ATHLETES:
+            guest = Athlete.objects.get(name=name)
+            self.assertTrue(self.session.athletes.filter(pk=guest.pk).exists())
+            self.assertTrue(guest.training_groups.filter(name=GROUP_NAME).exists())
+            self.assertEqual(AthleteReferenceMax.objects.filter(athlete=guest).count(), 2)
+
+    def test_the_guests_and_jordan_get_the_convention_logins(self):
+        for name in LOGIN_ATHLETES:
+            username, password = demo_login(name)
+            login = Athlete.objects.get(name=name).user
+            self.assertEqual(login.username, username)
+            self.assertTrue(login.check_password(password))
+        self.assertEqual(demo_login('Jordan Lee'), ('jordan', 'jordanpass123'))
+
+    def test_the_phantoms_get_no_login_and_the_guests_are_never_phantoms(self):
+        from .phantom_lifter import phantom_athletes
+        Node.objects.filter(is_simulated=True).update(is_active=True)   # what the simulator does
+        names = {a.name for a in phantom_athletes(MANUAL_ATHLETE)}
+        self.assertEqual(names, {'Alex Rivera', 'Casey Morgan', 'Riley Brooks'})
+        for name in names:
+            self.assertIsNone(Athlete.objects.get(name=name).user)
+
+    def test_seeding_again_moves_the_seats_and_keeps_the_logins(self):
+        seed('--guest-logins')
+        new = TrainingSession.objects.get(label=SESSION_LABEL, ended_at__isnull=True)
+        self.assertEqual(RackRuntime.objects.filter(session=self.session).count(), 0)
+        self.assertEqual(RackRuntime.objects.filter(session=new).count(), len(GUEST_ATHLETES))
+        for name in GUEST_ATHLETES:     # maxes are not stacked by a re-seed
+            self.assertEqual(AthleteReferenceMax.objects.filter(athlete__name=name).count(), 2)
+        self.assertEqual(User.objects.count(), 1 + len(LOGIN_ATHLETES))
+
+    def test_reset_removes_the_demo_logins_and_rebuilds_them_once(self):
+        seed('--reset', '--guest-logins')
+        self.assertEqual(Athlete.objects.filter(name__in=GUEST_ATHLETES).count(), len(GUEST_ATHLETES))
+        self.assertEqual(RackRuntime.objects.filter(owner_athlete__name__in=GUEST_ATHLETES).count(),
+                         len(GUEST_ATHLETES))
+        self.assertEqual(User.objects.count(), 1 + len(LOGIN_ATHLETES))
+
+    def test_a_real_athlete_with_a_guest_name_is_never_mixed_in(self):
+        TrainingSession.objects.filter(label=SESSION_LABEL).update(ended_at=timezone.now())
+        Athlete.objects.filter(name='Sam Ortiz').update(is_simulated=False)
+        with self.assertRaisesMessage(CommandError, 'Sam Ortiz'):
+            seed('--guest-logins')
+
+
+@override_settings(EA_DEPLOYMENT='remote')
+class GuestLoginRulesTests(TestCase):
+    def setUp(self):
+        make_admin()
+
+    def test_without_the_flag_no_guests_and_no_logins(self):
+        seed()
+        self.assertFalse(Athlete.objects.filter(name__in=GUEST_ATHLETES).exists())
+        self.assertFalse(RackRuntime.objects.exists())
+        self.assertEqual(User.objects.count(), 1)
+
+    def test_jordan_keeps_a_login_he_already_has(self):
+        jordan = Athlete.objects.create(name=MANUAL_ATHLETE, is_simulated=True)
+        jordan.user = User.objects.create_user('jlee', password=PASSWORD)
+        jordan.save()
+        seed('--guest-logins')
+        jordan.refresh_from_db()
+        self.assertEqual(jordan.user.username, 'jlee')
+        self.assertFalse(User.objects.filter(username='jordan').exists())
+        seed('--reset', '--guest-logins')       # a login a person chose survives a reset
+        self.assertTrue(User.objects.filter(username='jlee').exists())
+
+    def test_a_username_someone_else_holds_is_never_taken(self):
+        other = User.objects.create_user('Taylor', password=PASSWORD)
+        seed('--guest-logins')
+        self.assertIsNone(Athlete.objects.get(name='Taylor Grant').user)
+        self.assertTrue(User.objects.get(pk=other.pk).check_password(PASSWORD))
+
+
+@override_settings(EA_DEPLOYMENT='local')
+class NoGuestSeatsOnAGymBoxTests(TestCase):
+    def test_a_gym_box_refuses_the_flag_and_writes_nothing(self):
+        make_admin()
+        with self.assertRaisesMessage(CommandError, 'remote server'):
+            seed('--guest-logins')
+        self.assertFalse(Athlete.objects.exists())
+
+
 class DemoCoachTests(TestCase):
     def test_the_local_demo_coach_is_a_coach(self):
         call_command('ensure_demo_coach', '--i-know-this-is-a-demo-box', stdout=StringIO())
@@ -218,6 +335,23 @@ class SimulatorTests(TransactionTestCase):
         threading.Timer(1.0, lambda: os.kill(os.getpid(), 15)).start()
         self.run_sim()
         self.assert_unregistered()
+
+    def test_a_new_run_puts_the_guest_sensors_back_on_their_seats(self):
+        seed('--guest-logins')
+        self.run_sim('--stop-after', '0.02')          # a run ending takes them off
+        guest = Athlete.objects.get(name=GUEST_ATHLETES[0])
+        seat = RackRuntime.objects.get(owner_athlete=guest)
+        seen = []
+
+        def watch():
+            from django.db import connection
+            try:
+                seen.append(Node.objects.get(owner=guest).rack_number)
+            finally:
+                connection.close()
+        threading.Timer(0.5, watch).start()
+        self.run_sim('--stop-after', '0.02')
+        self.assertEqual(seen, [seat.rack_number])
 
     def test_it_wakes_switched_off_sensors(self):
         Node.objects.filter(pk=self.sensor.pk).update(is_active=False)

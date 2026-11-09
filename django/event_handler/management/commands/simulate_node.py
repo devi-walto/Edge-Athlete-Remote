@@ -28,6 +28,9 @@
 #                      plan set by set and rests, so the room trains with nobody at
 #                      the screens. The hands-on athlete (the seeder's MANUAL_ATHLETE)
 #                      is never one: that's who a real person lifts as, beside them.
+#                      Nor are the guest seats (seed --guest-logins): they have
+#                      logins, so their sensors only send reps while a visitor signed
+#                      in as them runs a set.
 
 import json
 import os
@@ -204,6 +207,13 @@ class Command(BaseCommand):
                 raise CommandError("No seeded demo sensors here. Seed the school first.")
             nodes.update(is_active=True)
             self.stdout.write(f"Woke {len(node_ids)} demo sensor(s): {', '.join(node_ids)}")
+            # A run that ended took every demo sensor off its rack. Put back the ones
+            # whose athlete already has a rack in the running session (a guest seat
+            # the seeder made, or someone who joined), or that rack drops out of the
+            # live room until they join again.
+            back = self._back_on_their_racks(nodes)
+            if back:
+                self.stdout.write(f"Back on their racks: {', '.join(back)}")
             fixed_rack = None   # each follows its own athlete's rack
         else:
             node_id = options["node_id"]
@@ -282,6 +292,26 @@ class Command(BaseCommand):
                 close_old_connections()
                 Node.objects.filter(node_id__in=node_ids).update(rack_number=None, is_active=False)
                 self.stdout.write(f"Unregistered {len(node_ids)} demo sensor(s).")
+
+    def _back_on_their_racks(self, nodes):
+        """Each sensor whose owner has a rack in the running session goes back on it.
+        Returns the sensor ids moved."""
+        from ...models import RackRuntime
+        from ...services.active_session import active_session
+
+        session = active_session()
+        if session is None:
+            return []
+        rack_by_owner = dict(RackRuntime.objects.filter(session=session, owner_athlete__isnull=False)
+                             .values_list("owner_athlete_id", "rack_number"))
+        moved = []
+        for node in nodes:
+            rack = rack_by_owner.get(node.owner_id)
+            if rack is not None and node.rack_number != rack:
+                node.rack_number = rack
+                node.save(update_fields=["rack_number"])
+                moved.append(node.node_id)
+        return moved
 
     def _start_phantoms(self, client, stop_event, options):
         """One phantom lifter per eligible seeded athlete, a few seconds apart so the
