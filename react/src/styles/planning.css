@@ -1,0 +1,275 @@
+/*
+ * planning.css — the PLANNING state: the workout catalog, Training Blocks and
+ * Programs, the Design steps, and the calendar (list and card views).
+ *
+ * Why this file exists: everything a coach uses to build and schedule training, in
+ * one place. Colours come from styles/tokens.css; never type a colour code here.
+ */
+
+/* Workout catalog */
+.workout-catalog { display:grid; gap:16px; }
+.workout-catalog-heading { align-items:end; background:linear-gradient(110deg,color-mix(in srgb, var(--lime) 6%, var(--panel)),var(--panel) 68%); border:1px solid color-mix(in srgb, var(--lime) 7%, var(--line)); display:flex; justify-content:space-between; padding:24px 28px; }
+.workout-catalog-heading span,.workout-panel>header>span { color:var(--lime); font-size:9px; font-weight:900; letter-spacing:.12em; text-transform:uppercase; }
+.workout-catalog-heading h2 { font-size:36px; letter-spacing:-.055em; margin:5px 0 0; }
+.workout-catalog-heading p,.workout-panel>header p { color:var(--muted); line-height:1.5; margin:5px 0 0; }
+.workout-catalog-heading>b { color:var(--lime); font-size:12px; white-space:nowrap; }
+.workout-builder-grid { display:grid; gap:14px; grid-template-columns:minmax(0,1.25fr) minmax(320px,.75fr); }
+.workout-panel { background:var(--panel); border:1px solid var(--line); min-width:0; padding:20px; }
+.workout-panel>header h3 { font-size:22px; letter-spacing:-.035em; margin:4px 0 0; }
+.workout-panel form { display:grid; gap:14px; margin-top:18px; }
+.workout-panel label { color:var(--muted); display:grid; font-size:9px; font-weight:850; gap:6px; letter-spacing:.07em; text-transform:uppercase; }
+/* Selects are styled with the inputs. Left to the browser they render as pale
+   native controls next to dark fields, which reads as "these two boxes are
+   different kinds of thing" when they are just fields on one form. */
+.workout-panel input, .workout-panel select { appearance:none; background:var(--field); border:1px solid var(--line); color:var(--ink); font:inherit; min-height:42px; min-width:0; padding:9px 10px; width:100%; }
+.workout-panel select { background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%); background-position:right 15px center,right 10px center; background-repeat:no-repeat; background-size:5px 5px,5px 5px; padding-right:32px; }
+.workout-panel input:focus, .workout-panel select:focus { border-color:var(--lime); }
+/* ...except checkboxes. `appearance:none` above also erased the tick, so a checked
+   box looked exactly like an empty one: clicking a training day worked but showed
+   nothing, and a second click (because "nothing happened") quietly unticked it. Give
+   checkboxes the browser's own drawing back; the dark field styling is for typing. */
+.workout-panel input[type=checkbox] { appearance:auto; background:none; border:0; padding:0; }
+
+/* The block's training days. Without this each checkbox stacks into its own row
+   as a large bare square with the label stranded beside it — a week of days
+   should read as a row of small toggles. */
+/* Days grouped under their block, with the edit controls per card. */
+.workout-block-group { margin-top:18px; }
+.workout-block-heading { color:var(--muted); font-size:10px; font-weight:850; letter-spacing:.09em; margin:0 0 10px; text-transform:uppercase; }
+.workout-day-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+.workout-day-actions button { background:transparent; border:1px solid var(--line); color:var(--muted); cursor:pointer; font-size:11px; padding:6px 10px; }
+.workout-day-actions button:hover:not(:disabled) { border-color:var(--lime); color:var(--lime); }
+.workout-day-actions button:disabled { opacity:.35; cursor:default; }
+.workout-day-actions .workout-remove { border-color:color-mix(in srgb, var(--coral) 40%, transparent); color:var(--coral-text); }
+.workout-day-actions .workout-remove:hover:not(:disabled) { border-color:var(--coral-text); color:var(--coral-text); }
+.workout-row-editor { display:grid; gap:10px; margin-top:12px; }
+.workout-row-editor fieldset { border:1px solid var(--line); display:grid; gap:8px; padding:12px; }
+.workout-row-editor legend { color:var(--lime); font-size:10px; font-weight:850; letter-spacing:.07em; padding:0 6px; text-transform:uppercase; }
+
+.workout-panel fieldset.program-draft { border:1px solid var(--line); padding:14px; }
+.workout-panel fieldset.program-draft > div { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.workout-panel fieldset.program-draft > div > label { align-items:center; border:1px solid var(--line); cursor:pointer; display:flex; flex-direction:row; gap:7px; padding:8px 11px; }
+.workout-panel fieldset.program-draft > div > label:hover { border-color:var(--lime); }
+.workout-panel fieldset.program-draft input[type=checkbox] { accent-color:var(--lime); height:15px; margin:0; min-height:0; min-width:0; width:15px; }
+.workout-panel fieldset.program-draft > div > label > span { color:var(--ink); font-size:11px; font-weight:700; letter-spacing:.04em; }
+.workout-exercise-list { display:grid; gap:9px; }
+.workout-exercise-list fieldset { align-items:end; border:1px solid var(--line); display:grid; gap:9px; grid-template-columns:minmax(170px,1.5fr) repeat(5,minmax(72px,.55fr)) auto; margin:0; min-width:0; padding:13px; }
+.workout-exercise-list legend { color:var(--lime); font-size:10px; font-weight:900; letter-spacing:.08em; padding:0 6px; text-transform:uppercase; }
+.workout-form-actions { align-items:center; display:flex; gap:9px; justify-content:flex-end; margin-top:14px; }
+.workout-form-actions button,.workout-catalog-list>button,.workout-program-browser>button { background:var(--lime); border:1px solid var(--lime); color:var(--on-lime); cursor:pointer; font-weight:900; min-height:42px; padding:9px 15px; }
+.workout-form-actions button:disabled,.workout-remove:disabled { cursor:not-allowed; opacity:.42; }
+.workout-form-actions .workout-secondary,.workout-catalog-list>.workout-secondary,.workout-program-browser>.workout-secondary { background:transparent; border-color:var(--line); color:var(--ink); }
+.workout-remove { background:transparent; border:1px solid var(--line); color:var(--coral); cursor:pointer; min-height:42px; padding:7px 10px; }
+.workout-errors { background:color-mix(in srgb, var(--coral) 9%, transparent); border:1px solid color-mix(in srgb, var(--coral) 30%, transparent); color:var(--coral); font-size:11px; line-height:1.5; margin-top:12px; padding:12px 14px; }
+.workout-errors ul { margin:6px 0 0; padding-left:18px; }
+.workout-status { color:var(--mint); font-size:11px; margin:12px 0 0; }
+.workout-file { margin-top:18px; }
+.workout-file input { cursor:pointer; padding:7px; }
+.workout-file input::file-selector-button { background:color-mix(in srgb, var(--line) 81%, var(--bg)); border:0; color:var(--ink); cursor:pointer; margin-right:10px; padding:8px 10px; }
+.workout-file-name { color:var(--muted); font-size:10px; overflow-wrap:anywhere; }
+.workout-preview { border-top:1px solid var(--line); margin-top:18px; padding-top:15px; }
+.workout-preview h4 { font-size:14px; margin:0 0 9px; }
+.workout-preview article { background:var(--field); border:1px solid var(--line); margin-top:8px; padding:12px; }
+.workout-preview article>strong { font-size:13px; }
+.workout-preview ol,.workout-card-grid ol { display:grid; gap:7px; list-style:none; margin:10px 0 0; padding:0; }
+.workout-preview li,.workout-card-grid li { border-top:1px solid var(--line); display:grid; gap:3px; padding-top:7px; }
+.workout-preview li b,.workout-card-grid li b { font-size:11px; }
+.workout-preview li span,.workout-card-grid li span { color:var(--muted); font-size:9px; }
+.workout-catalog-list { margin-top:0; }
+.workout-card-grid { display:grid; gap:10px; grid-template-columns:repeat(3,minmax(0,1fr)); margin-top:16px; }
+.workout-card-grid>article { background:var(--field); border:1px solid var(--line); min-width:0; padding:16px; }
+.workout-card-grid>article>header span { color:var(--lime); font-size:9px; font-weight:900; text-transform:uppercase; }
+.workout-card-grid h4 { font-size:19px; letter-spacing:-.025em; margin:4px 0 0; overflow-wrap:anywhere; }
+.workout-card-add { background:transparent; border:1px solid color-mix(in srgb, var(--lime) 16%, var(--line)); color:var(--lime); cursor:pointer; font-size:10px; font-weight:900; margin-top:14px; min-height:40px; text-transform:uppercase; width:100%; }
+.workout-card-add:disabled { border-color:var(--line); color:var(--muted); cursor:not-allowed; }
+.workout-pagination { align-items:center; border-top:1px solid var(--line); display:flex; gap:12px; justify-content:flex-end; margin-top:16px; padding-top:14px; }
+.workout-pagination span { color:var(--muted); font-size:10px; margin-right:auto; }
+.workout-pagination button { background:var(--lime); border:1px solid var(--lime); color:var(--on-lime); cursor:pointer; font-weight:900; min-height:42px; padding:9px 15px; }
+.workout-pagination button.workout-secondary { background:transparent; border-color:var(--line); color:var(--ink); }
+.workout-pagination button:disabled { cursor:not-allowed; opacity:.42; }
+
+/* "My blocks / All coaches" — a lens on the shared catalog, not a permission. */
+.block-scope-toggle { display:flex; gap:8px; margin-bottom:14px; }
+.block-scope-toggle button { background:var(--lime); border:1px solid var(--lime); color:var(--on-lime); cursor:pointer; font-weight:900; min-height:38px; padding:7px 14px; }
+.block-scope-toggle button.workout-secondary { background:transparent; border-color:var(--line); color:var(--muted); }
+
+/* Category chips. Same control in two roles: filtering the catalog, and
+   labelling one block. Both toggle, so both look the same on purpose. */
+.block-category-filter,.block-card-categories { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+.block-card-categories { margin:8px 0 10px; }
+.category-chip { background:transparent; border:1px solid var(--line); border-radius:999px; color:var(--muted); cursor:pointer; font-size:11px; font-weight:800; padding:5px 11px; }
+.category-chip b { color:var(--muted); font-weight:800; opacity:.7; }
+.category-chip.is-on { background:var(--lime); border-color:var(--lime); color:var(--on-lime); }
+.category-chip.is-on b { color:var(--on-lime); opacity:.65; }
+.category-chip.is-clear { border-style:dashed; }
+.new-category-form { align-items:flex-end; border-top:1px solid var(--line); display:flex; gap:10px; margin-top:16px; padding-top:14px; }
+.new-category-form label { display:flex; flex:1; flex-direction:column; gap:5px; }
+.new-category-form button { min-height:42px; padding:9px 15px; }
+
+/* A day still open from before today — the base station restarted and nobody
+   ended it. Amber, not red: nothing is broken and nothing was lost. */
+.training-day-active.is-stale { border-color:var(--amber); }
+.training-day-stale-note { color:var(--amber); font-size:11px; line-height:1.5; margin-top:8px; max-width:62ch; }
+.training-day-stale-note b { color:var(--ink); }
+.training-day-end-time { display:flex; flex-direction:column; gap:4px; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+.training-day-end-time select { background:var(--panel); border:1px solid var(--line); color:var(--ink); font-size:12px; min-height:38px; padding:7px 9px; text-transform:none; letter-spacing:0; }
+.training-day-end-time small { color:var(--muted); font-size:10px; letter-spacing:0; text-transform:none; }
+
+/* "That day is still open" — resolve it here rather than sending the coach
+   somewhere else and losing the form they just filled in. */
+.training-day-conflict { border:1px solid var(--amber); display:flex; flex-direction:column; gap:10px; margin-top:14px; padding:14px; }
+.training-day-conflict strong { color:var(--amber); font-size:13px; }
+.training-day-conflict p { color:var(--muted); font-size:11px; line-height:1.5; max-width:60ch; }
+.training-day-conflict-actions { display:flex; gap:8px; }
+.training-day-conflict-actions button { min-height:42px; padding:9px 15px; }
+
+/* Deployed programs, and promoting one back into a reusable block. */
+.deployed-program-list { display:flex; flex-direction:column; gap:10px; }
+.deployed-program-list article { align-items:flex-end; border:1px solid var(--line); display:flex; gap:14px; justify-content:space-between; padding:12px 14px; }
+.deployed-program-main span { color:var(--muted); font-size:10px; letter-spacing:.08em; text-transform:uppercase; }
+.deployed-program-main h4 { font-size:14px; margin:3px 0; }
+.deployed-program-main p { color:var(--muted); font-size:11px; margin:0; }
+.deployed-program-actions { align-items:flex-end; display:flex; flex:none; gap:8px; }
+.deployed-program-actions label { color:var(--muted); display:flex; flex-direction:column; font-size:9px; gap:4px; letter-spacing:.1em; text-transform:uppercase; }
+.deployed-program-actions input { background:var(--panel); border:1px solid var(--line); color:var(--ink); font-size:12px; letter-spacing:0; min-height:38px; padding:7px 9px; text-transform:none; width:190px; }
+.deployed-program-actions button { background:var(--lime); border:1px solid var(--lime); color:var(--on-lime); cursor:pointer; font-weight:900; min-height:38px; padding:7px 14px; }
+.deployed-program-actions button:disabled { cursor:not-allowed; opacity:.45; }
+
+@media (max-width:720px) {
+  .deployed-program-list article { align-items:stretch; flex-direction:column; }
+  .deployed-program-actions input { width:100%; }
+}
+
+/* ── the training calendar ─────────────────────────────────────────────────
+   Each slot's STATE is the thing a coach is reading, so it carries the colour:
+   planned is quiet, ready is amber (waiting on you), running is lime (live),
+   complete is muted. */
+.schedule-workspace { display:flex; flex-direction:column; gap:16px; }
+.schedule-past-toggle button { min-height:38px; padding:7px 14px; }
+.schedule-past-toggle button.workout-secondary { background:transparent; border:1px solid var(--line); color:var(--muted); }
+.schedule-errors { border:1px solid var(--coral); padding:12px; }
+.schedule-errors p { color:var(--coral-text); font-size:11px; line-height:1.5; margin:0; }
+
+/* ── PLANNING → Design: the three steps ───────────────────────────────────
+   Numbered because the order is the point: a block is the template, a program
+   is that template placed in time, a one-off is a program with no template.
+   The left rule is what makes them read as a sequence rather than three
+   unrelated panels stacked up. */
+/* An accordion, because the three steps are a SEQUENCE. Three open at once
+   turned the tab into a scroll where the order stopped being visible; one at a
+   time keeps the shape of the process on screen. */
+.design-step { border-left:2px solid var(--line); margin-bottom:10px; padding-left:15px; }
+.design-step.is-open { border-left-color:var(--lime); }
+.design-step-head { align-items:center; background:transparent; border:0; border-bottom:1px solid var(--line); color:inherit; cursor:pointer; display:flex; font:inherit; gap:12px; padding:12px 0; text-align:left; width:100%; }
+.design-step-head:hover .design-stepno { color:var(--ink); }
+.design-step.is-open .design-stepno { color:var(--lime); }
+.design-step-head:focus-visible { outline:2px solid var(--lime); outline-offset:2px; }
+.design-stepno { color:var(--muted); font-size:10px; font-weight:900; letter-spacing:.12em; text-transform:uppercase; }
+/* What is inside, without opening it — so a coach can tell which step they want
+   from the closed state. */
+.design-step-summary { color:var(--muted); flex:1; font-size:11px; }
+.design-step-chevron { color:var(--muted); font-size:15px; font-weight:800; line-height:1; }
+.design-step.is-open .design-step-chevron { color:var(--lime); }
+.design-step .workout-panel { margin-top:12px; }
+
+/* Create is a dropdown that REVEALS a form, not a form sitting open forever.
+   A coach creates a block occasionally and deploys one constantly, so the rare
+   thing should not be the tallest thing on the screen. */
+.design-create-row { align-items:center; display:flex; flex-wrap:wrap; gap:10px; margin-bottom:12px; }
+.design-create-row select { background:var(--panel2); border:1px solid var(--line); color:var(--ink); font:inherit; font-size:12px; min-height:40px; padding:8px 10px; }
+.design-inline-form { border-top:1px solid var(--line); margin-top:12px; padding-top:14px; }
+.design-inline-form>label { color:var(--muted); display:grid; font-size:9px; font-weight:850; gap:6px; margin-top:12px; text-transform:uppercase; }
+.design-inline-form input,.design-inline-form select { background:var(--field); border:1px solid var(--line); color:var(--ink); font:inherit; min-height:44px; padding:8px 10px; }
+
+/* Block cards. Deploy and Edit days are actions ON the block — they used to be
+   panels with their own "which block?" dropdown, so a coach picked the block
+   twice and nothing stopped the two picks from disagreeing. */
+.design-block-list { display:flex; flex-direction:column; gap:10px; margin-top:14px; }
+.design-block-list>article { background:var(--panel2); border:1px solid var(--line); padding:14px; }
+.design-block-main span { color:var(--muted); font-size:10px; font-weight:850; letter-spacing:.08em; text-transform:uppercase; }
+.design-block-main h4 { font-size:16px; margin:4px 0 0; }
+.design-block-actions { display:flex; flex-wrap:wrap; gap:9px; margin-top:11px; }
+.design-block-actions button { background:var(--lime); border:1px solid var(--lime); color:var(--on-lime); cursor:pointer; font:inherit; font-size:11px; font-weight:850; min-height:40px; padding:8px 13px; }
+.design-block-actions button.workout-secondary { background:transparent; border-color:var(--line); color:var(--ink); }
+.design-block-actions button:disabled { cursor:not-allowed; opacity:.42; }
+
+/* ── the calendar's card view ──────────────────────────────────────────────
+   A month at a glance: four across, one card per day, colour-coded by the same
+   four states the list uses. The colours ARE the information here — a coach
+   scanning this grid is reading shape, not text. */
+.schedule-header-controls { align-items:center; display:flex; flex-wrap:wrap; gap:12px; }
+.schedule-header-controls select { background:var(--panel2); border:1px solid var(--line); color:var(--ink); font:inherit; font-size:12px; padding:7px 9px; }
+.schedule-view-toggle { background:var(--panel2); border:1px solid var(--line); border-radius:999px; display:inline-flex; gap:3px; padding:3px; }
+.schedule-view-toggle button { background:transparent; border:0; border-radius:999px; color:var(--muted); cursor:pointer; font:inherit; font-size:10px; font-weight:850; letter-spacing:.09em; padding:7px 15px; text-transform:uppercase; }
+.schedule-view-toggle button.is-on { background:var(--lime); color:var(--on-lime); }
+
+.schedule-card-grid { display:grid; gap:10px; grid-template-columns:repeat(4,minmax(0,1fr)); }
+.schedule-card { background:var(--panel2); border:1px solid var(--line); padding:13px; }
+.schedule-card-date { color:var(--muted); font-size:10px; font-weight:900; letter-spacing:.1em; text-transform:uppercase; }
+.schedule-card b { display:block; font-size:14px; margin:5px 0 3px; }
+.schedule-card p { color:var(--muted); font-size:11px; margin:0 0 9px; }
+.schedule-card-state { font-size:10px; font-weight:900; letter-spacing:.1em; text-transform:uppercase; }
+.schedule-card button { background:transparent; border:1px solid var(--line); color:var(--ink); cursor:pointer; font:inherit; font-size:10px; font-weight:800; letter-spacing:.05em; margin-top:9px; min-height:38px; padding:8px 11px; text-transform:uppercase; width:100%; }
+.schedule-card button:hover:not(:disabled) { border-color:var(--lime); color:var(--lime); }
+.schedule-card button.schedule-card-primary { background:var(--lime); border-color:var(--lime); color:var(--on-lime); }
+.schedule-card button:disabled { cursor:not-allowed; opacity:.42; }
+
+/* Dashed edge = nothing exists yet. The one state that is a plan, not a thing. */
+.schedule-card.is-planned { border-style:dashed; }
+.schedule-card.is-planned .schedule-card-state { color:var(--muted); }
+.schedule-card.is-ready { border-color:var(--lime); }
+.schedule-card.is-ready .schedule-card-state { color:var(--lime); }
+.schedule-card.is-running { background:color-mix(in srgb, var(--mint) 7%, transparent); border-color:var(--mint); }
+.schedule-card.is-running .schedule-card-state { color:var(--mint); }
+/* Faded, not hidden: a finished day is context for the ones around it. */
+.schedule-card.is-done { opacity:.55; }
+.schedule-card.is-done .schedule-card-state { color:var(--muted); }
+
+.schedule-card-note { color:var(--muted); font-size:11px; margin-top:13px; }
+
+/* Four across needs width. Below that the cards get too narrow to read a
+   workout name in, so drop to two and then one rather than squeezing. */
+@media (max-width:1100px) { .schedule-card-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:620px) { .schedule-card-grid { grid-template-columns:1fr; } }
+
+/* The calendar scrolls INSIDE ITSELF rather than lengthening the page.
+   A deployed block generates a slot per training day, so this list runs to
+   dozens of rows within a couple of weeks. Left to grow, it pushed everything
+   else off the bottom of the screen and buried the controls above it under three
+   weeks of scrolling. Bounded here, the day rows stay where a coach left them
+   and the rest of PLANNING stays reachable.
+   `overscroll-behavior` stops a flick that reaches the end of the list from
+   carrying on and scrolling the page underneath it — on a tablet that reads as
+   the screen jumping. */
+.schedule-day-list { display:flex; flex-direction:column; gap:14px; max-height:min(58vh,640px); overflow-y:auto; overscroll-behavior:contain; padding-right:6px; }
+/* A hairline that says "there is more below" without adding chrome. */
+.schedule-day-list::-webkit-scrollbar { width:8px; }
+.schedule-day-list::-webkit-scrollbar-thumb { background:var(--line); border-radius:4px; }
+.schedule-day-list::-webkit-scrollbar-track { background:transparent; }
+.schedule-day { border:1px solid var(--line); }
+.schedule-day>header { align-items:baseline; border-bottom:1px solid var(--line); display:flex; gap:12px; justify-content:space-between; padding:12px 14px; }
+.schedule-day>header h4 { font-size:14px; margin:0; }
+.schedule-day>header span { color:var(--muted); font-size:10px; letter-spacing:.08em; text-transform:uppercase; }
+.schedule-slot-list { display:flex; flex-direction:column; }
+.schedule-slot { align-items:center; border-top:1px solid var(--line); display:flex; gap:14px; justify-content:space-between; padding:12px 14px; }
+.schedule-slot:first-child { border-top:none; }
+.schedule-slot-main h5 { font-size:13px; margin:2px 0; }
+.schedule-slot-main p { color:var(--muted); font-size:11px; margin:0; }
+.schedule-slot-main small { color:var(--muted); font-size:10px; opacity:.8; }
+.schedule-slot-state { font-size:9px; font-weight:900; letter-spacing:.14em; text-transform:uppercase; }
+.schedule-slot.is-planned .schedule-slot-state { color:var(--muted); }
+.schedule-slot.is-ready { border-left:3px solid var(--amber); }
+.schedule-slot.is-ready .schedule-slot-state { color:var(--amber); }
+.schedule-slot.is-running { border-left:3px solid var(--lime); }
+.schedule-slot.is-running .schedule-slot-state { color:var(--lime); }
+.schedule-slot.is-done { opacity:.62; }
+.schedule-slot-actions { align-items:center; display:flex; flex:none; gap:8px; }
+.schedule-slot-actions button { background:var(--lime); border:1px solid var(--lime); color:var(--on-lime); cursor:pointer; font-weight:900; min-height:38px; padding:7px 13px; }
+.schedule-slot-actions button.workout-secondary { background:transparent; border-color:var(--line); color:var(--muted); }
+.schedule-slot-actions button:disabled { cursor:not-allowed; opacity:.45; }
+.schedule-move { color:var(--muted); display:flex; flex-direction:column; font-size:9px; gap:3px; letter-spacing:.1em; text-transform:uppercase; }
+.schedule-move select { background:var(--panel); border:1px solid var(--line); color:var(--ink); font-size:12px; letter-spacing:0; min-height:38px; padding:6px 8px; text-transform:none; }
+
+@media (max-width:720px) {
+  .schedule-slot { align-items:flex-start; flex-direction:column; }
+}

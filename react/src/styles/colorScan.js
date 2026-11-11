@@ -37,7 +37,7 @@ export function coloursIn(text) {
   return counts
 }
 
-/** Every colour code typed anywhere in the app: { 'src/App.css': { '#0b1114': 29 } }. */
+/** Every colour code typed anywhere in the app: { 'src/athlete/athlete.css': { '#123456': 1 } }. */
 export function typedColours() {
   const all = {}
   for (const file of appFiles()) {

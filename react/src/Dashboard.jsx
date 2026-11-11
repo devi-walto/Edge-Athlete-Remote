@@ -30,7 +30,15 @@
 // of time. See the D8 note further down.
 
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
-import "./App.css";
+// The room display and coach workspace styles, in the order they must load: the
+// shared base first, the area files, and the screen-size rules last so they win.
+import "./styles/monitor.css";
+import "./styles/room-display.css";
+import "./styles/coach-workspace.css";
+import "./styles/planning.css";
+import "./styles/analytics.css";
+import "./styles/rack-tablet.css";
+import "./styles/screen-sizes.css";
 import { navigate } from "./router.js";
 import { coachFetch, fetchCurrentCoach, getCoachToken, getSignedInRole, setCoachToken, setSignedInRole } from "./coach/api.js";
 import AccountMenu from "./coach/AccountMenu.jsx";

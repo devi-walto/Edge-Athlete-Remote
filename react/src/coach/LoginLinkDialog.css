@@ -2,7 +2,7 @@
  * LoginLinkDialog.css — the login link dialog, to the board F_Remote_LoginLink.
  *
  * Solid surfaces and square-ish corners like the rest of the coach screens
- * (spec 06, rule 9). Colours are the app's own (App.css): lime for the action
+ * (spec 06, rule 9). Colours come from styles/tokens.css: lime for the action
  * and the name, amber for the warning.
  */
 
