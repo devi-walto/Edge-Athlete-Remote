@@ -4,7 +4,10 @@
 - Date: 2026-10-06
 - Status: Written — not started
 - Form item: #11 (unified coach interface, added 2026-10-06)
-- Depends on: nothing. **Specs 07, 08 and 09 all depend on this one**
+- Depends on: nothing. **Specs 07, 08, 09 and 10 (the athlete's pages) all depend on this one**
+- Updated 2026-11-11: the shared pieces live in `react/src/ui/` (coach and athlete screens
+  share them), `Button` carries every kind in rule 2, Phase 3 builds rule 12's top bar,
+  and Phase 0 moves every colour into one token file with a guard against drift
 - Mockup: every screen in [`mockups/coach-ui-final.html`](mockups/coach-ui-final.html).
   On the canvas, the **Final designs** page (boards named `F_*`) is the only one to build from
 - Look adopted 2026-10-06: **solid surfaces** (rule 9). It replaced the earlier hairline look
@@ -51,6 +54,7 @@ The single most likely next action is the filled lime button. Everything else is
 | **Solid** | filled `#151e23`, 1px border `#5c6a72`, 6px corner, white text, weight 800 | real but secondary actions |
 | **Solid, key** | the same with a lime border, and an icon where one helps | the main secondary action of a screen (**Copy session link**) |
 | **End** | transparent, 1px border `#ff646b`, text `#ff9aa0`, 6px corner | **every button that ends something**, in both versions |
+| **Danger** | filled `danger-fill #e5484d`, white text 19px weight 800, 6px corner | the button inside a confirm dialog that removes something for good (**Remove sensor**). Never on a row |
 | **Quiet** | text only, grey `#89969d` or white | row actions, Close, Cancel |
 | **Quiet, lime** | lime text, weight 800, set off by a dashed divider | an action inside a dashed "waiting" row (**Send login link**) |
 
@@ -61,7 +65,8 @@ The single most likely next action is the filled lime button. Everything else is
 - **End training day is the End button on every screen, local and hosted** (Devin,
   2026-10-06). This replaces the earlier ruling that it was lime, so the strip no
   longer carries a second lime button.
-- Other destructive row actions (Archive, Delete, Remove) stay quiet grey.
+- Other destructive row actions (Archive, Delete, Remove) stay quiet grey. The row's
+  button only opens the confirm dialog; the red **Danger** button is inside it.
 
 ### 3. Nothing important is buried
 
@@ -85,8 +90,14 @@ Never "template" as the name of a thing (it describes a Training Block).
 ### 5. Two accent colours, each meaning one thing
 
 - **Lime** — where you are, and what to press next.
-- **Red** (`#ff646b`) — an athlete is **Behind**, or a button **ends** something.
-  Nothing else is red.
+- **Red** — an athlete is **Behind**, a button **ends or removes** something, or
+  something **went wrong** (an error message, a field with a mistake). Nothing else is red.
+  Two reds, each with one job (decided 2026-11-11, Devin):
+  - **Coral `#ff646b`** for red **text, outlines and dots** on the dark background:
+    Behind, End buttons, error messages, a field with a mistake. 6.3:1 against `panel`.
+  - **`danger-fill #e5484d`** for a **filled** red button with white text (rule 2's
+    Danger kind). White on it is 3.9:1, so its text is 19px weight 800, which meets
+    the 3:1 bar for large text. White on coral would be 2.9:1, too faint.
 - Mint and amber keep their existing jobs: velocity zones, sensor state, elapsed time.
 
 ### 6. What stays exactly as it is
@@ -205,7 +216,7 @@ Decided 2026-11-11 (Devin), for coach and athlete screens alike, on every page:
 - **The signed-in person's name, beside it, opens the account menu.** Coaches: Coaches
   (administrators only), Change password, Log out. Athletes: Account, Sign out.
 - Today the coach's corner is one button (the picture and "Edge Athlete") that opens the
-  account menu (`react/src/coach/AccountMenu.jsx`); it splits into the two targets above.
+  account menu (`react/src/coach/AccountMenu.jsx`); it splits into the two targets above (Phase 3).
 
 ## Tokens
 
@@ -217,45 +228,123 @@ Font: Inter.
 
 New, added by this spec: `focus-bg #121b14` · `faint #6f7c83` · `soft-ink #c9d1d5` ·
 `button-edge #5c6a72` · `risk-bg #170d0e` · `hero-bg #101a17` · `admin-bg #1a2610` ·
+`on-lime #071006` (dark text on a lime fill) · `danger-fill #e5484d` (rule 5) ·
 `radius-button 6px`. (`hairline #1b252a` and `outline #8d9aa1` from the first draft of
 this spec are dropped: rule 9 uses `line` and `panel` instead.)
 
+**Every colour in the app comes from one file** (decided 2026-11-11, Devin): change a
+colour there and it changes everywhere. No colour code is typed anywhere else, and a test
+keeps it that way. The sensor's own setup page (the captive portal in
+`esp32/edge_athlete_node/src/setup_page.h`) runs on another device and can't load the
+app's stylesheet, so it keeps its own copy, and a test fails if that copy stops matching.
+
+### What it found (2026-11-11)
+
+- The colours were defined twice, by hand: in `theme.js` (172 uses, the rack screen's
+  inline styles) and as variables on the `.monitor` class in `App.css` (620 uses).
+- The `.monitor` variables reach only the coach screens. The sign-in pages, the athlete
+  pages and the account menu can't see them, so their stylesheets type colours out.
+- **393 colour codes typed out in 20 files, 78 different values**, plus 47 `rgba(...)`
+  see-through colours. About ten are the brand colours copied by hand; the rest are
+  drift: six reds, four ambers (the sensor's setup page uses `#f2b84b`, the app
+  `#ffb63e`) and about forty near-identical dark greys.
+- `App.css` is one file of 1,020 lines.
+
 ---
 
-## Phase 0 — Tokens
+## Phase 0 — One token file, and nothing typed anywhere else
 
-Add the new tokens to `theme.js` and as CSS variables in `App.css`, beside the existing
-ones. Use nothing yet.
+Two stops. It changes how colours are written, never what a screen does.
+
+### Stop A — the token file, the guards, the exact matches
+
+- **New `react/src/styles/tokens.css`**, on `:root` so every screen can see it (not on
+  `.monitor`). It holds every colour in "Tokens" above, plus `radius-button` and the
+  font stacks. It is grouped into sections (surfaces, text, lime, mint, amber, red,
+  shapes and type), and **each section opens with a comment naming the kinds of things
+  that colour is used on**, in plain words. For example: *Red: coral is for red text,
+  outlines and dots (Behind, End buttons, error messages, a field with a mistake);
+  danger-fill is only for the filled button that confirms removing something.* A colour
+  with no job written down doesn't go in.
+- **`theme.js` stops holding colour codes.** Each entry points at its variable
+  (`lime: 'var(--lime)'`), so the rack screen's inline styles read the same file.
+  (Checked 2026-11-11: no code does arithmetic on the colour codes, so this is safe.)
+- The `.monitor` block in `App.css` loses its copy of the variables.
+- **Every typed colour that exactly matches a token becomes that token.**
+- **The guards**, run by the frontend suite in CI:
+  - a test fails if a colour code (`#…`, `rgb(…)`, `rgba(…)`, `hsl(…)`) appears in any
+    stylesheet or component outside `tokens.css`. Until Stop B, it reads from a list of
+    the leftovers it allows, and that list may only shrink;
+  - a test reads the colours in the sensor's `setup_page.h` and fails if any differs from
+    `tokens.css`. Until Stop B, it allows only the amber.
 
 **Done when:**
 
-- [ ] The tokens exist in both places with matching values (a test compares them, as
-      the navbar's stylesheet comment already asks for).
-- [ ] The app looks exactly as before. Frontend suite and build pass.
+- [ ] `tokens.css` exists with a plain-language comment on every section.
+- [ ] `theme.js` holds no colour codes.
+- [ ] Both guard tests pass, and each fails when a colour code is typed into a component
+      or the setup page's colours are changed (checked once by hand).
+- [ ] *(Browser)* The app looks exactly as before, as a local install and as the remote
+      server: the rack screen, the coach's three states, sign-in, the athlete's pages.
+- [ ] Frontend suite and build pass.
+
+**Stop. Devin reviews.**
+
+### Stop B — the drift, the firmware, the files
+
+- **Every leftover colour is mapped to the nearest token.** Before changing any, a list
+  goes to Devin: each leftover value, where it is, the token it would become, and a
+  side-by-side of any that visibly shift (the five stray reds, the ambers, the greys).
+  A leftover that turns out to have a real job of its own becomes a new token, with its
+  comment, only on Devin's say-so.
+- **See-through colours** become a token plus how see-through it is, written with
+  `color-mix()`, not a new `rgba(…)`.
+- **The Remove sensor button** uses `danger-fill` at 19px (rule 2's Danger kind).
+- **The sensor's setup page** takes the app's amber, `#ffb63e`. It reaches sensors at the
+  next firmware update; nothing forces a re-flash.
+- **`App.css` is split by area** into `react/src/styles/`: base (page, type, focus),
+  the rack screen, the room display, and the coach's shared pieces. Each file opens with a
+  plain-language comment saying what it styles. The component stylesheets that already
+  sit beside their component (`coach/*.css`, `athlete/athlete.css`) stay there.
+- The leftovers list is deleted: from now on the guard allows no colour code outside
+  `tokens.css` at all.
+
+**Done when:**
+
+- [ ] No colour code exists outside `tokens.css` and the sensor's setup page; the guard
+      runs with no allowed list.
+- [ ] The setup page's colours all match `tokens.css`.
+- [ ] Every new token Devin approved has its comment.
+- [ ] *(Browser)* Every screen checked against its Final designs board; the only visible
+      changes are the ones on the approved list.
+- [ ] Frontend suite, build and firmware build pass.
 
 **Stop. Devin reviews.**
 
 ## Phase 1 — The shared pieces
 
-New folder `react/src/coach/ui/`, one small component per file, each opening with a
-plain-language comment:
+New folder `react/src/ui/`, one small component per file, each opening with a
+plain-language comment. It sits outside `coach/` because the athlete's pages (spec 10) are
+built from the same pieces: one interface, one set of components (rule 8).
 
 | Component | What it is |
 |---|---|
 | `FocusCard` | the tinted, lime-bordered panel with a label, a large title and an action area |
-| `QuietRow` | a hairline row: name, meta, a slot for a badge, quiet actions |
+| `QuietRow` | one list row as its own solid block (rule 9: `panel`, 1px `line` border, 6px gap to the next): name, meta, a slot for a badge, quiet actions |
 | `SectionLabel` | the small grey uppercase label |
 | `Step` | a numbered step, active or idle, plus `StepLink` for one that goes elsewhere |
-| `Button` | `kind="primary" \| "next" \| "outline" \| "quiet"` — the only way to make a button on these screens |
+| `Button` | every kind in rule 2: `kind="primary" \| "next" \| "solid" \| "key" \| "end" \| "danger" \| "quiet" \| "quiet-lime"`. The only way to make a button on these screens |
 | `Badge` | `scheduled` / `not-scheduled`, sensor on/off, rack state |
 | `RiskTag` | the red "Behind 4/5" tag, and its small-triangle form |
 | `Hero` | the existing header card, extracted unchanged |
 
-Build them against the mockup, each with a render test. Use them nowhere yet.
+Build them against the Final designs boards, each with a render test. Use them nowhere yet.
 
 **Done when:**
 
-- [ ] Each component has a render test for every variant.
+- [ ] Each component has a render test for every variant, including all eight `Button`
+      kinds (`end` is the red outline from rule 2, `danger` the filled red, `key` the
+      lime-bordered solid one).
 - [ ] `Button` refuses an unknown `kind` in development.
 - [ ] Buttons and row actions are at least 44px tall (touch targets on a tablet).
 - [ ] Text meets 4.5:1 contrast on its background — in particular grey text on the
@@ -280,6 +369,39 @@ Build them against the mockup, each with a render test. Use them nowhere yet.
       phrase "server-local".
 - [ ] *(Browser)* All three states still work.
 
+**Stop. Devin reviews.**
+
+## Phase 3 — The top bar (rule 12)
+
+Today the coach's corner is one button, the picture and "Edge Athlete", that opens the
+account menu (`react/src/coach/AccountMenu.jsx`). It splits into two targets, and the
+result becomes a shared `TopBar` in `react/src/ui/` that the athlete's pages use too
+(spec 10 Phase 1). The menu's contents and its rules (close on Escape or a press
+elsewhere; Coaches shown to administrators only, as a courtesy, with the server as the
+lock) move with it unchanged.
+
+| Part | Coach | Athlete (spec 10) |
+|---|---|---|
+| The picture (profile image on the lime square) | Goes to **Planning**, always, even while a training day is running. The session strip stays and the day keeps running | Goes to the athlete's Home |
+| The name beside it | Opens the menu: Coaches (administrators only), Change password, Log out | Opens the menu: Account, Sign out |
+| Signed out (sign-in, first-run) | The square holds "EA", and neither part is pressable | The same |
+
+Also in `react/src/ui/`: `BackLink`, the one link under the top bar on a drill-down page
+(rule 11), back to wherever the page was opened from.
+
+**Done when:**
+
+- [ ] *(Frontend test)* From SESSION and from ANALYTICS, pressing the picture lands on
+      PLANNING; with a day running, the day is still running afterwards.
+- [ ] *(Frontend test)* Pressing the name opens the menu; Coaches appears only for an
+      administrator; Escape and a press elsewhere close it.
+- [ ] Both parts are real buttons, at least 44px tall, reachable by keyboard, each with
+      its own accessible name ("Home", "Account menu").
+- [ ] `BackLink` renders its label and goes where it is told; a render test covers it.
+- [ ] *(Browser)* The top bar works as a local install and as the remote server.
+
+**Stop. Devin reviews.**
+
 ---
 
 ## Acceptance criteria
@@ -287,11 +409,14 @@ Build them against the mockup, each with a render test. Use them nowhere yet.
 - [ ] Every coach screen has one focus card and at most one lime button.
 - [ ] No row, card or table is drawn without a solid surface and a border; only banners
       and the focus card are tinted.
-- [ ] Every button that ends something uses the End style, in both deployments.
+- [ ] Every button that ends something uses the End style, in both deployments; every
+      filled red button is the Danger kind on `danger-fill`.
+- [ ] No colour code exists outside `tokens.css` (and the sensor's setup page, which a
+      test keeps matching).
 - [ ] Every pressable thing is a `Button`.
 - [ ] The six vocabulary terms are used consistently; "deploy" and "head coach" (for
       the flag) appear nowhere a coach reads.
-- [ ] Red appears only on **Behind** and on End buttons.
+- [ ] Red appears only on **Behind**, End and Danger buttons, and errors.
 - [ ] The strip, header cards, LIVE pill and navbar are unchanged.
 - [ ] No component, page or stylesheet exists only for hosted mode, apart from the
       login-link dialog. Every hosted difference is reached through `useDeployment()`.
@@ -302,7 +427,7 @@ Build them against the mockup, each with a render test. Use them nowhere yet.
 
 | Risk | What reduces it |
 |---|---|
-| The rules drift as screens are rebuilt one at a time | Specs 07–09 may only use the Phase 1 components for buttons, rows and focus cards |
+| The rules drift as screens are rebuilt one at a time | Specs 07–10 may only use the Phase 1 components for buttons, rows and focus cards |
 | A restyle quietly changes behaviour | This spec has no behaviour change at all; any is a bug |
 | "One lime button" hides something that used to be obvious | Rule 3 wins over rule 2: if a coach needs it weekly, it is an outline button on the row, never a menu |
 
