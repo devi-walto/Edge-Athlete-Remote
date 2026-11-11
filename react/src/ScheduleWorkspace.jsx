@@ -264,7 +264,7 @@ export default function ScheduleWorkspace({ accessToken, onLogout, refresh, onSt
     {status && <p className="workout-status" role="status">{status}</p>}
 
     {state === "ready" && days.length === 0 && <p className="monitor-empty">
-      No scheduled days. A block needs training days and a duration for its calendar to be generated — deploy one from the Workouts tab.
+      No Training Sessions on the calendar yet. Create a Training Program in Design, then schedule it.
     </p>}
 
     {view === "cards"

@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: Phase 0 done 2026-11-11 (every colour in one token file); Phase 1 built, awaiting review
+- Status: Phase 0 done 2026-11-11 (every colour in one token file); Phases 1–2 built, awaiting review
 - Form item: #11 (unified coach interface, added 2026-10-06)
 - Depends on: nothing. **Specs 07, 08, 09 and 10 (the athlete's pages) all depend on this one**
 - Updated 2026-11-11: the shared pieces live in `react/src/ui/` (coach and athlete screens
@@ -369,11 +369,12 @@ Build them against the Final designs boards, each with a render test. Use them n
   from the Workouts tab" on the empty Calendar. (Each is also listed in the spec that
   owns its screen; do them here if those specs have not started.)
 - Delete `react/src/coachTabs.js` if nothing imports it. On 2026-10-06 nothing did.
+  (Already gone by 2026-11-11.)
 
 **Done when:**
 
-- [ ] *(Frontend test)* SESSION renders no tab row; PLANNING and ANALYTICS render theirs.
-- [ ] A test fails if the coach bundle's source contains `/api/` in visible text or the
+- [x] *(Frontend test)* SESSION renders no tab row; PLANNING and ANALYTICS render theirs.
+- [x] A test fails if the coach bundle's source contains `/api/` in visible text or the
       phrase "server-local".
 - [ ] *(Browser)* All three states still work.
 

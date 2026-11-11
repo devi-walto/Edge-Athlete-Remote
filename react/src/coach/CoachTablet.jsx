@@ -649,11 +649,6 @@ export function RoomLayout({ token, onAuthLost }) {
         Bluetooth sensors that have never been linked must be verified standing at
         the rack — you cannot tell anonymous nearby radios apart from here.
       </p>
-      <p className="coach-hint">
-        Screens: <code>{'PATCH /api/racks/{device_id}/'}</code>
-        {' · '}
-        Sensors: <code>{'PUT /api/racks/node-assignment/'}</code>
-      </p>
 
       {loading && screens.length === 0 && nodes.length === 0 ? (
         <p className="coach-msg">Loading room state…</p>

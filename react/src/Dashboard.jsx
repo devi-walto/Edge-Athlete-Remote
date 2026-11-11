@@ -22,7 +22,7 @@
 // comes in as the `coachState` prop, read from the URL by App.jsx, so a reload
 // keeps it and the Back button moves between states. See coach/coachState.js.
 //
-// Each state has its own sub-tabs (STATE_TABS below) — the eight-at-once bar
+// Each state has its own sub-tabs (STATE_TABS, in coach/ContextTabs.jsx) — the eight-at-once bar
 // this replaced is gone, and so is the Programs tab, whose per-athlete override
 // editor now lives in PLANNING → Groups → Open.
 //
@@ -61,42 +61,12 @@ import SessionWidget from "./coach/SessionWidget.jsx";
 import QuickNote from "./coach/QuickNote.jsx";
 import GroupsView from "./coach/GroupsView.jsx";
 import GroupHistory from "./coach/GroupHistory.jsx";
+import ContextTabs, { STATE_TABS } from "./coach/ContextTabs.jsx";
 import { pathForCoachState, rememberCoachState } from "./coach/coachState.js";
 import { DEFAULT_PRESET_DAYS, matchesPreset, normaliseRange, presetRange, RANGE_PRESETS, rangeContains, rangeLabel } from "./coach/historyRange.js";
 import { scheduleUrl, scheduleWindow, slotState } from "./schedule.js";
 
-// Which sub-tabs belong to which state — the three moments of a coach's day.
-//
-//   PLANNING   what you set up before anyone lifts
-//   SESSION    the live room, while they do
-//   ANALYTICS  what you read afterwards, one athlete at a time
-//
-// The first entry in each list is that state's landing tab.
-const STATE_TABS = {
-  planning: ["design", "groups", "catalog", "calendar"],
-  session: ["room"],
-  analytics: ["athlete", "history", "notes", "reports"],
-};
-
-// ANALYTICS sub-tabs that are about ONE athlete, and so need the selector above
-// them. Reports is the odd one out — it is day-scoped and carries its own
-// athlete/day mode switch, so the shared selector stays out of its way.
-const ATHLETE_SCOPED_TABS = ["athlete", "history", "notes"];
-
-// The sub-tab bar used to print its own keys, so it read "workouts · schedule"
-// in lowercase. These are named things a coach would say out loud, so the label
-// and the internal key stop being the same string here.
-const TAB_LABELS = {
-  design: "Design",
-  groups: "Groups",
-  catalog: "Workout catalog",
-  calendar: "Calendar",
-  room: "Room",
-  athlete: "Athlete",
-  history: "History",
-  notes: "Notes",
-  reports: "Reports",
-};
+// The sub-tabs each state has (STATE_TABS) and their row live in coach/ContextTabs.jsx.
 
 // Days a coach set up ahead of time and has not started yet.
 //
@@ -928,7 +898,7 @@ function CoachView({ monitor, accessToken, onLogout, coachState, me }) {
           <span className="coach-range-label">{rangeLabel(historyRange)}</span>
         </div>}
       </div>}
-      {!dayMissing&&<nav className="coach-context-tabs" aria-label="Coach workspace tabs" role="tablist">{stateTabs.map(t=><button className={activeTab===t?"active":""} aria-selected={activeTab===t} role="tab" onClick={()=>chooseTab(t)} key={t}>{TAB_LABELS[t]??t}</button>)}</nav>}{/* ONE instance across two sub-tabs, not two. Design and Workout catalog
+      {!dayMissing&&<ContextTabs tabs={stateTabs} active={activeTab} onChoose={chooseTab}/>}{/* ONE instance across two sub-tabs, not two. Design and Workout catalog
           need the same blocks, categories, groups and deployed programs; mounting
           it twice would fetch all of them twice and let the two copies drift —
           a block made on Design would not show up in the catalog. */}
