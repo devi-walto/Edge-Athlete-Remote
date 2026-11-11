@@ -22,7 +22,7 @@ const inputStyle = {
 
 const buttonStyle = {
   padding: '13px 18px', borderRadius: 10, border: 'none', background: T.lime,
-  color: '#0a1106', fontWeight: 850, cursor: 'pointer', fontFamily: 'inherit',
+  color: 'var(--on-lime)', fontWeight: 850, cursor: 'pointer', fontFamily: 'inherit',
 }
 
 const secondaryButtonStyle = {
@@ -301,7 +301,7 @@ export default function RackNodeSetup({ rackNumber, onReady, onObserve }) {
               value={username} onChange={(event) => setUsername(event.target.value)} style={inputStyle} />
             <input aria-label="Coach password" autoComplete="current-password" type="password" placeholder="Password"
               value={password} onChange={(event) => setPassword(event.target.value)} style={inputStyle} />
-            {error && <div role="alert" style={{ color: '#ff8b8b', fontSize: 13 }}>{error}</div>}
+            {error && <div role="alert" style={{ color: 'var(--coral-text)', fontSize: 13 }}>{error}</div>}
             <button type="submit" disabled={disabled} style={{ ...buttonStyle, opacity: disabled ? .45 : 1 }}>
               {status === 'authenticating' ? 'Authenticating...' : 'Continue to sensor scan'}
             </button>
@@ -329,7 +329,7 @@ export default function RackNodeSetup({ rackNumber, onReady, onObserve }) {
                : 'Bluetooth sensors must be verified at the rack. Wi-Fi sensors can be linked directly.'}
         </p>
 
-        {error && <div role="alert" style={{ color: '#ff8b8b', fontSize: 13, marginBottom: 14 }}>{error}</div>}
+        {error && <div role="alert" style={{ color: 'var(--coral-text)', fontSize: 13, marginBottom: 14 }}>{error}</div>}
 
         {(status === 'scan-ready' || status === 'scanning') && (
           <>

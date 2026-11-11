@@ -1622,8 +1622,7 @@ def athletes_view(request):
     reachable through detail and history.
 
     The GET stays open on purpose. Braydon's coach-accounts work made this
-    coach-only, but on a gym box the connection test and the rack-side tools read
-    it with no login. Closing it for the hosted version is spec 05's job, where
+    coach-only, but on a gym box the rack-side tools read it with no login. Closing it for the hosted version is spec 05's job, where
     every open route is handled in one place.
     """
     if request.method == "GET":

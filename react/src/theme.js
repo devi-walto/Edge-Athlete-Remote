@@ -1,24 +1,30 @@
-// theme.js — the rack screen's colors and type, in ONE place.
+// theme.js — the rack screen's colours and type, for inline styles.
 //
-// These values match the team's `.monitor` design system (Braydon's coach/wall
-// surfaces) so every screen in Edge Athlete reads as one product: a near-black
-// background, a lime accent, mint/amber/coral for green/yellow/red status, and
-// Inter with tight, heavy numerals. If the look ever needs to change, change it
-// here — every screen imports from this file.
+// Why this file exists: the rack screen and a few other screens set their styles in
+// JavaScript (style={{ ... }}) instead of in a stylesheet, so they need the colours as
+// values they can drop in. Every value here only POINTS at a colour in
+// styles/tokens.css (the one place colours are defined), so changing a colour there
+// changes these screens too. Never put a colour code in this file.
 export const T = {
-  bg: '#070b0e',      // near-black page background
-  panel: '#10171b',   // raised surfaces (cards, buttons)
-  panel2: '#151e23',  // slightly lighter surface
-  line: '#263239',    // hairline borders/dividers
-  ink: '#f5f7f2',     // primary text (near-white)
-  muted: '#89969d',   // secondary text / labels
-  lime: '#a9f04d',    // the brand accent
-  mint: '#45dcb3',    // status: on target  (green)
-  amber: '#ffb63e',   // status: dropping   (yellow)
-  coral: '#ff646b',   // status: fatigued   (red)
+  bg: 'var(--bg)',      // the page background
+  panel: 'var(--panel)',   // cards, rows, buttons
+  panel2: 'var(--panel2)',  // a surface one step lighter
+  line: 'var(--line)',    // borders and dividers
+  ink: 'var(--ink)',     // main text
+  muted: 'var(--muted)',   // secondary text, labels
+  lime: 'var(--lime)',    // the brand accent: press this next
+  mint: 'var(--mint)',    // status: on target  (green)
+  amber: 'var(--amber)',   // status: dropping   (yellow)
+  coral: 'var(--coral)',   // status: fatigued   (red)
 
-  // Inter is bundled locally (see main.jsx) so it renders on the Pi's offline
-  // network; the rest are fallbacks in case the font ever fails to load.
-  sans: '"Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif',
-  mono: 'ui-monospace, Menlo, Consolas, monospace',
+  // Inter, bundled with the app (see main.jsx); defined in styles/tokens.css.
+  sans: 'var(--font-sans)',
+  mono: 'var(--font-mono)',
+}
+
+/** A see-through version of a colour, for inline styles: seeThrough(T.coral, 40) is
+ *  coral at 40% over whatever is behind it. Colours here are names, not codes, so the
+ *  old trick of gluing "66" onto a colour code no longer works; this does the same. */
+export function seeThrough(color, percent) {
+  return `color-mix(in srgb, ${color} ${percent}%, transparent)`
 }

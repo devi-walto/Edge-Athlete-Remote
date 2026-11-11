@@ -5,7 +5,7 @@
  * line of "28 athletes · Sarah Kemp (head), Mike Ross". Nothing more, because
  * the tab only answers "what groups exist and who runs them".
  *
- * Colours match react/src/theme.js.
+ * Colours come from styles/tokens.css; never type a colour code here.
  */
 
 .groups-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px; }
@@ -15,8 +15,8 @@
 .groups-create-open,
 .groups-stranded {
   background: transparent;
-  border: 1px solid #263239;
-  color: #f5f7f2;
+  border: 1px solid var(--line);
+  color: var(--ink);
   cursor: pointer;
   font: inherit;
   font-size: 12px;
@@ -24,24 +24,24 @@
   padding: 8px 14px;
 }
 
-.groups-create-open:hover { border-color: #a9f04d; color: #a9f04d; }
+.groups-create-open:hover { border-color: var(--lime); color: var(--lime); }
 
 /* Coral, because an athlete in no group gets no program and no calendar — they
    are invisible everywhere else in PLANNING. Clicking filters to them. */
-.groups-stranded { border-color: #ff646b; color: #ff646b; }
-.groups-stranded:hover { background: rgba(255, 100, 107, .1); }
+.groups-stranded { border-color: var(--coral); color: var(--coral-text); }
+.groups-stranded:hover { background: color-mix(in srgb, var(--coral) 10%, transparent); }
 
 .groups-create { display: flex; flex-wrap: wrap; gap: 8px; }
 .groups-create input {
-  background: #0b1114; border: 1px solid #263239; color: #f5f7f2;
+  background: var(--field); border: 1px solid var(--line); color: var(--ink);
   font: inherit; font-size: 13px; min-height: 40px; min-width: 220px; padding: 8px 10px;
 }
-.groups-create input:focus-visible { border-color: #a9f04d; outline: none; }
+.groups-create input:focus-visible { border-color: var(--lime); outline: none; }
 .groups-create button {
-  background: #a9f04d; border: 1px solid #a9f04d; color: #071006;
+  background: var(--lime); border: 1px solid var(--lime); color: var(--on-lime);
   cursor: pointer; font: inherit; font-weight: 850; font-size: 12px; min-height: 40px; padding: 8px 14px;
 }
-.groups-create button.workout-secondary { background: transparent; border-color: #263239; color: #f5f7f2; }
+.groups-create button.workout-secondary { background: transparent; border-color: var(--line); color: var(--ink); }
 .groups-create button:disabled { cursor: not-allowed; opacity: .42; }
 
 /* ── the roster ── */
@@ -49,36 +49,36 @@
 .groups-roster-panel { margin-top: 4px; }
 .groups-filter { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 4px; }
 .groups-filter button {
-  background: #151e23; border: 1px solid #263239; border-radius: 999px; color: #89969d;
+  background: var(--panel2); border: 1px solid var(--line); border-radius: 999px; color: var(--muted);
   cursor: pointer; font: inherit; font-size: 11px; font-weight: 800; padding: 7px 13px;
 }
-.groups-filter button:hover { color: #f5f7f2; }
-.groups-filter button.is-on { background: #a9f04d; border-color: #a9f04d; color: #071006; }
+.groups-filter button:hover { color: var(--ink); }
+.groups-filter button.is-on { background: var(--lime); border-color: var(--lime); color: var(--on-lime); }
 
 .groups-roster-table tbody tr { cursor: default; }
 .groups-roster-table tbody tr:hover td { background: transparent; }
 /* Members of the selected group, tinted. Non-members stay on the list so they
    can be added — the tint is what separates the two halves without hiding
    either. */
-.groups-roster-table tbody tr.is-member td { background: rgba(169, 240, 77, .06); }
+.groups-roster-table tbody tr.is-member td { background: color-mix(in srgb, var(--lime) 6%, transparent); }
 .groups-chip {
-  background: #151e23; border: 1px solid #263239; color: #f5f7f2;
+  background: var(--panel2); border: 1px solid var(--line); color: var(--ink);
   display: inline-block; font-size: 10px; margin-right: 5px; padding: 3px 8px;
 }
-.groups-none { color: #ff646b; font-size: 11px; font-weight: 700; }
+.groups-none { color: var(--coral-text); font-size: 11px; font-weight: 700; }
 
 .groups-member-toggle {
-  background: transparent; border: 1px solid #263239; color: #f5f7f2;
+  background: transparent; border: 1px solid var(--line); color: var(--ink);
   cursor: pointer; font: inherit; font-size: 11px; font-weight: 800;
   min-height: 34px; min-width: 78px; padding: 6px 12px;
 }
-.groups-member-toggle:hover:not(:disabled) { border-color: #a9f04d; color: #a9f04d; }
+.groups-member-toggle:hover:not(:disabled) { border-color: var(--lime); color: var(--lime); }
 .groups-member-toggle:disabled { cursor: not-allowed; opacity: .5; }
 
 .groups-card {
   align-items: start;
-  background: #10171b;
-  border: 1px solid #263239;
+  background: var(--panel);
+  border: 1px solid var(--line);
   display: flex;
   gap: 16px;
   justify-content: space-between;
@@ -86,7 +86,7 @@
 }
 
 .groups-eyebrow {
-  color: #a9f04d;
+  color: var(--lime);
   display: block;
   font-size: 9px;
   font-weight: 900;
@@ -95,12 +95,12 @@
 }
 
 .groups-card h3 { font-size: 19px; margin: 3px 0 0; }
-.groups-card p { color: #89969d; font-size: 12px; margin: 5px 0 0; }
+.groups-card p { color: var(--muted); font-size: 12px; margin: 5px 0 0; }
 
 .groups-card > button {
   background: transparent;
-  border: 1px solid #263239;
-  color: #f5f7f2;
+  border: 1px solid var(--line);
+  color: var(--ink);
   cursor: pointer;
   font: inherit;
   font-size: 11px;
@@ -112,7 +112,7 @@
   white-space: nowrap;
 }
 
-.groups-card > button:hover { border-color: #a9f04d; color: #a9f04d; }
+.groups-card > button:hover { border-color: var(--lime); color: var(--lime); }
 
 /* ── one group opened ── */
 
@@ -121,8 +121,8 @@
    lime action beside it, which reads as "going back is the main thing here". */
 .groups-open > header button {
   background: transparent;
-  border: 1px solid #263239;
-  color: #f5f7f2;
+  border: 1px solid var(--line);
+  color: var(--ink);
   cursor: pointer;
   font: inherit;
   font-size: 11px;
@@ -133,7 +133,7 @@
   white-space: nowrap;
 }
 
-.groups-open > header button:hover { border-color: #a9f04d; color: #a9f04d; }
+.groups-open > header button:hover { border-color: var(--lime); color: var(--lime); }
 
 /* The roster as a wrap of name buttons rather than a list: a coach is picking a
    person they already have in mind, not reading down a column. At 28 athletes a
@@ -141,9 +141,9 @@
 .groups-roster { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 
 .groups-roster button {
-  background: #0b1114;
-  border: 1px solid #263239;
-  color: #f5f7f2;
+  background: var(--field);
+  border: 1px solid var(--line);
+  color: var(--ink);
   cursor: pointer;
   font: inherit;
   font-size: 12px;
@@ -151,8 +151,8 @@
   padding: 8px 13px;
 }
 
-.groups-roster button:hover { border-color: #a9f04d; }
-.groups-roster button.is-on { background: #a9f04d; border-color: #a9f04d; color: #071006; font-weight: 800; }
+.groups-roster button:hover { border-color: var(--lime); }
+.groups-roster button.is-on { background: var(--lime); border-color: var(--lime); color: var(--on-lime); font-weight: 800; }
 
 /* Archive an athlete: a quiet text action at the end of a roster row. */
 .groups-archive { background: transparent; border: 0; color: var(--muted); cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; min-height: 44px; padding: 0 10px; }
@@ -163,16 +163,16 @@
 /* ── login links (remote only, spec 03) ── */
 
 .groups-login b { display: block; font-weight: 800; }
-.groups-login span { color: #89969d; font-size: 12px; }
-.groups-login.is-sent b { color: #ffb63e; }   /* waiting on the athlete */
-.groups-login.is-none b { color: #89969d; }
+.groups-login span { color: var(--muted); font-size: 12px; }
+.groups-login.is-sent b { color: var(--amber); }   /* waiting on the athlete */
+.groups-login.is-none b { color: var(--muted); }
 
 .groups-login-actions { white-space: nowrap; }
 .groups-login-actions button {
   background: transparent; border: 0; cursor: pointer; font: inherit;
   font-size: 13px; font-weight: 800; padding: 6px 8px;
 }
-.groups-login-send { color: #f5f7f2; }
-.groups-login-send:hover { color: #a9f04d; }
-.groups-login-quiet { color: #89969d; }
-.groups-login-quiet:hover { color: #f5f7f2; }
+.groups-login-send { color: var(--ink); }
+.groups-login-send:hover { color: var(--lime); }
+.groups-login-quiet { color: var(--muted); }
+.groups-login-quiet:hover { color: var(--ink); }

@@ -6,12 +6,12 @@
  * with the numbers above it for attention. Panel-grey, no accent border, two
  * rows tall until someone types.
  *
- * Colours match react/src/theme.js.
+ * Colours come from styles/tokens.css; never type a colour code here.
  */
 
 .quick-note {
-  background: #10171b;
-  border: 1px solid #263239;
+  background: var(--panel);
+  border: 1px solid var(--line);
   margin-top: 16px;
   padding: 16px;
 }
@@ -25,7 +25,7 @@
 }
 
 .quick-note-eyebrow {
-  color: #a9f04d;
+  color: var(--lime);
   display: block;
   font-size: 9px;
   font-weight: 900;
@@ -34,12 +34,12 @@
 }
 
 .quick-note h3 { font-size: 17px; margin: 3px 0 0; }
-.quick-note > header b { color: #89969d; font-size: 10px; text-transform: uppercase; white-space: nowrap; }
+.quick-note > header b { color: var(--muted); font-size: 10px; text-transform: uppercase; white-space: nowrap; }
 
 .quick-note textarea {
-  background: #0b1114;
-  border: 1px solid #263239;
-  color: #f5f7f2;
+  background: var(--field);
+  border: 1px solid var(--line);
+  color: var(--ink);
   font: inherit;
   font-size: 13px;
   padding: 10px;
@@ -47,7 +47,7 @@
   width: 100%;
 }
 
-.quick-note textarea:focus { border-color: #a9f04d; outline: none; }
+.quick-note textarea:focus { border-color: var(--lime); outline: none; }
 
 .quick-note-actions {
   align-items: center;
@@ -57,12 +57,12 @@
   margin-top: 10px;
 }
 
-.quick-note-actions small { color: #89969d; font-size: 11px; }
+.quick-note-actions small { color: var(--muted); font-size: 11px; }
 
 .quick-note-actions button {
-  background: #a9f04d;
-  border: 1px solid #a9f04d;
-  color: #071006;
+  background: var(--lime);
+  border: 1px solid var(--lime);
+  color: var(--on-lime);
   cursor: pointer;
   font: inherit;
   font-weight: 900;
@@ -74,7 +74,7 @@
 .quick-note-actions button:disabled { cursor: not-allowed; opacity: .42; }
 
 /* Nobody on the rack. Says why rather than showing a box that cannot be used. */
-.quick-note.is-empty p { color: #89969d; font-size: 12px; margin: 6px 0 0; }
+.quick-note.is-empty p { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
 
-.quick-note-status { color: #45dcb3; font-size: 11px; margin: 10px 0 0; }
-.quick-note-error { color: #ff646b; font-size: 11px; margin: 10px 0 0; }
+.quick-note-status { color: var(--mint); font-size: 11px; margin: 10px 0 0; }
+.quick-note-error { color: var(--coral-text); font-size: 11px; margin: 10px 0 0; }

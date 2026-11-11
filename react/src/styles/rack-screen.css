@@ -1,0 +1,13 @@
+/*
+ * rack-screen.css — the page box around the rack screen.
+ *
+ * Why this file exists: the rack screen (rack/RackScreen.jsx) styles itself with
+ * theme.js, but its outer box needs to fill the tablet and scroll, and its buttons and
+ * dropdowns need a finger-sized height. Those two rules live here. (The old rack tablet
+ * styles that used to fill this file were removed on 2026-11-11: nothing used them.)
+ * Colours come from styles/tokens.css; never type a colour code here.
+ */
+
+.rack-screen { min-height:100vh; overflow-x:hidden; overflow-y:auto; width:100%; }
+.rack-screen button,.rack-screen select { min-height:44px; }
+

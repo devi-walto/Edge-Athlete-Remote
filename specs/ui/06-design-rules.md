@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: Written — not started
+- Status: Phase 0 done 2026-11-11 (every colour in one token file); Phases 1–3 built 2026-11-11, awaiting review
 - Form item: #11 (unified coach interface, added 2026-10-06)
 - Depends on: nothing. **Specs 07, 08, 09 and 10 (the athlete's pages) all depend on this one**
 - Updated 2026-11-11: the shared pieces live in `react/src/ui/` (coach and athlete screens
@@ -53,7 +53,7 @@ The single most likely next action is the filled lime button. Everything else is
 | **Primary, next step** | the same, ending in a right arrow | a button that moves the coach to the next stage |
 | **Solid** | filled `#151e23`, 1px border `#5c6a72`, 6px corner, white text, weight 800 | real but secondary actions |
 | **Solid, key** | the same with a lime border, and an icon where one helps | the main secondary action of a screen (**Copy session link**) |
-| **End** | transparent, 1px border `#ff646b`, text `#ff9aa0`, 6px corner | **every button that ends something**, in both versions |
+| **End** | transparent, 1px border `coral`, text `coral-text`, 6px corner | **every button that ends something**, in both versions |
 | **Danger** | filled `danger-fill #e5484d`, white text 19px weight 800, 6px corner | the button inside a confirm dialog that removes something for good (**Remove sensor**). Never on a row |
 | **Quiet** | text only, grey `#89969d` or white | row actions, Close, Cancel |
 | **Quiet, lime** | lime text, weight 800, set off by a dashed divider | an action inside a dashed "waiting" row (**Send login link**) |
@@ -180,10 +180,11 @@ the exception is a banner that announces something.
   and the focus card. Nothing else is tinted.
 - **Filter chips are solid**: `panel2` with a `line` border; the chosen one is filled
   white with dark text.
-- **The top bar** is the bold one: "Edge Athlete" at weight 800 beside the signed-in
-  coach's **profile image** on a lime rounded square. On the sign-in and first-run
-  pages, where nobody is signed in, the square holds the letters "EA".
-- **Administrator** is a pill badge: `admin-bg #1a2610`, lime border, text `#c6f78a`.
+- **The top bar** is the bold one: the signed-in person's **profile image** on a lime
+  rounded square, with their name beside it at weight 800 (rule 12: the picture goes
+  Home, the name opens the menu). On the sign-in and first-run pages, where nobody is
+  signed in, the square holds the letters "EA" beside "Edge Athlete".
+- **Administrator** is a pill badge: `admin-bg #1a2610`, lime border, lime text (2026-11-11).
 - **The Calendar has two views behind one List | Month switch** (a two-option segmented
   control, the chosen option filled white). **Month** is a grid of solid square day
   blocks: a planned session has a mint bar, the next one a lime border, a finished one
@@ -226,10 +227,14 @@ From `react/src/theme.js` and `App.css` — existing values, unchanged:
 `muted #89969d` · `lime #a9f04d` · `mint #45dcb3` · `amber #ffb63e` · `coral #ff646b`.
 Font: Inter.
 
-New, added by this spec: `focus-bg #121b14` · `faint #6f7c83` · `soft-ink #c9d1d5` ·
+New, added by this spec: `focus-bg #121b14` · `faint #7a868c` · `soft-ink #c9d1d5` ·
 `button-edge #5c6a72` · `risk-bg #170d0e` · `hero-bg #101a17` · `admin-bg #1a2610` ·
 `on-lime #071006` (dark text on a lime fill) · `danger-fill #e5484d` (rule 5) ·
-`radius-button 6px`. (`hairline #1b252a` and `outline #8d9aa1` from the first draft of
+`radius-button 6px`. Added in Phase 0, Stop B (Devin, 2026-11-11): `coral-text #ff9aa0`
+(red words) · `field #0b1114` (inputs) · `shade #000000` (dims and shadows, always
+see-through) · `warn-bg #1f1a0d` (amber notice boxes); `risk-bg` also backs error boxes.
+`faint` was `#6f7c83` until Phase 1, lightened 8% so small labels read at 4.5:1 on every
+surface. (`hairline #1b252a` and `outline #8d9aa1` from the first draft of
 this spec are dropped: rule 9 uses `line` and `panel` instead.)
 
 **Every colour in the app comes from one file** (decided 2026-11-11, Devin): change a
@@ -280,13 +285,16 @@ Two stops. It changes how colours are written, never what a screen does.
 
 **Done when:**
 
-- [ ] `tokens.css` exists with a plain-language comment on every section.
-- [ ] `theme.js` holds no colour codes.
-- [ ] Both guard tests pass, and each fails when a colour code is typed into a component
+- [x] `tokens.css` exists with a plain-language comment on every section.
+- [x] `theme.js` holds no colour codes.
+- [x] Both guard tests pass, and each fails when a colour code is typed into a component
       or the setup page's colours are changed (checked once by hand).
-- [ ] *(Browser)* The app looks exactly as before, as a local install and as the remote
+- [x] *(Browser)* The app looks exactly as before, as a local install and as the remote
       server: the rack screen, the coach's three states, sign-in, the athlete's pages.
-- [ ] Frontend suite and build pass.
+      (Checked by comparing every element's colours, old against new, on the 9 screens that
+      open without a server; Room Layout's header changed, kept by Devin. Screens behind a
+      login not opened yet.)
+- [x] Frontend suite and build pass.
 
 **Stop. Devin reviews.**
 
@@ -311,13 +319,13 @@ Two stops. It changes how colours are written, never what a screen does.
 
 **Done when:**
 
-- [ ] No colour code exists outside `tokens.css` and the sensor's setup page; the guard
+- [x] No colour code exists outside `tokens.css` and the sensor's setup page; the guard
       runs with no allowed list.
-- [ ] The setup page's colours all match `tokens.css`.
-- [ ] Every new token Devin approved has its comment.
-- [ ] *(Browser)* Every screen checked against its Final designs board; the only visible
+- [x] The setup page's colours all match `tokens.css`.
+- [x] Every new token Devin approved has its comment.
+- [x] *(Browser)* Every screen checked against its Final designs board; the only visible
       changes are the ones on the approved list.
-- [ ] Frontend suite, build and firmware build pass.
+- [x] Frontend suite, build and firmware build pass.
 
 **Stop. Devin reviews.**
 
@@ -342,14 +350,15 @@ Build them against the Final designs boards, each with a render test. Use them n
 
 **Done when:**
 
-- [ ] Each component has a render test for every variant, including all eight `Button`
+- [x] Each component has a render test for every variant, including all eight `Button`
       kinds (`end` is the red outline from rule 2, `danger` the filled red, `key` the
       lime-bordered solid one).
-- [ ] `Button` refuses an unknown `kind` in development.
-- [ ] Buttons and row actions are at least 44px tall (touch targets on a tablet).
-- [ ] Text meets 4.5:1 contrast on its background — in particular grey text on the
+- [x] `Button` refuses an unknown `kind` in development.
+- [x] Buttons and row actions are at least 44px tall (touch targets on a tablet).
+- [x] Text meets 4.5:1 contrast on its background — in particular grey text on the
       focus card and on the risk background.
-- [ ] Nothing else in the app changed.
+- [x] Nothing else in the app changed, apart from `faint` lightening 8% (an archived
+      coach's name, the zone labels on a rack row, the bar beside an idle rack).
 
 **Stop. Devin reviews.**
 
@@ -361,11 +370,12 @@ Build them against the Final designs boards, each with a render test. Use them n
   from the Workouts tab" on the empty Calendar. (Each is also listed in the spec that
   owns its screen; do them here if those specs have not started.)
 - Delete `react/src/coachTabs.js` if nothing imports it. On 2026-10-06 nothing did.
+  (Already gone by 2026-11-11.)
 
 **Done when:**
 
-- [ ] *(Frontend test)* SESSION renders no tab row; PLANNING and ANALYTICS render theirs.
-- [ ] A test fails if the coach bundle's source contains `/api/` in visible text or the
+- [x] *(Frontend test)* SESSION renders no tab row; PLANNING and ANALYTICS render theirs.
+- [x] A test fails if the coach bundle's source contains `/api/` in visible text or the
       phrase "server-local".
 - [ ] *(Browser)* All three states still work.
 
@@ -391,14 +401,16 @@ Also in `react/src/ui/`: `BackLink`, the one link under the top bar on a drill-d
 
 **Done when:**
 
-- [ ] *(Frontend test)* From SESSION and from ANALYTICS, pressing the picture lands on
+- [x] *(Frontend test)* From SESSION and from ANALYTICS, pressing the picture lands on
       PLANNING; with a day running, the day is still running afterwards.
-- [ ] *(Frontend test)* Pressing the name opens the menu; Coaches appears only for an
+- [x] *(Frontend test)* Pressing the name opens the menu; Coaches appears only for an
       administrator; Escape and a press elsewhere close it.
-- [ ] Both parts are real buttons, at least 44px tall, reachable by keyboard, each with
+- [x] Both parts are real buttons, at least 44px tall, reachable by keyboard, each with
       its own accessible name ("Home", "Account menu").
-- [ ] `BackLink` renders its label and goes where it is told; a render test covers it.
-- [ ] *(Browser)* The top bar works as a local install and as the remote server.
+- [x] `BackLink` renders its label and goes where it is told; a render test covers it.
+- [x] *(Browser)* The top bar works as a local install and as the remote server.
+      (Checked on the real components in a preview page; not yet on a signed-in
+      workspace, which needs the server running.)
 
 **Stop. Devin reviews.**
 

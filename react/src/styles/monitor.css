@@ -1,0 +1,40 @@
+/*
+ * monitor.css — the base shared by the room display and the coach workspace.
+ *
+ * Why this file exists: both screens sit inside a `.monitor` box, which sets the page
+ * colour, the text colour and the font, and styles a few things they share (the brand
+ * mark, the connection light, the empty and loading panels). Loaded first, so the
+ * area files after it can build on it.
+ *
+ * Colours come from styles/tokens.css; never type a colour code here.
+ */
+
+/* Its colours come from styles/tokens.css, which every screen can see. */
+.monitor {
+  background:var(--bg); color:var(--ink); font-family:var(--font-sans); min-height:100vh;
+}
+.monitor * { box-sizing:border-box; }
+.monitor button,.monitor input,.monitor select { font:inherit; }
+.monitor-brand { align-items:center; display:flex; gap:12px; }
+.monitor-brand>b { align-items:center; background:var(--lime); color:var(--on-lime); display:flex; font-size:14px; height:38px; justify-content:center; letter-spacing:-.05em; width:38px; }
+/* The app icon, where a device has one. Kept square and never stretched, so a
+   replaced icon of a different aspect ratio degrades by letterboxing rather
+   than by distorting the artwork. */
+.monitor-brand>img { border-radius:8px; flex:none; height:38px; object-fit:contain; width:38px; }
+.monitor-brand>span { font-size:14px; font-weight:850; letter-spacing:.08em; text-transform:uppercase; }
+.monitor-connection { align-items:center; background:var(--panel); border:1px solid var(--line); border-radius:999px; display:flex; font-size:10px; font-weight:850; gap:8px; letter-spacing:.08em; padding:8px 12px; text-transform:uppercase; }
+.monitor-connection i { background:var(--muted); border-radius:50%; height:8px; width:8px; }
+.monitor-connection.live i { background:var(--mint); box-shadow:0 0 12px color-mix(in srgb, var(--mint) 80%, transparent); }
+.monitor-connection.connecting i,.monitor-connection.reconnecting i { background:var(--amber); }
+.monitor-connection.stale i { background:var(--coral); }
+.monitor-state-panel { align-items:flex-start; display:flex; flex-direction:column; justify-content:center; margin:auto; max-width:650px; min-height:100vh; padding:48px; }
+/* Was a lime "EA" lettermark; now the device's own app icon. Sized and squared
+   like .monitor-brand>img so a swapped icon letterboxes rather than stretches.
+   `align-self:flex-start` because the panel is a column — without it the image
+   stretches to the panel's full width. */
+.monitor-state-mark { align-self:flex-start; border-radius:10px; height:44px; margin-bottom:32px; object-fit:contain; width:44px; }
+.monitor-state-panel h2 { font-size:clamp(34px,5vw,64px); letter-spacing:-.055em; line-height:.98; margin:0; }
+.monitor-state-panel p { color:var(--muted); font-size:17px; line-height:1.6; max-width:48ch; }
+.monitor-state-panel button { background:var(--lime); border:0; color:var(--on-lime); cursor:pointer; font-weight:850; padding:12px 20px; }
+.monitor button:focus-visible,.monitor input:focus-visible,.monitor select:focus-visible,.monitor textarea:focus-visible { outline:3px solid var(--lime); outline-offset:3px; }
+.monitor-empty { color:var(--muted); line-height:1.5; }

@@ -30,7 +30,7 @@ import Idle from './Idle.jsx'
 import CheckInList from './CheckInList.jsx'
 import WeightPad from './WeightPad.jsx'
 import { controllerCommand } from './controller.js'
-import { T } from '../theme.js'
+import { T, seeThrough } from '../theme.js'
 import { useRackAgentStatus } from './rackAgent.js'
 import { handleNfcPollResult, pollLocalNfcTap } from './nfc.js'
 
@@ -45,9 +45,9 @@ const LABEL = {
 // One reusable button in the team style. `tone` picks the accent.
 function Button({ children, onClick, tone = 'primary' }) {
   const tones = {
-    primary: { bg: T.lime, fg: '#0a0f07', border: T.lime },
+    primary: { bg: T.lime, fg: 'var(--on-lime)', border: T.lime },
     ghost: { bg: T.panel, fg: T.ink, border: T.line },
-    danger: { bg: 'transparent', fg: T.coral, border: T.coral + '66' },
+    danger: { bg: 'transparent', fg: 'var(--coral-text)', border: seeThrough(T.coral, 40) },
   }
   const s = tones[tone] || tones.primary
   return (
@@ -116,7 +116,7 @@ function ActivePhase({ movementName, repCount, lastVelocity, lastColor, sensorMo
           <span style={{ fontSize: 13, fontWeight: 700, color: T.muted, marginLeft: 5 }}>m/s</span>
         </div>
         <span style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '.1em',
-          padding: '6px 12px', borderRadius: 999, background: hex + '22', color: hex }}>{lastColor}</span>
+          padding: '6px 12px', borderRadius: 999, background: seeThrough(hex, 13.3), color: hex }}>{lastColor}</span>
       </div>
 
       <div style={{ width: '100%', padding: 14, borderRadius: 12, border: `1px solid ${T.line}`,
@@ -637,7 +637,7 @@ export default function RackScreen({ rackNumber, session: openingSession, node, 
       {/* the current phase */}
       {setStartError && (
         <div role="alert" style={{ margin: '14px 24px 0', padding: '12px 14px', borderRadius: 10,
-          border: '1px solid #7f3636', background: '#2b1717', color: '#ffb4b4', fontSize: 13 }}>
+          border: '1px solid var(--coral)', background: 'var(--risk-bg)', color: 'var(--coral-text)', fontSize: 13 }}>
           {setStartError}
         </div>
       )}

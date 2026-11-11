@@ -60,3 +60,6 @@ docker-compose.demo.yml
 # site.h names our schools' base domain, which stays out of this public repo.
 esp32/**/secrets.h
 esp32/**/site.h
+
+# Firmware build output (arduino-cli writes it into the sketch folder).
+esp32/**/build/

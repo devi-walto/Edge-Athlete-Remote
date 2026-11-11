@@ -331,7 +331,7 @@ it('never calls the administrator a head coach', async () => {
 
 it('shows Coaches in the account menu to an administrator only', async () => {
   await render(<AccountMenu me={ME} onLogout={vi.fn()} />)
-  await click('Edge Athlete')
+  await click('head▾')
   expect(container.textContent).toContain('head')
   expect(container.querySelector('.acct-badge').textContent).toBe('Administrator')
   expect(labels().some(l => l.startsWith('Coaches'))).toBe(true)

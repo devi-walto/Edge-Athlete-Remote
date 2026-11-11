@@ -1,0 +1,95 @@
+/*
+ * screen-sizes.css — how every screen above changes on smaller or shorter screens
+ * (tablets turned sideways, phones).
+ *
+ * Why this file exists: these rules must load LAST so they win over the normal
+ * layout, so they stay together at the end instead of spread through the area files.
+ * Colours come from styles/tokens.css; never type a colour code here.
+ */
+
+@media (max-width:1100px) {
+  .wall-content { grid-template-columns:minmax(0,1fr) 260px; padding-inline:16px; }
+  .wall-rack-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .coach-workspace { grid-template-columns:210px minmax(0,1fr); }
+  .training-day-start fieldset>div { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .coach-panel-grid { grid-template-columns:1fr; }
+  .coach-set-hero { grid-template-columns:1fr auto; }
+  .coach-set-hero dl { border-left:0; border-top:1px solid var(--line); grid-column:1/-1; grid-template-columns:repeat(3,1fr); padding:12px 0 0; }
+  .context-athlete-hero { grid-template-columns:1fr; }
+  .context-exercise-grid { grid-template-columns:repeat(2,1fr); }
+  .athlete-assignment-fields { grid-template-columns:1fr 1fr; }
+  .athlete-override-list fieldset { grid-template-columns:repeat(3,1fr); }
+  .athlete-template-targets { grid-column:1/-1; }
+  .history-set-summary { grid-template-columns:minmax(180px,.8fr) minmax(300px,1.2fr) 120px; } .history-rep-spark { display:none; }
+
+  .workout-builder-grid { grid-template-columns:1fr; }
+  .workout-exercise-list fieldset { grid-template-columns:repeat(3,1fr); }
+  .exercise-movement { grid-column:1/-1; }
+  .workout-card-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .workout-program-grid { grid-template-columns:1fr; }
+  .daily-report-list>article,.athlete-day-list>article { grid-template-columns:minmax(200px,1fr) minmax(250px,1fr); }
+  .daily-report-list button,.athlete-day-list button { grid-column:1/-1; }
+  .athlete-report-set-summary { grid-template-columns:1fr minmax(280px,1fr); }
+  .athlete-report-set-summary>button { grid-column:1/-1; }
+}
+@media (max-width:800px) {
+
+  .coach-topbar { grid-template-columns:1fr auto auto; } .coach-session-title { grid-column:1/-1; grid-row:2; } .coach-topbar .monitor-connection { grid-column:2; grid-row:1; }
+  .coach-summary-strip { grid-template-columns:repeat(5,130px); overflow-x:auto; padding:0 12px; }
+  .training-day-shell { padding:12px; }
+  .training-day-start fieldset>div { grid-template-columns:repeat(2,minmax(0,1fr)); }
+
+  .training-report-summary { grid-template-columns:repeat(2,1fr); }
+  .training-report-target { grid-template-columns:1fr; }
+  .training-report-set li { grid-template-columns:1fr 1fr; }
+  .coach-workspace { display:block; } .coach-rack-list { border-bottom:1px solid var(--line); border-right:0; display:flex; gap:6px; overflow-x:auto; padding:10px 12px; } .coach-section-label { display:none; }
+  .coach-observation-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .coach-rack-row { flex:0 0 180px; } .coach-detail-workspace { padding:14px 12px 28px; } .coach-set-hero { grid-template-columns:1fr; } .coach-hero-metric { text-align:left; } .coach-set-hero dl { grid-template-columns:1fr; }
+  /* The selector left the topbar in Phase C, so it no longer needs a grid slot
+     there. On a narrow screen its own bar stacks and the select goes full width. */
+  .coach-analytics-bar { padding:12px; }
+  .coach-analytics-bar label { flex:1 1 100%; }
+  .coach-analytics-bar select { flex:1; min-width:0; }
+  .context-tab-content { padding:14px 12px 30px; }
+  .context-summary-grid { grid-template-columns:repeat(2,1fr); }
+  .context-exercise-grid { grid-template-columns:1fr; }
+  .athlete-assignment-fields { grid-template-columns:1fr; }
+  .athlete-override-list fieldset { grid-template-columns:1fr; }
+
+  .history-day-heading { align-items:start; gap:16px; } .history-day-heading dl { gap:12px; }
+  .history-workout { padding-inline:10px; }
+  .history-set-summary { align-items:start; grid-template-columns:1fr; padding:13px; } .history-set-metrics { grid-column:1/-1; }
+  .history-set-action { justify-content:flex-start; }
+  .history-rep-detail { padding:14px 12px; } .history-rep-detail-title { align-items:start; display:grid; gap:7px; }
+
+  .workout-catalog-heading { align-items:start; display:grid; gap:14px; padding:20px; }
+  .workout-catalog-heading h2 { font-size:31px; }
+  .workout-exercise-list fieldset { grid-template-columns:1fr 1fr; }
+  .exercise-movement { grid-column:1/-1; }
+  .workout-remove { grid-column:1/-1; }
+  .workout-card-grid { grid-template-columns:1fr; }
+  .workout-pagination { align-items:stretch; display:grid; grid-template-columns:1fr 1fr; }
+  .workout-pagination span { grid-column:1/-1; grid-row:1; }
+  .program-browser-list { grid-template-columns:1fr; }
+  .reports-heading { align-items:start; display:grid; padding:20px; }
+  .reports-heading h2 { font-size:31px; }
+  .reports-toolbar { align-items:stretch; display:grid; }
+  .reports-toolbar select { min-width:0; width:100%; }
+  .daily-report-list>article,.athlete-day-list>article { grid-template-columns:1fr; }
+  .daily-report-list button,.athlete-day-list button { grid-column:auto; }
+  .athlete-day-detail>header { align-items:start; display:grid; }
+  .athlete-day-detail>header dl { min-width:0; width:100%; }
+  .athlete-day-prescriptions article>div { grid-template-columns:1fr; }
+  .athlete-report-set-summary { align-items:start; grid-template-columns:1fr; }
+  .athlete-report-set-summary>button { grid-column:auto; }
+  .program-draft li { align-items:start; grid-template-columns:1fr; }
+  .program-draft li>div { display:grid; grid-template-columns:1fr 1fr 1fr; }
+}
+@media (max-width:700px) {
+  .wall-monitor { height:auto; min-height:100vh; overflow:visible; } .wall-topbar { grid-template-columns:1fr auto; padding:12px 16px; } .wall-session { grid-column:1/-1; grid-row:2; padding-top:12px; text-align:left; }
+  .wall-content { display:block; } .wall-rack-grid { grid-template-columns:1fr; overflow:visible; } .wall-rail { margin-top:12px; overflow:visible; }
+
+  .wall-footer { gap:8px; padding:12px 16px; }
+
+}
+

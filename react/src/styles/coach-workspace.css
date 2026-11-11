@@ -1,0 +1,140 @@
+/*
+ * coach-workspace.css — the frame of the coach app: the top bar and its buttons, the
+ * summary strip, the Room Layout hardware panel, and the training day panel
+ * (starting, running and ending a day).
+ *
+ * Why this file exists: these pieces sit around every coach screen, whatever tab is
+ * open. Colours come from styles/tokens.css; never type a colour code here.
+ */
+
+.coach-eyebrow { color:var(--lime)!important; font-size:10px!important; font-weight:900; letter-spacing:.14em; margin:70px 0 14px!important; text-transform:uppercase; }
+
+.coach-login-error { color:var(--coral-text)!important; font-size:12px!important; margin:0!important; }
+
+/* Coach workspace */
+.coach-monitor { height:100vh; min-height:0; overflow-y:auto; overscroll-behavior:contain; width:100%; }
+/* Three zones: identity, what's running, and the controls. The controls are one
+   flex group rather than separate grid columns so adding a button doesn't push
+   the row into wrapping. */
+.coach-topbar { align-items:center; border-bottom:1px solid var(--line); display:grid; gap:24px; grid-template-columns:auto 1fr auto; min-height:72px; padding:10px 24px; }
+.coach-topbar-actions { align-items:center; display:flex; flex-wrap:wrap; gap:10px; justify-content:flex-end; }
+.coach-session-title h1 { font-size:20px; letter-spacing:-.035em; margin:1px 0 0; }
+
+/* Square icon button, sized to match the height of the text buttons beside it. */
+.coach-icon-button { align-items:center; background:transparent; border:1px solid var(--line); color:var(--muted); cursor:pointer; display:flex; height:31px; justify-content:center; padding:0; width:31px; }
+.coach-icon-button:hover { border-color:var(--lime); color:var(--lime); }
+/* A labelled variant of the icon button — the cog alone was not discoverable
+   enough to be the only route to Room Layout. */
+.coach-labeled-button { gap:7px; padding:0 11px; width:auto; }
+.coach-labeled-button span { font-size:10px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; }
+/* No racks assigned: this button is the only way forward, so it stops being quiet. */
+.coach-button-attention { border-color:var(--lime); color:var(--lime); }
+
+.coach-summary-strip { border-bottom:1px solid var(--line); display:grid; grid-template-columns:repeat(5,1fr); padding:0 24px; }
+.coach-summary-strip>div { border-right:1px solid var(--line); display:grid; gap:4px; padding:13px 18px; }
+.coach-summary-strip>div:first-child { border-left:1px solid var(--line); }
+.coach-summary-strip strong { font-size:19px; } .coach-summary-strip small { color:var(--muted); font-size:10px; }
+
+.training-day-shell { border-bottom:1px solid var(--line); padding:14px 24px; }
+.training-day-start,.training-report { background:var(--panel); border:1px solid var(--line); padding:18px; }
+.training-day-start>header,.training-report>header { align-items:start; display:flex; gap:20px; justify-content:space-between; }
+.training-day-start>header span,.training-report>header span,.training-report-athletes>section>header span,.training-report-prescription>header>span { color:var(--lime); font-size:9px; font-weight:900; letter-spacing:.11em; text-transform:uppercase; }
+.training-day-start h3,.training-report>header h3 { font-size:22px; margin:3px 0; }
+.training-day-start>header p,.training-report>header p { color:var(--muted); font-size:11px; margin:4px 0 0; }
+.training-day-start>header>b,.training-report>header>b { color:var(--lime); font-size:10px; text-transform:uppercase; }
+.training-day-start>label { color:var(--muted); display:grid; font-size:9px; font-weight:850; gap:6px; margin-top:14px; text-transform:uppercase; }
+.training-day-start input[type="text"],.training-day-start>label input { background:var(--field); border:1px solid var(--line); color:var(--ink); min-height:44px; padding:8px 10px; }
+.training-day-start fieldset { border:1px solid var(--line); margin:14px 0; padding:12px; }
+.training-day-start legend { color:var(--muted); font-size:9px; font-weight:850; padding:0 5px; text-transform:uppercase; }
+.training-day-start fieldset>div { display:grid; gap:7px; grid-template-columns:repeat(4,minmax(0,1fr)); max-height:190px; overflow-y:auto; }
+.training-day-start fieldset label { align-items:center; background:var(--field); cursor:pointer; display:flex; font-size:11px; gap:8px; min-height:40px; padding:8px; }
+.training-day-start fieldset input { accent-color:var(--lime); height:17px; width:17px; }
+.training-day-start>button { background:var(--lime); border:1px solid var(--lime); color:var(--on-lime); cursor:pointer; font-weight:900; min-height:44px; padding:8px 15px; }
+.training-day-start>button:disabled { cursor:not-allowed; opacity:.42; }
+
+/* Days staged from the calendar and waiting to be started. Lime-edged like the
+   running-day strip, because it is the same kind of thing one step earlier —
+   but a dashed edge, because nothing is holding the racks yet. */
+.training-day-staged { background:var(--panel); border:1px dashed color-mix(in srgb, var(--lime) 45%, transparent); margin-bottom:14px; padding:18px; }
+.training-day-staged>header { align-items:start; display:flex; gap:20px; justify-content:space-between; }
+.training-day-staged>header span { color:var(--lime); font-size:9px; font-weight:900; letter-spacing:.11em; text-transform:uppercase; }
+.training-day-staged>header h3 { font-size:22px; margin:3px 0; }
+.training-day-staged>header p { color:var(--muted); font-size:11px; margin:4px 0 0; }
+.training-day-staged>header>b { color:var(--lime); font-size:10px; text-transform:uppercase; white-space:nowrap; }
+.training-day-staged article { align-items:center; border-top:1px solid var(--line); display:flex; gap:16px; justify-content:space-between; margin-top:12px; padding-top:12px; }
+.training-day-staged article h4 { font-size:15px; margin:0; }
+.training-day-staged article p { color:var(--muted); font-size:11px; margin:4px 0 0; }
+.training-day-staged article button { background:var(--lime); border:1px solid var(--lime); color:var(--on-lime); cursor:pointer; font-weight:900; min-height:44px; padding:8px 15px; white-space:nowrap; }
+.training-day-staged article button:disabled { cursor:not-allowed; opacity:.42; }
+.training-day-status { color:var(--mint); font-size:11px; margin-bottom:0; }
+.training-day-error { color:var(--coral-text); font-size:11px; margin-bottom:0; }
+.training-report { margin-bottom:14px; }
+.training-report-summary { display:grid; gap:8px; grid-template-columns:repeat(4,1fr); margin:16px 0; }
+.training-report-summary>div { background:var(--field); border:1px solid var(--line); display:grid; gap:4px; padding:14px; }
+.training-report-summary dt { color:var(--muted); font-size:9px; text-transform:uppercase; }
+.training-report-summary dd { font-size:22px; font-weight:900; margin:0; }
+.training-report-budget { background:color-mix(in srgb, var(--amber) 9%, transparent); border:1px solid color-mix(in srgb, var(--amber) 30%, transparent); color:var(--amber); margin-bottom:14px; padding:11px 13px; }
+.training-report-budget strong { font-size:11px; }
+.training-report-budget p { font-size:10px; margin:5px 0 0; }
+.training-report-athletes { display:grid; gap:14px; }
+.training-report-athletes>section { border:1px solid var(--line); padding:16px; }
+.training-report-athletes>section>header { align-items:end; display:flex; gap:12px; justify-content:space-between; }
+.training-report-athletes h4 { flex:1; font-size:18px; margin:0; }
+.training-report-athletes>section>header>b { color:var(--muted); font-size:10px; }
+.training-report-prescription { background:var(--field); border:1px solid var(--line); margin-top:10px; padding:13px; }
+.training-report-prescription h5 { font-size:15px; margin:3px 0 10px; }
+.training-report-prescription>section+section { border-top:1px solid var(--line); margin-top:12px; padding-top:12px; }
+.training-report-target { display:grid; gap:10px; grid-template-columns:minmax(180px,1fr) auto auto; }
+.training-report-target>div { display:grid; gap:3px; }
+.training-report-target span,.training-report-set header span,.training-report-set li span { color:var(--muted); font-size:9px; text-transform:uppercase; }
+.training-report-target b { font-size:11px; }
+
+.training-report-results { border-top:1px solid var(--line); margin-top:14px; padding-top:12px; }
+.training-report-results>h5 { font-size:12px; margin:0 0 8px; }
+.training-report-set { border:1px solid var(--line); padding:9px; }
+.training-report-set>header { display:flex; gap:14px; }
+.training-report-set>header span { flex:1; }
+.training-report-set>header b { font-size:10px; }
+.training-report-set ol { display:grid; gap:1px; list-style:none; margin:8px 0 0; padding:0; }
+.training-report-set li { background:var(--panel); display:grid; gap:8px; grid-template-columns:1fr repeat(3,auto); padding:7px; }
+.training-report-set li b { font-size:9px; }
+.training-report-truncation { color:var(--amber); font-size:10px; line-height:1.45; margin:8px 0 0; }
+.coach-workspace { display:grid; grid-template-columns:250px minmax(0,1fr); min-height:calc(100vh - 136px); }
+.coach-rack-list { border-right:1px solid var(--line); padding:18px 12px; }
+.coach-section-label { align-items:center; display:flex; justify-content:space-between; padding:0 8px 12px; }
+.coach-section-label span,.coach-panel header span,.coach-set-hero>div>span { color:var(--muted); font-size:9px; font-weight:900; letter-spacing:.1em; text-transform:uppercase; }
+.coach-section-label b { color:var(--muted); font-size:10px; }
+.coach-rack-row { align-items:center; background:transparent; border:1px solid transparent; color:var(--ink); cursor:pointer; display:grid; gap:10px; grid-template-columns:5px 1fr auto; padding:11px 9px; text-align:left; width:100%; }
+.coach-rack-row:hover,.coach-rack-row.selected { background:var(--panel); border-color:var(--line); }
+.coach-rack-row>i { background:color-mix(in srgb, var(--faint) 76%, var(--bg)); height:34px; width:3px; } .coach-rack-row>i.green { background:var(--mint); } .coach-rack-row>i.yellow { background:var(--amber); } .coach-rack-row>i.red { background:var(--coral); }
+.coach-rack-row>span { display:grid; gap:2px; min-width:0; } .coach-rack-row b { font-size:12px; } .coach-rack-row small { color:var(--muted); font-size:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .coach-rack-row>strong { font-size:16px; }
+.coach-detail-workspace { min-width:0; padding:20px 24px 36px; }
+.coach-set-hero { align-items:end; background:linear-gradient(110deg,color-mix(in srgb, var(--lime) 6%, var(--panel)),var(--panel) 62%); border:1px solid color-mix(in srgb, var(--lime) 7%, var(--line)); display:grid; gap:24px; grid-template-columns:minmax(0,1fr) auto auto; padding:22px 26px; }
+.coach-set-hero h2 { font-size:34px; letter-spacing:-.055em; margin:5px 0 0; } .coach-set-hero p { color:var(--muted); margin:4px 0 0; }
+.coach-hero-metric { display:grid; text-align:right; } .coach-hero-metric strong { color:var(--lime); font-size:60px; letter-spacing:-.08em; line-height:.85; } .coach-hero-metric span { color:var(--muted); font-size:9px; font-weight:800; }
+.coach-set-hero dl { border-left:1px solid var(--line); display:grid; gap:8px; margin:0; min-width:145px; padding-left:22px; }
+.coach-set-hero dl div { display:flex; gap:14px; justify-content:space-between; } .coach-set-hero dt { color:var(--muted); font-size:10px; } .coach-set-hero dd { font-size:11px; font-weight:800; margin:0; }
+.coach-panel-grid { display:grid; gap:14px; grid-template-columns:1.1fr .9fr; margin-top:14px; }
+.coach-panel { background:var(--panel); border:1px solid var(--line); padding:18px; }
+.coach-panel>header { align-items:start; display:flex; justify-content:space-between; } .coach-panel header h3 { font-size:16px; margin:3px 0 0; } .coach-panel>header>b { color:var(--muted); font-size:10px; }
+.coach-rep-chart { align-items:end; display:flex; gap:10px; height:190px; margin-top:20px; overflow-x:auto; }
+.coach-rep-bar { display:grid; flex:1 0 38px; gap:5px; grid-template-rows:auto 1fr auto; height:100%; text-align:center; }
+.coach-rep-bar strong { font-size:10px; } .coach-rep-bar>div { align-items:end; background:var(--bg); display:flex; height:100%; } .coach-rep-bar i { background:color-mix(in srgb, var(--muted) 73%, var(--panel)); display:block; width:100%; }
+.coach-rep-bar i.green { background:var(--mint); } .coach-rep-bar i.yellow { background:var(--amber); } .coach-rep-bar i.red { background:var(--coral); } .coach-rep-bar span { color:var(--muted); font-size:9px; }
+.coach-insight-grid { display:grid; gap:1px; grid-template-columns:1fr 1fr; margin-top:17px; }
+.coach-insight-grid>div { background:var(--field); display:grid; gap:3px; padding:14px; } .coach-insight-grid span { color:var(--muted); font-size:9px; text-transform:uppercase; }
+.coach-insight-grid strong { font-size:25px; letter-spacing:-.05em; } .coach-insight-grid strong.positive { color:var(--mint); } .coach-insight-grid strong.negative { color:var(--coral); } .coach-insight-grid small { color:var(--muted); font-size:9px; }
+.coach-zone-row { border-top:1px solid var(--line); display:flex; gap:16px; margin-top:14px; padding-top:13px; }
+.coach-zone-row span { align-items:center; color:var(--muted); display:flex; font-size:9px; gap:5px; } .coach-zone-row i { background:color-mix(in srgb, var(--faint) 90%, var(--panel)); border-radius:50%; height:6px; width:6px; }
+.coach-zone-row i.green { background:var(--mint); } .coach-zone-row i.yellow { background:var(--amber); } .coach-zone-row i.red { background:var(--coral); } .coach-zone-row b { color:var(--ink); }
+.coach-hardware-panel { margin-top:14px; }
+.coach-rack-observation { margin-bottom:14px; }
+.coach-observation-grid { display:grid; gap:1px; grid-template-columns:repeat(3,minmax(0,1fr)); margin-top:14px; }
+.coach-observation-grid>div { background:var(--field); display:grid; gap:6px; min-height:72px; padding:12px; }
+.coach-observation-grid span { color:var(--muted); font-size:9px; letter-spacing:.08em; text-transform:uppercase; }
+.coach-observation-grid strong { font-size:12px; overflow-wrap:anywhere; }
+.coach-observation-conflict { color:var(--amber); }
+.coach-node { align-items:center; border-top:1px solid var(--line); display:grid; gap:12px; grid-template-columns:8px 1fr auto; padding:12px 0; }
+.coach-node>i { background:var(--coral); border-radius:50%; height:8px; width:8px; } .coach-node>i.online { background:var(--mint); } .coach-node>span { display:grid; gap:2px; }
+.coach-node strong { font-size:11px; } .coach-node small { color:var(--muted); font-size:9px; } .coach-node>b { font-size:13px; }
+

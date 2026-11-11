@@ -23,25 +23,25 @@ const CACHE_KEY = 'ea_wifi_change'
 
 const overlayStyle = {
   position: 'fixed', inset: 0, zIndex: 9999,
-  background: 'rgba(0, 0, 0, 0.82)',
+  background: 'color-mix(in srgb, var(--shade) 82%, transparent)',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   padding: '24px', fontFamily: 'system-ui, -apple-system, sans-serif',
 }
 const cardStyle = {
   maxWidth: 620, width: '100%', textAlign: 'center',
-  background: '#10171b', color: '#f5f7f2',
-  border: '1px solid #ffb63e', borderRadius: 16, padding: '32px 28px',
+  background: 'var(--panel)', color: 'var(--ink)',
+  border: '1px solid var(--amber)', borderRadius: 16, padding: '32px 28px',
 }
 const pwStyle = {
   display: 'block', margin: '20px 0', padding: '18px',
-  fontFamily: 'ui-monospace, Menlo, Consolas, monospace',
+  fontFamily: 'var(--font-mono)',
   fontSize: 'clamp(24px, 6vw, 44px)', letterSpacing: '1px',
-  color: '#a9f04d', background: '#070b0e', borderRadius: 12,
+  color: 'var(--lime)', background: 'var(--bg)', borderRadius: 12,
   userSelect: 'all', wordBreak: 'break-all',
 }
 const btnStyle = {
-  padding: '12px 22px', borderRadius: 10, border: '1px solid #263239',
-  background: 'transparent', color: '#f5f7f2', font: 'inherit',
+  padding: '12px 22px', borderRadius: 10, border: '1px solid var(--line)',
+  background: 'transparent', color: 'var(--ink)', font: 'inherit',
   fontSize: 16, cursor: 'pointer',
 }
 
@@ -75,7 +75,7 @@ export default function WifiChangeOverlay() {
         <h1 style={{ margin: '0 0 10px', fontSize: 'clamp(20px, 4vw, 30px)' }}>
           The gym Wi-Fi password is changing
         </h1>
-        <p style={{ margin: 0, fontSize: 16, lineHeight: 1.5, color: '#89969d' }}>
+        <p style={{ margin: 0, fontSize: 16, lineHeight: 1.5, color: 'var(--muted)' }}>
           This screen is about to drop off the network. Reconnect it to
           “EdgeAthlete” in this device’s Wi-Fi settings using:
         </p>

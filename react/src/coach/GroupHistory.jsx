@@ -51,7 +51,6 @@ export default function GroupHistory({ group, range, accessToken, onLogout }) {
   const [members, setMembers] = useState([])
   const [analytics, setAnalytics] = useState({})
   const [state, setState] = useState('loading')
-  const [requestCount, setRequestCount] = useState(0)
   // Read through a ref so a new copy of the sign-out function from a redraw doesn't
   // restart the load below (one roster request plus one per athlete, every time).
   const onLogoutRef = useRef(onLogout)
@@ -61,7 +60,6 @@ export default function GroupHistory({ group, range, accessToken, onLogout }) {
     if (!group?.id) return undefined
     let cancelled = false
     setState('loading')
-    setRequestCount(0)
 
     const headers = { Accept: 'application/json', Authorization: `Bearer ${accessToken}` }
     const json = async (url) => {
@@ -80,7 +78,6 @@ export default function GroupHistory({ group, range, accessToken, onLogout }) {
         const loaded = await fetchInBatches(list.map((a) => a.id), (id) => json(athleteAnalyticsUrl(id)))
         if (cancelled) return
         setAnalytics(loaded)
-        setRequestCount(1 + list.length)
         setState('ready')
       } catch {
         if (!cancelled) setState('error')
@@ -147,18 +144,17 @@ export default function GroupHistory({ group, range, accessToken, onLogout }) {
           ))}</tbody>
         </table></div>
 
-        {/* Said out loud on purpose. Phase H's open decision is whether to add a
-            `?group=` parameter, and that should be settled by a number a coach
-            can see rather than by how it feels on a four-athlete demo. */}
+        {/* The request count used to be printed here; spec 06 Phase 2 took it out,
+            since a coach shouldn't read developer numbers. The cost is unchanged
+            (one request per athlete, see groupHistory.js); spec 09 moves Behind
+            to the server. */}
         <p className="history-table-note">
           <b>Behind</b> means slower than the session before on at least {BEHIND_DOWN_DAYS} of the
           last {BEHIND_OF_LAST} training days — a pattern, not a bad night. Judged on the athlete’s whole
           history, so it does not move when the window does.
         </p>
         <p className="history-table-note">
-          Built from <b>{requestCount} requests</b> — the group roster, then one per athlete. There is no
-          group-scoped analytics route, so this is the cost today. Velocity pools every movement, the same
-          caveat as the per-athlete view.
+          Speed here pools every movement, the same as on one athlete’s page.
         </p>
       </>}
     </div>

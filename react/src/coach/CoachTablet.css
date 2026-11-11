@@ -1,23 +1,10 @@
-/* Coach tablet — JWT gate + Room Layout. Matches main theme (theme.js / .monitor). */
+/* Coach tablet — JWT gate + Room Layout. Colours come from styles/tokens.css. */
 
 .coach-root {
-  --coach-bg: #070b0e;
-  --coach-card: #10171b;
-  --coach-card2: #151e23;
-  --coach-line: #263239;
-  --coach-ink: #f5f7f2;
-  --coach-ink2: #89969d;
-  --coach-ink3: #6f7a82;
-  --coach-accent: #a9f04d;
-  --coach-good: #45dcb3;
-  --coach-warn: #ffb63e;
-  --coach-sans: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --coach-mono: ui-monospace, Menlo, Consolas, monospace;
-
   min-height: 100vh;
-  background: var(--coach-bg);
-  color: var(--coach-ink);
-  font-family: var(--coach-sans);
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
 }
 
 .coach-shell {
@@ -31,7 +18,7 @@
   font-weight: 900;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--coach-accent);
+  color: var(--lime);
   margin: 0 0 10px;
 }
 
@@ -43,7 +30,7 @@
 }
 
 .coach-lede {
-  color: var(--coach-ink2);
+  color: var(--muted);
   font-size: 15px;
   max-width: 56ch;
   margin: 0 0 28px;
@@ -51,8 +38,8 @@
 }
 
 .coach-card {
-  background: var(--coach-card);
-  border: 1px solid var(--coach-line);
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 12px;
   padding: 22px 24px;
   margin-top: 18px;
@@ -63,36 +50,29 @@
   font-size: 17px;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: var(--coach-ink);
+  color: var(--ink);
 }
 
 .coach-card-sub {
-  color: var(--coach-ink2);
+  color: var(--muted);
   font-size: 13px;
   margin: 4px 0 16px;
   line-height: 1.45;
-}
-
-.coach-form {
-  display: grid;
-  gap: 12px;
-  max-width: 360px;
 }
 
 .coach-label {
   display: grid;
   gap: 6px;
   font-size: 13px;
-  color: var(--coach-ink2);
+  color: var(--muted);
 }
 
-.coach-input,
 .coach-select {
   font: inherit;
   font-size: 14px;
-  color: var(--coach-ink);
-  background: var(--coach-bg);
-  border: 1px solid var(--coach-line);
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line);
   border-radius: 12px;
   padding: 12px 14px;
 }
@@ -102,11 +82,10 @@
   width: 100%;
 }
 
-.coach-input:focus,
 .coach-select:focus {
-  outline: 2px solid rgba(169, 240, 77, 0.35);
+  outline: 2px solid color-mix(in srgb, var(--lime) 35%, transparent);
   outline-offset: 1px;
-  border-color: var(--coach-accent);
+  border-color: var(--lime);
 }
 
 .coach-btn {
@@ -115,14 +94,14 @@
   font-weight: 600;
   padding: 12px 16px;
   border-radius: 12px;
-  border: 1px solid var(--coach-line);
-  background: var(--coach-card);
-  color: var(--coach-ink);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
   cursor: pointer;
 }
 
 .coach-btn:hover:not(:disabled) {
-  border-color: var(--coach-ink2);
+  border-color: var(--muted);
 }
 
 .coach-btn:disabled {
@@ -131,9 +110,9 @@
 }
 
 .coach-btn-primary {
-  background: var(--coach-accent);
-  color: #0a1106;
-  border-color: var(--coach-accent);
+  background: var(--lime);
+  color: var(--on-lime);
+  border-color: var(--lime);
   font-weight: 700;
 }
 
@@ -143,8 +122,8 @@
 
 .coach-btn-ghost {
   background: transparent;
-  border-color: var(--coach-line);
-  color: var(--coach-ink2);
+  border-color: var(--line);
+  color: var(--muted);
   font-size: 13px;
   padding: 10px 14px;
 }
@@ -152,11 +131,11 @@
 .coach-msg {
   font-size: 13px;
   margin: 10px 0 0;
-  color: var(--coach-ink2);
+  color: var(--muted);
 }
 
-.coach-msg-ok { color: var(--coach-good); }
-.coach-msg-err { color: var(--coach-warn); }
+.coach-msg-ok { color: var(--mint); }
+.coach-msg-err { color: var(--amber); }
 
 .coach-topbar {
   display: flex;
@@ -189,7 +168,7 @@
 
 .coach-divider {
   border: 0;
-  border-top: 1px solid var(--coach-line);
+  border-top: 1px solid var(--line);
   margin: 20px 0;
 }
 
@@ -201,38 +180,38 @@
 }
 
 .coach-slot {
-  background: var(--coach-card2);
-  border: 1px solid var(--coach-line);
+  background: var(--panel2);
+  border: 1px solid var(--line);
   border-radius: 12px;
   padding: 12px 12px 14px;
   min-height: 96px;
 }
 
 .coach-slot-num {
-  font-family: var(--coach-mono);
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 900;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--coach-accent);
+  color: var(--lime);
   margin-bottom: 8px;
 }
 
 .coach-slot-line {
   font-size: 12.5px;
-  color: var(--coach-ink2);
+  color: var(--muted);
   line-height: 1.4;
 }
 
 .coach-slot-line strong {
-  color: var(--coach-ink);
+  color: var(--ink);
   font-weight: 600;
-  font-family: var(--coach-mono);
+  font-family: var(--font-mono);
   font-size: 12px;
 }
 
 .coach-slot-empty {
-  color: var(--coach-ink3);
+  color: var(--faint);
   font-size: 12.5px;
 }
 
@@ -246,15 +225,15 @@
 
 .coach-hint {
   font-size: 12.5px;
-  color: var(--coach-ink3);
+  color: var(--faint);
   margin: 0 0 14px;
   line-height: 1.45;
 }
 
 .coach-hint code {
-  font-family: var(--coach-mono);
+  font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--coach-ink2);
+  color: var(--muted);
 }
 
 /* Default-Wi-Fi-password nudge. Amber, not red: a "before you ship" reminder,
@@ -264,15 +243,15 @@
   margin: 0 0 16px;
   padding: 12px 16px;
   border-radius: 10px;
-  border: 1px solid var(--coach-warn);
-  background: rgba(255, 182, 62, 0.08);
-  color: var(--coach-ink);
+  border: 1px solid var(--amber);
+  background: color-mix(in srgb, var(--amber) 8%, transparent);
+  color: var(--ink);
   font-size: 13px;
   line-height: 1.5;
 }
 
 .coach-defaults-banner strong {
-  color: var(--coach-warn);
+  color: var(--amber);
 }
 
 /* The banner's inline "change it" link — a button that reads as a link, so the
@@ -283,7 +262,7 @@
   border: 0;
   padding: 0;
   font: inherit;
-  color: var(--coach-warn);
+  color: var(--amber);
   text-decoration: underline;
   cursor: pointer;
 }
@@ -297,7 +276,7 @@
 .coach-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: color-mix(in srgb, var(--shade) 60%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -308,24 +287,24 @@
 .coach-modal {
   width: 100%;
   max-width: 420px;
-  background: var(--coach-card);
-  border: 1px solid var(--coach-line);
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 14px;
   padding: 22px;
-  color: var(--coach-ink);
+  color: var(--ink);
 }
 
 .coach-modal-warn {
   margin: 0 0 14px;
   font-size: 12.5px;
   line-height: 1.5;
-  color: var(--coach-warn);
+  color: var(--amber);
 }
 
 .coach-field {
   display: block;
   font-size: 12px;
-  color: var(--coach-ink2);
+  color: var(--muted);
   margin-bottom: 12px;
 }
 
@@ -335,9 +314,9 @@
   margin-top: 5px;
   padding: 9px 11px;
   border-radius: 8px;
-  border: 1px solid var(--coach-line);
-  background: var(--coach-bg);
-  color: var(--coach-ink);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
   font: inherit;
   box-sizing: border-box;
 }
@@ -355,16 +334,16 @@
   margin: 4px 0 16px;
   padding: 14px 16px;
   border-radius: 10px;
-  border: 1px dashed var(--coach-line);
-  background: var(--coach-bg);
+  border: 1px dashed var(--line);
+  background: var(--bg);
   text-align: center;
 }
 
 .coach-wifi-reveal code {
-  font-family: var(--coach-mono);
+  font-family: var(--font-mono);
   font-size: 20px;
   letter-spacing: 0.5px;
-  color: var(--coach-accent);
+  color: var(--lime);
   user-select: all;
   word-break: break-all;
 }

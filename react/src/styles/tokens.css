@@ -1,0 +1,135 @@
+/*
+ * tokens.css — every colour in Edge Athlete, in ONE place.
+ *
+ * Why this file exists: before it, the same colours were typed out by hand in
+ * twenty files, and copies drifted (six slightly different reds, four ambers).
+ * Now every stylesheet and every screen says what a colour is FOR ("lime",
+ * "panel"), never the colour code itself, so changing a colour here changes it
+ * everywhere at once. A test (colorGuard.test.js) fails if a colour code is
+ * typed anywhere else in the app.
+ *
+ * The sensor's own setup page (esp32/edge_athlete_node/src/setup_page.h) runs
+ * on the sensor, so it can't load this file. It keeps its own copy of these
+ * values, and a test (tokenCopies.test.js) fails if that copy stops matching.
+ * The same test checks the few places outside the app's code that need a
+ * colour written out: the page's theme colour in index.html and the install
+ * manifests in public/.
+ *
+ * Rules for this file (spec 06):
+ *   - Each section says, in plain words, what kinds of things use its colours.
+ *   - A colour with no job written down doesn't go in.
+ *   - A new colour needs Devin's OK first.
+ *
+ * It sits on :root, so every screen can see it: the rack screen, the room
+ * display, the coach app, sign-in, and the athlete's pages.
+ */
+
+:root {
+  /*
+   * SURFACES: what everything sits on (spec 06 rule 9, "solid surfaces").
+   *   bg       the page itself, behind everything; also the browser's theme colour.
+   *   panel    every card, row, table and dialog: a solid block with a border.
+   *   panel2   a surface one step lighter: the chosen card or day, dropdowns,
+   *            filter chips, the "solid" secondary button's fill.
+   *   line     every border and divider between surfaces.
+   *   field    the inside of every text box, number box and dropdown a person types
+   *            into or picks from (rule 9: inputs sit darker than the card around them).
+   *   shade    plain black, only ever see-through: the dimmed page behind an open
+   *            dialog, and drop shadows.
+   */
+  --bg: #070b0e;
+  --panel: #10171b;
+  --panel2: #151e23;
+  --line: #263239;
+  --field: #0b1114;
+  --shade: #000000;
+
+  /*
+   * BANNER SURFACES: the only tinted backgrounds (rule 9: tints are for banners).
+   *   focus-bg   the focus card: the one thing on a screen the person is working on
+   *              (rule 1), and the athlete's code card.
+   *   hero-bg    the header card at the top of a page.
+   *   risk-bg    the red banner background: behind an athlete who is Behind, and
+   *              behind every error message box (the app's and the sensor's setup page).
+   *   warn-bg    the amber banner background: behind a heads-up notice box (simulated
+   *              data, a hint, a warning on the sensor's setup page).
+   *   admin-bg   the Administrator pill badge.
+   */
+  --focus-bg: #121b14;
+  --hero-bg: #101a17;
+  --risk-bg: #170d0e;
+  --warn-bg: #1f1a0d;
+  --admin-bg: #1a2610;
+
+  /*
+   * TEXT: from loudest to quietest.
+   *   ink        main text: titles, names, numbers, button labels.
+   *   soft-ink   body text inside a card or dialog, and titles that are not in focus.
+   *   muted      labels, captions, secondary details, quiet buttons.
+   *   faint      the quietest text: small uppercase section labels, archived rows.
+   *              The lightest grey that still reads at 4.5:1 on every surface.
+   */
+  --ink: #f5f7f2;
+  --soft-ink: #c9d1d5;
+  --muted: #89969d;
+  --faint: #7a868c;
+
+  /*
+   * LIME: "you are here" and "press this next" (rule 5). The brand colour.
+   *   lime      the one primary button per screen, the active tab or step, the
+   *             selected card's border, keyboard focus outlines, key numbers, and the
+   *             word "Administrator" on its pill.
+   *   on-lime   dark text and icons sitting ON a lime fill (a primary button's label).
+   */
+  --lime: #a9f04d;
+  --on-lime: #071006;
+
+  /*
+   * MINT: good and on target.
+   *   mint   a rep in the target speed zone, a sensor that is online, a live
+   *          connection, a planned session on the calendar, positive changes.
+   */
+  --mint: #45dcb3;
+
+  /*
+   * AMBER: heads-up, not an error.
+   *   amber   speed dropping, a connection still connecting, warnings,
+   *           simulated data, time running long.
+   */
+  --amber: #ffb63e;
+
+  /*
+   * RED: something is wrong, or a button ends or removes something (rule 5).
+   * Three reds, each with one job:
+   *   coral         red LINES and DOTS on the dark background: the outline of an End
+   *                 button or an error box, a field with a mistake, a rep that shows
+   *                 fatigue, a lost connection, the Behind marker.
+   *   coral-text    red WORDS on the dark background: an End button's label, every
+   *                 error message, a quiet Remove or Archive that turns red. Lighter than
+   *                 coral so a sentence of it stays easy to read.
+   *   danger-fill   ONLY the filled red button that confirms removing something for
+   *                 good (Remove sensor). Its label is ink, 19px bold: 3.6:1 on this
+   *                 red, which passes for large text. Never use coral as a fill
+   *                 behind light text (2.9:1, too faint to read).
+   */
+  --coral: #ff646b;
+  --coral-text: #ff9aa0;
+  --danger-fill: #e5484d;
+
+  /*
+   * EDGES AND SHAPES: the outline and corners of buttons.
+   *   button-edge     the border of a solid secondary button, and of an "off" dot.
+   *   radius-button   the corner of every button.
+   */
+  --button-edge: #5c6a72;
+  --radius-button: 6px;
+
+  /*
+   * TYPE: Inter everywhere, bundled with the app (see main.jsx) so it works on a
+   * gym's offline network; the rest of each list is a fallback.
+   *   font-sans   all text.
+   *   font-mono   codes and IDs (a sensor's ID, a login code).
+   */
+  --font-sans: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, Menlo, Consolas, monospace;
+}

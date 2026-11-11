@@ -22,7 +22,7 @@
 // comes in as the `coachState` prop, read from the URL by App.jsx, so a reload
 // keeps it and the Back button moves between states. See coach/coachState.js.
 //
-// Each state has its own sub-tabs (STATE_TABS below) — the eight-at-once bar
+// Each state has its own sub-tabs (STATE_TABS, in coach/ContextTabs.jsx) — the eight-at-once bar
 // this replaced is gone, and so is the Programs tab, whose per-athlete override
 // editor now lives in PLANNING → Groups → Open.
 //
@@ -30,7 +30,15 @@
 // of time. See the D8 note further down.
 
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
-import "./App.css";
+// The room display and coach workspace styles, in the order they must load: the
+// shared base first, the area files, and the screen-size rules last so they win.
+import "./styles/monitor.css";
+import "./styles/room-display.css";
+import "./styles/coach-workspace.css";
+import "./styles/planning.css";
+import "./styles/analytics.css";
+import "./styles/rack-screen.css";
+import "./styles/screen-sizes.css";
 import { navigate } from "./router.js";
 import { coachFetch, fetchCurrentCoach, getCoachToken, getSignedInRole, setCoachToken, setSignedInRole } from "./coach/api.js";
 import AccountMenu from "./coach/AccountMenu.jsx";
@@ -53,42 +61,12 @@ import SessionWidget from "./coach/SessionWidget.jsx";
 import QuickNote from "./coach/QuickNote.jsx";
 import GroupsView from "./coach/GroupsView.jsx";
 import GroupHistory from "./coach/GroupHistory.jsx";
+import ContextTabs, { STATE_TABS } from "./coach/ContextTabs.jsx";
 import { pathForCoachState, rememberCoachState } from "./coach/coachState.js";
 import { DEFAULT_PRESET_DAYS, matchesPreset, normaliseRange, presetRange, RANGE_PRESETS, rangeContains, rangeLabel } from "./coach/historyRange.js";
 import { scheduleUrl, scheduleWindow, slotState } from "./schedule.js";
 
-// Which sub-tabs belong to which state — the three moments of a coach's day.
-//
-//   PLANNING   what you set up before anyone lifts
-//   SESSION    the live room, while they do
-//   ANALYTICS  what you read afterwards, one athlete at a time
-//
-// The first entry in each list is that state's landing tab.
-const STATE_TABS = {
-  planning: ["design", "groups", "catalog", "calendar"],
-  session: ["room"],
-  analytics: ["athlete", "history", "notes", "reports"],
-};
-
-// ANALYTICS sub-tabs that are about ONE athlete, and so need the selector above
-// them. Reports is the odd one out — it is day-scoped and carries its own
-// athlete/day mode switch, so the shared selector stays out of its way.
-const ATHLETE_SCOPED_TABS = ["athlete", "history", "notes"];
-
-// The sub-tab bar used to print its own keys, so it read "workouts · schedule"
-// in lowercase. These are named things a coach would say out loud, so the label
-// and the internal key stop being the same string here.
-const TAB_LABELS = {
-  design: "Design",
-  groups: "Groups",
-  catalog: "Workout catalog",
-  calendar: "Calendar",
-  room: "Room",
-  athlete: "Athlete",
-  history: "History",
-  notes: "Notes",
-  reports: "Reports",
-};
+// The sub-tabs each state has (STATE_TABS) and their row live in coach/ContextTabs.jsx.
 
 // Days a coach set up ahead of time and has not started yet.
 //
@@ -843,8 +821,8 @@ function CoachView({ monitor, accessToken, onLogout, coachState, me }) {
   // `coach-states-clearance` is room for the navbar to float over. Without it
   // the last card on every screen sits under the glass and cannot be reached.
   return <main className="monitor coach-monitor coach-states-clearance"><header className="coach-topbar">
-    {/* The top-left corner is the account menu: who is signed in, Coaches for an
-        administrator, Change password, Log out. See coach/AccountMenu.jsx. */}
+    {/* The top-left corner (spec 06 rule 12): the picture goes to Planning, the
+        coach's name opens the account menu. See coach/AccountMenu.jsx. */}
     <AccountMenu me={me} onLogout={onLogout} />
     <div className="coach-session-title"><span>Coach workspace</span><h1>{roomState.session?.label||"No active session"}</h1></div>
     <div className="coach-topbar-actions">
@@ -920,7 +898,7 @@ function CoachView({ monitor, accessToken, onLogout, coachState, me }) {
           <span className="coach-range-label">{rangeLabel(historyRange)}</span>
         </div>}
       </div>}
-      {!dayMissing&&<nav className="coach-context-tabs" aria-label="Coach workspace tabs" role="tablist">{stateTabs.map(t=><button className={activeTab===t?"active":""} aria-selected={activeTab===t} role="tab" onClick={()=>chooseTab(t)} key={t}>{TAB_LABELS[t]??t}</button>)}</nav>}{/* ONE instance across two sub-tabs, not two. Design and Workout catalog
+      {!dayMissing&&<ContextTabs tabs={stateTabs} active={activeTab} onChoose={chooseTab}/>}{/* ONE instance across two sub-tabs, not two. Design and Workout catalog
           need the same blocks, categories, groups and deployed programs; mounting
           it twice would fetch all of them twice and let the two copies drift —
           a block made on Design would not show up in the catalog. */}
