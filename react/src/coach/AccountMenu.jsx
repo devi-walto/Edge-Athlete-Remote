@@ -15,7 +15,7 @@ export const PASSWORD_PATH = '/coach/account/password'
 
 export function ProfileImage() {
   return <span className="acct-avatar" aria-hidden="true">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="#071006"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z" /></svg>
+    <svg width="22" height="22" viewBox="0 0 24 24" style={{ fill: 'var(--on-lime)' }}><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z" /></svg>
   </span>
 }
 

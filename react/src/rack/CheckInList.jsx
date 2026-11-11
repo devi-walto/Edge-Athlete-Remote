@@ -89,7 +89,7 @@ function NfcHint() {
       <div style={{ width: 96, height: 96, borderRadius: '50%', border: `2px dashed ${T.line}`,
         display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14,
         animation: 'eaNfcPulse 2.4s ease-in-out infinite' }}>
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.muted}
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" style={{ stroke: T.muted }}
           strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M6 9a4.5 4.5 0 0 1 0 6" />
           <path d="M9.5 6.5a9 9 0 0 1 0 11" />

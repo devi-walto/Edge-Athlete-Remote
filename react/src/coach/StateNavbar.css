@@ -9,9 +9,7 @@
  * grey. That is what stops the bar from reading as a separate page footer and
  * makes it read as one surface floating above the work.
  *
- * Colours are the same values as react/src/theme.js. They are repeated here as
- * literals because this is a stylesheet and cannot import the file — if the
- * brand accent ever changes, both places change.
+ * Colours come from styles/tokens.css; never type a colour code here.
  */
 
 .coach-states {
@@ -47,7 +45,7 @@
   background: transparent;
   border: 0;
   border-radius: 999px;
-  color: #89969d;
+  color: var(--muted);
   cursor: pointer;
   font: inherit;
   font-size: 11px;
@@ -59,12 +57,12 @@
 }
 
 .coach-states button:hover:not(:disabled):not(.on) {
-  color: #f5f7f2;
+  color: var(--ink);
 }
 
 /* Dark ink on the lime pill — near-white text on lime is unreadable. */
 .coach-states button.on {
-  color: #071006;
+  color: var(--on-lime);
 }
 
 /* SESSION with no training day running. Dimmer than an unselected state and
@@ -92,7 +90,7 @@
   bottom: 0;
   left: 0;
   border-radius: 999px;
-  background: #a9f04d;
+  background: var(--lime);
   transition: transform .34s cubic-bezier(.4, 0, .2, 1),
               width .34s cubic-bezier(.4, 0, .2, 1);
   pointer-events: none;

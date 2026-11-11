@@ -307,10 +307,10 @@ function ConnectionTestPage() {
 // for anyone who finds it. Asked once, before anything connects (spec 05, Phases 3–4).
 export function RemoteNotice() {
   return (
-    <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#070b0e', color: '#f5f7f2', padding: 24 }}>
-      <section role="alert" style={{ maxWidth: 420, background: '#10171b', border: '1px solid #263239', borderRadius: 6, padding: 24 }}>
+    <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: 'var(--bg)', color: 'var(--ink)', padding: 24 }}>
+      <section role="alert" style={{ maxWidth: 420, background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 6, padding: 24 }}>
         <h1 style={{ margin: '0 0 8px', fontSize: 20 }}>Not available here</h1>
-        <p style={{ margin: 0, color: '#89969d', lineHeight: 1.5 }}>
+        <p style={{ margin: 0, color: 'var(--muted)', lineHeight: 1.5 }}>
           The connection test is a tool for a local installation. It is switched off on an online one.
         </p>
       </section>
