@@ -177,10 +177,14 @@ describe('the look in ui.css', () => {
   }
   const px = (body, prop) => Number((body.match(new RegExp(`(?:^|;|\\s)${prop}:\\s*(\\d+)px`)) || [])[1] || 0)
 
-  it('makes every button, and every step row that opens, at least 44px tall', () => {
+  it('makes every button, step row, top bar part and back link at least 44px tall', () => {
     expect(px(rule('.ui-button'), 'min-height')).toBeGreaterThanOrEqual(44)
     expect(px(rule('.ui-button--danger'), 'min-height')).toBeGreaterThanOrEqual(44)
     expect(px(rule('.ui-step-row'), 'min-height')).toBeGreaterThanOrEqual(44)
+    expect(px(rule('.ui-topbar-home'), 'height')).toBeGreaterThanOrEqual(44)
+    expect(px(rule('.ui-topbar-home'), 'width')).toBeGreaterThanOrEqual(44)
+    expect(px(rule('.ui-topbar-name'), 'min-height')).toBeGreaterThanOrEqual(44)
+    expect(px(rule('.ui-backlink'), 'min-height')).toBeGreaterThanOrEqual(44)
     // Row actions are quiet Buttons, so they inherit the 44px; nothing shrinks a button.
     expect(css).not.toMatch(/\.ui-button[^{]*\{[^}]*(?:^|;|\s)(?:min-)?height:\s*(?:[0-3]?\d|4[0-3])px/)
   })

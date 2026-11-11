@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: Phase 0 done 2026-11-11 (every colour in one token file); Phases 1–2 built, awaiting review
+- Status: Phase 0 done 2026-11-11 (every colour in one token file); Phases 1–3 built 2026-11-11, awaiting review
 - Form item: #11 (unified coach interface, added 2026-10-06)
 - Depends on: nothing. **Specs 07, 08, 09 and 10 (the athlete's pages) all depend on this one**
 - Updated 2026-11-11: the shared pieces live in `react/src/ui/` (coach and athlete screens
@@ -180,9 +180,10 @@ the exception is a banner that announces something.
   and the focus card. Nothing else is tinted.
 - **Filter chips are solid**: `panel2` with a `line` border; the chosen one is filled
   white with dark text.
-- **The top bar** is the bold one: "Edge Athlete" at weight 800 beside the signed-in
-  coach's **profile image** on a lime rounded square. On the sign-in and first-run
-  pages, where nobody is signed in, the square holds the letters "EA".
+- **The top bar** is the bold one: the signed-in person's **profile image** on a lime
+  rounded square, with their name beside it at weight 800 (rule 12: the picture goes
+  Home, the name opens the menu). On the sign-in and first-run pages, where nobody is
+  signed in, the square holds the letters "EA" beside "Edge Athlete".
 - **Administrator** is a pill badge: `admin-bg #1a2610`, lime border, lime text (2026-11-11).
 - **The Calendar has two views behind one List | Month switch** (a two-option segmented
   control, the chosen option filled white). **Month** is a grid of solid square day
@@ -400,14 +401,16 @@ Also in `react/src/ui/`: `BackLink`, the one link under the top bar on a drill-d
 
 **Done when:**
 
-- [ ] *(Frontend test)* From SESSION and from ANALYTICS, pressing the picture lands on
+- [x] *(Frontend test)* From SESSION and from ANALYTICS, pressing the picture lands on
       PLANNING; with a day running, the day is still running afterwards.
-- [ ] *(Frontend test)* Pressing the name opens the menu; Coaches appears only for an
+- [x] *(Frontend test)* Pressing the name opens the menu; Coaches appears only for an
       administrator; Escape and a press elsewhere close it.
-- [ ] Both parts are real buttons, at least 44px tall, reachable by keyboard, each with
+- [x] Both parts are real buttons, at least 44px tall, reachable by keyboard, each with
       its own accessible name ("Home", "Account menu").
-- [ ] `BackLink` renders its label and goes where it is told; a render test covers it.
-- [ ] *(Browser)* The top bar works as a local install and as the remote server.
+- [x] `BackLink` renders its label and goes where it is told; a render test covers it.
+- [x] *(Browser)* The top bar works as a local install and as the remote server.
+      (Checked on the real components in a preview page; not yet on a signed-in
+      workspace, which needs the server running.)
 
 **Stop. Devin reviews.**
 

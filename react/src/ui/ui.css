@@ -180,3 +180,99 @@ button.ui-step-row:focus-visible { outline: 2px solid var(--lime); outline-offse
 .ui-risk svg,
 .ui-risk-mark { fill: var(--coral); flex: none; }
 .ui-risk-mark { display: inline-block; vertical-align: middle; }
+
+/* ── TopBar: the picture goes Home, the name opens the menu (rule 12) ── */
+.ui-topbar { align-items: center; display: flex; gap: 4px; position: relative; }
+.ui-topbar-home {
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  display: grid;
+  height: 44px;
+  padding: 0;
+  place-items: center;
+  width: 44px;
+}
+.ui-topbar-square {
+  background: var(--lime);
+  border-radius: 9px;
+  color: var(--on-lime);
+  display: grid;
+  fill: var(--on-lime);
+  font-size: 13px;
+  font-weight: 900;
+  height: 34px;
+  letter-spacing: -.04em;
+  place-items: center;
+  width: 34px;
+}
+.ui-topbar-brand { color: var(--ink); font-size: 15px; font-weight: 800; padding-left: 8px; }
+.ui-topbar-name {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  gap: 6px;
+  letter-spacing: 0;
+  min-height: 44px;
+  padding: 0 8px;
+  text-transform: none;
+}
+.ui-topbar-name[aria-expanded="true"] { background: var(--panel2); }
+.ui-topbar-caret { color: var(--muted); }
+.ui-topbar-home:focus-visible,
+.ui-topbar-name:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+.ui-topbar-menu {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--shade) 55%, transparent);
+  left: 0;
+  min-width: 290px;
+  position: absolute;
+  top: calc(100% + 8px);
+  z-index: 40;
+}
+.ui-topbar-menu-header { display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; }
+.ui-topbar-menu > button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  justify-content: space-between;
+  letter-spacing: 0;
+  min-height: 48px;
+  padding: 0 18px;
+  text-align: left;
+  text-transform: none;
+  width: 100%;
+}
+.ui-topbar-menu > button:hover { background: var(--panel2); }
+.ui-topbar-menu > button small { color: var(--muted); font-size: 11px; font-weight: 600; }
+
+/* ── BackLink: the one way out of a drill-down page (rule 11) ── */
+.ui-backlink-row { align-items: center; display: flex; padding: 0 12px; }
+.ui-backlink {
+  background: transparent;
+  border: 0;
+  color: var(--soft-ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  min-height: 44px;
+  padding: 0 4px;
+}
+.ui-backlink:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }

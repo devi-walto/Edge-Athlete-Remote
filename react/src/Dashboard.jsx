@@ -821,8 +821,8 @@ function CoachView({ monitor, accessToken, onLogout, coachState, me }) {
   // `coach-states-clearance` is room for the navbar to float over. Without it
   // the last card on every screen sits under the glass and cannot be reached.
   return <main className="monitor coach-monitor coach-states-clearance"><header className="coach-topbar">
-    {/* The top-left corner is the account menu: who is signed in, Coaches for an
-        administrator, Change password, Log out. See coach/AccountMenu.jsx. */}
+    {/* The top-left corner (spec 06 rule 12): the picture goes to Planning, the
+        coach's name opens the account menu. See coach/AccountMenu.jsx. */}
     <AccountMenu me={me} onLogout={onLogout} />
     <div className="coach-session-title"><span>Coach workspace</span><h1>{roomState.session?.label||"No active session"}</h1></div>
     <div className="coach-topbar-actions">
