@@ -23,7 +23,7 @@ const CACHE_KEY = 'ea_wifi_change'
 
 const overlayStyle = {
   position: 'fixed', inset: 0, zIndex: 9999,
-  background: 'rgba(0, 0, 0, 0.82)',
+  background: 'color-mix(in srgb, var(--shade) 82%, transparent)',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   padding: '24px', fontFamily: 'system-ui, -apple-system, sans-serif',
 }
@@ -34,7 +34,7 @@ const cardStyle = {
 }
 const pwStyle = {
   display: 'block', margin: '20px 0', padding: '18px',
-  fontFamily: 'ui-monospace, Menlo, Consolas, monospace',
+  fontFamily: 'var(--font-mono)',
   fontSize: 'clamp(24px, 6vw, 44px)', letterSpacing: '1px',
   color: 'var(--lime)', background: 'var(--bg)', borderRadius: 12,
   userSelect: 'all', wordBreak: 'break-all',

@@ -197,5 +197,5 @@ const COMPACT = { display: 'flex', alignItems: 'center', padding: '12px 16px', b
 const GHOST_SM = { padding: '8px 12px', borderRadius: 8, border: `1px solid ${T.line}`,
   background: 'transparent', color: T.muted, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }
 const START = { padding: '16px 20px', fontSize: 16, fontWeight: 850, borderRadius: 12,
-  border: `1px solid ${T.lime}`, background: T.lime, color: '#0a0f07', cursor: 'pointer',
+  border: `1px solid ${T.lime}`, background: T.lime, color: 'var(--on-lime)', cursor: 'pointer',
   fontFamily: 'inherit', width: '100%' }

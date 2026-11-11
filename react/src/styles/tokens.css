@@ -32,23 +32,33 @@
    *   panel2   a surface one step lighter: the chosen card or day, dropdowns,
    *            filter chips, the "solid" secondary button's fill.
    *   line     every border and divider between surfaces.
+   *   field    the inside of every text box, number box and dropdown a person types
+   *            into or picks from (rule 9: inputs sit darker than the card around them).
+   *   shade    plain black, only ever see-through: the dimmed page behind an open
+   *            dialog, and drop shadows.
    */
   --bg: #070b0e;
   --panel: #10171b;
   --panel2: #151e23;
   --line: #263239;
+  --field: #0b1114;
+  --shade: #000000;
 
   /*
    * BANNER SURFACES: the only tinted backgrounds (rule 9: tints are for banners).
    *   focus-bg   the focus card: the one thing on a screen the person is working on
    *              (rule 1), and the athlete's code card.
    *   hero-bg    the header card at the top of a page.
-   *   risk-bg    behind an athlete who is Behind.
+   *   risk-bg    the red banner background: behind an athlete who is Behind, and
+   *              behind every error message box (the app's and the sensor's setup page).
+   *   warn-bg    the amber banner background: behind a heads-up notice box (simulated
+   *              data, a hint, a warning on the sensor's setup page).
    *   admin-bg   the Administrator pill badge.
    */
   --focus-bg: #121b14;
   --hero-bg: #101a17;
   --risk-bg: #170d0e;
+  --warn-bg: #1f1a0d;
   --admin-bg: #1a2610;
 
   /*
@@ -66,7 +76,8 @@
   /*
    * LIME: "you are here" and "press this next" (rule 5). The brand colour.
    *   lime      the one primary button per screen, the active tab or step, the
-   *             selected card's border, keyboard focus outlines, key numbers.
+   *             selected card's border, keyboard focus outlines, key numbers, and the
+   *             word "Administrator" on its pill.
    *   on-lime   dark text and icons sitting ON a lime fill (a primary button's label).
    */
   --lime: #a9f04d;
@@ -88,16 +99,20 @@
 
   /*
    * RED: something is wrong, or a button ends or removes something (rule 5).
-   * Two reds, each with one job:
-   *   coral         red TEXT, OUTLINES and DOTS on the dark background: an athlete
-   *                 who is Behind, a rep that shows fatigue, End buttons (the red
-   *                 outline), error messages, a field with a mistake, a lost connection.
+   * Three reds, each with one job:
+   *   coral         red LINES and DOTS on the dark background: the outline of an End
+   *                 button or an error box, a field with a mistake, a rep that shows
+   *                 fatigue, a lost connection, the Behind marker.
+   *   coral-text    red WORDS on the dark background: an End button's label, every
+   *                 error message, a quiet Remove or Archive that turns red. Lighter than
+   *                 coral so a sentence of it stays easy to read.
    *   danger-fill   ONLY the filled red button that confirms removing something for
-   *                 good (Remove sensor). Its white label is 19px bold: white on this
-   *                 red is 3.9:1, which passes for large text. Never use coral as a
-   *                 fill behind white text (2.9:1, too faint to read).
+   *                 good (Remove sensor). Its label is ink, 19px bold: 3.6:1 on this
+   *                 red, which passes for large text. Never use coral as a fill
+   *                 behind light text (2.9:1, too faint to read).
    */
   --coral: #ff646b;
+  --coral-text: #ff9aa0;
   --danger-fill: #e5484d;
 
   /*

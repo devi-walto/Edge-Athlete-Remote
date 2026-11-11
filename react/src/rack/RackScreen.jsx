@@ -45,7 +45,7 @@ const LABEL = {
 // One reusable button in the team style. `tone` picks the accent.
 function Button({ children, onClick, tone = 'primary' }) {
   const tones = {
-    primary: { bg: T.lime, fg: '#0a0f07', border: T.lime },
+    primary: { bg: T.lime, fg: 'var(--on-lime)', border: T.lime },
     ghost: { bg: T.panel, fg: T.ink, border: T.line },
     danger: { bg: 'transparent', fg: T.coral, border: seeThrough(T.coral, 40) },
   }
@@ -637,7 +637,7 @@ export default function RackScreen({ rackNumber, session: openingSession, node, 
       {/* the current phase */}
       {setStartError && (
         <div role="alert" style={{ margin: '14px 24px 0', padding: '12px 14px', borderRadius: 10,
-          border: '1px solid #7f3636', background: '#2b1717', color: '#ffb4b4', fontSize: 13 }}>
+          border: '1px solid var(--coral)', background: 'var(--risk-bg)', color: 'var(--coral-text)', fontSize: 13 }}>
           {setStartError}
         </div>
       )}

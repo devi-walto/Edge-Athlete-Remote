@@ -16,15 +16,15 @@
   gap: 20px;
   margin: 14px 24px;
   padding: 15px 18px;
-  border: 1px solid rgba(169, 240, 77, .45);
-  background: rgba(169, 240, 77, .05);
+  border: 1px solid color-mix(in srgb, var(--lime) 45%, transparent);
+  background: color-mix(in srgb, var(--lime) 5%, transparent);
 }
 
 /* A day open since before today. Amber, not lime: still running, but something
    about it needs a decision. */
 .coach-strip.is-stale {
-  border-color: rgba(255, 182, 62, .55);
-  background: rgba(255, 182, 62, .06);
+  border-color: color-mix(in srgb, var(--amber) 55%, transparent);
+  background: color-mix(in srgb, var(--amber) 6%, transparent);
 }
 
 .coach-strip-eyebrow {

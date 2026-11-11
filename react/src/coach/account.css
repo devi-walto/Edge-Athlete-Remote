@@ -16,19 +16,19 @@
 .acct-mark-name span { color: var(--muted); font-size: 12px; }
 .acct-card h1 { font-size: 28px; font-weight: 850; letter-spacing: -.02em; line-height: 1.1; margin: 4px 0 0; }
 .acct-field { display: flex; flex-direction: column; font-size: 12px; font-weight: 700; gap: 7px; }
-.acct-field input { background: #0b1114; border: 1px solid var(--line); border-radius: 6px; box-sizing: border-box; color: var(--ink); font: inherit; font-size: 15px; font-weight: 400; min-height: 48px; outline: none; padding: 0 14px; }
+.acct-field input { background: var(--field); border: 1px solid var(--line); border-radius: 6px; box-sizing: border-box; color: var(--ink); font: inherit; font-size: 15px; font-weight: 400; min-height: 48px; outline: none; padding: 0 14px; }
 .acct-field input:focus { border-color: var(--lime); }
-.acct-field input.is-code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 16px; letter-spacing: .12em; }
+.acct-field input.is-code { font-family: var(--font-mono); font-size: 16px; letter-spacing: .12em; }
 .acct-primary { background: var(--lime); border: 0; border-radius: 6px; color: var(--on-lime); cursor: pointer; font: inherit; font-size: 14px; font-weight: 800; min-height: 50px; padding: 0 20px; }
 .acct-primary:disabled, .acct-solid:disabled, .acct-quiet:disabled { cursor: default; opacity: .55; }
 .acct-solid { background: var(--panel2); border: 1px solid var(--button-edge); border-radius: 6px; color: var(--ink); cursor: pointer; font: inherit; font-size: 12px; font-weight: 800; min-height: 44px; padding: 0 16px; }
 .acct-quiet { background: transparent; border: 0; color: var(--muted); cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; min-height: 44px; padding: 0 12px; }
 .acct-quiet.is-strong { color: var(--ink); }
-.acct-quiet.is-danger { color: #ff9aa0; }
+.acct-quiet.is-danger { color: var(--coral-text); }
 .acct-note { color: var(--muted); font-size: 12px; line-height: 1.5; margin: 0; }
-.acct-error { background: #1c0f10; border: 1px solid var(--coral); border-radius: 6px; color: #ff9aa0; font-size: 13px; line-height: 1.45; margin: 0; padding: 10px 12px; }
-.acct-hint { background: #1a1608; border: 1px solid var(--amber); border-radius: 6px; color: var(--ink); font-size: 13px; line-height: 1.5; margin: 0; padding: 12px 14px; }
-.acct-hint code { color: var(--amber); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+.acct-error { background: var(--risk-bg); border: 1px solid var(--coral); border-radius: 6px; color: var(--coral-text); font-size: 13px; line-height: 1.45; margin: 0; padding: 10px 12px; }
+.acct-hint { background: var(--warn-bg); border: 1px solid var(--amber); border-radius: 6px; color: var(--ink); font-size: 13px; line-height: 1.5; margin: 0; padding: 12px 14px; }
+.acct-hint code { color: var(--amber); font-family: var(--font-mono); font-size: 12px; }
 
 /* first-run setup: what the code is on the left, the form on the right */
 .acct-setup { align-items: center; display: flex; gap: 56px; max-width: 960px; width: 100%; }
@@ -47,11 +47,11 @@
 .acct-menu .acct-menu-button { align-items: center; background: transparent; border: 0; border-radius: 10px; color: var(--ink); cursor: pointer; display: flex; font-family: inherit; font-size: 15px; font-weight: 800; gap: 10px; letter-spacing: 0; min-height: 44px; padding: 3px 8px 3px 3px; text-transform: none; }
 .acct-menu .acct-menu-button[aria-expanded="true"] { background: var(--panel2); }
 .acct-avatar { background: var(--lime); border-radius: 10px; display: grid; flex: none; height: 38px; place-items: center; width: 38px; }
-.acct-menu-panel { background: var(--panel); border: 1px solid var(--line); box-shadow: 0 14px 34px rgba(0, 0, 0, .55); left: 0; min-width: 290px; position: absolute; top: calc(100% + 8px); z-index: 40; }
+.acct-menu-panel { background: var(--panel); border: 1px solid var(--line); box-shadow: 0 14px 34px color-mix(in srgb, var(--shade) 55%, transparent); left: 0; min-width: 290px; position: absolute; top: calc(100% + 8px); z-index: 40; }
 .acct-menu-who { display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; }
 .acct-menu-who > span { align-items: center; display: flex; gap: 10px; }
 .acct-menu-who b { font-size: 19px; font-weight: 800; }
-.acct-badge { background: var(--admin-bg); border: 1px solid var(--lime); border-radius: 999px; color: #c6f78a; font-size: 10px; font-weight: 800; padding: 3px 8px; white-space: nowrap; }
+.acct-badge { background: var(--admin-bg); border: 1px solid var(--lime); border-radius: 999px; color: var(--lime); font-size: 10px; font-weight: 800; padding: 3px 8px; white-space: nowrap; }
 .acct-menu .acct-menu-panel > button { align-items: center; background: transparent; border: 0; border-top: 1px solid var(--line); color: var(--ink); cursor: pointer; display: flex; font-family: inherit; font-size: 13px; font-weight: 700; justify-content: space-between; letter-spacing: 0; min-height: 48px; padding: 0 18px; text-align: left; text-transform: none; width: 100%; }
 .acct-menu .acct-menu-panel > button:hover { background: var(--panel2); }
 .acct-menu .acct-menu-panel > button small { color: var(--muted); font-size: 11px; font-weight: 600; }
@@ -68,11 +68,11 @@
 .acct-hero h2 { font-size: 36px; font-weight: 850; letter-spacing: -.03em; line-height: 1; margin: 0; }
 .acct-hero p { color: var(--muted); font-size: 15px; line-height: 1.4; margin: 0; }
 .acct-hero > span { color: var(--lime); font-size: 12px; font-weight: 800; white-space: nowrap; }
-.acct-handoff { align-items: center; background: #0c1a17; border: 1px solid var(--mint); border-radius: 6px; display: flex; flex-wrap: wrap; gap: 14px 18px; padding: 16px 18px; }
+.acct-handoff { align-items: center; background: var(--hero-bg); border: 1px solid var(--mint); border-radius: 6px; display: flex; flex-wrap: wrap; gap: 14px 18px; padding: 16px 18px; }
 .acct-handoff > div { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 240px; }
 .acct-handoff > div b { font-size: 13px; font-weight: 800; }
 .acct-handoff > div span { color: var(--soft-ink); font-size: 12px; line-height: 1.5; }
-.acct-handoff code { background: #0b1114; border: 1px solid var(--line); border-radius: 6px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 15px; letter-spacing: .04em; padding: 12px 16px; }
+.acct-handoff code { background: var(--field); border: 1px solid var(--line); border-radius: 6px; font-family: var(--font-mono); font-size: 15px; letter-spacing: .04em; padding: 12px 16px; }
 .acct-handoff .acct-solid { border-color: var(--mint); }
 .acct-list-head { align-items: center; display: flex; gap: 12px; }
 .acct-list-head .acct-label { flex: 1; }

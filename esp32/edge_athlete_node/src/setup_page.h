@@ -19,7 +19,7 @@ static const char SETUP_PAGE[] = R"PAGE(<!doctype html>
 <title>Set up your sensor</title>
 <style>
 :root{--bg:#070b0e;--s:#10171b;--s2:#151e23;--l:#263239;--l2:#5c6a72;--ink:#f5f7f2;--ink2:#c9d1d5;--m:#89969d;
---lime:#a9f04d;--limebg:#121b14;--amber:#f2b84b;--coral:#ff646b;--coralbg:#1e1213;
+--lime:#a9f04d;--limebg:#121b14;--amber:#ffb63e;--coral:#ff646b;--coralbg:#170d0e;--amberbg:#1f1a0d;
 --mono:ui-monospace,"SF Mono",Menlo,monospace}
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);
@@ -63,16 +63,16 @@ label.f{display:flex;flex-direction:column;gap:6px}
 .code8{position:relative;display:flex;align-items:center;gap:5px}
 .code8 span{display:grid;place-items:center;width:36px;height:54px;background:var(--s);border:1.5px solid var(--l);border-radius:6px;font:800 24px var(--mono)}
 .code8 span.has{border-color:var(--l2)}.code8 span.at{border:2px solid var(--lime)}
-.code8 span.odd{background:#241c0e;border:2px solid var(--amber);color:var(--amber)}.code8.bad span{border-color:var(--coral)}
+.code8 span.odd{background:var(--amberbg);border:2px solid var(--amber);color:var(--amber)}.code8.bad span{border-color:var(--coral)}
 .code8 .dash{width:14px;border:0;background:none;color:var(--m)}
 .code8 #c8b,.code8 #c8b span{pointer-events:none}.code8 input{position:absolute;inset:0;width:100%;height:100%;opacity:.01;border:0;font-size:16px;color:transparent;caret-color:transparent;background:none}
-.st.warn{background:#241c0e;border-color:var(--amber)}
+.st.warn{background:var(--amberbg);border-color:var(--amber)}
 .keep{display:flex;flex-direction:column;gap:14px;padding:18px;background:var(--limebg);border:1.5px solid var(--lime);border-radius:8px}
 .keeph{display:flex;gap:12px;align-items:center;font-size:22px;font-weight:850;line-height:1.15}
 .okdot{display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:50%;background:var(--lime)}
 .or{display:flex;align-items:center;gap:12px;color:var(--m);font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
 .or span{flex:1;height:1px;background:var(--l)}.ghost:disabled{color:var(--m)}
-.icon{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:#241c0e;border:2px solid var(--amber)}
+.icon{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:var(--amberbg);border:2px solid var(--amber)}
 .row{display:flex;justify-content:space-between;align-items:center}
 .tick{display:grid;place-items:center;width:64px;height:64px;margin-top:18px;border-radius:50%;background:var(--lime);color:var(--bg);font-size:34px;font-weight:900}
 .facts{display:flex;flex-direction:column;background:var(--s);border:1px solid var(--l)}
@@ -190,7 +190,7 @@ function claim(takeover){var c=S.code;if(c.length<8)return;$("b").disabled=true;
   if(r.owned){takeoverScreen();return}
   $("c8").className="code8 bad";$("out").innerHTML=st("bad",esc(r.detail));$("b").disabled=false;$("b").textContent="Try again"})}
 function takeoverScreen(){S.screen="takeover";
- show('<span class="icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f2b84b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l10 18H2z"/><path d="M12 10v5"/><path d="M12 18h.01"/></svg></span>'+
+ show('<span class="icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffb63e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l10 18H2z"/><path d="M12 10v5"/><path d="M12 18h.01"/></svg></span>'+
   "<h1>This sensor belongs to another athlete</h1><p class=\"sub\">Make it yours and it comes off their account. Their history stays theirs.</p><div id=\"out\"></div>",
   '<button class="go" id="b" onclick="claim(true)">Make it mine</button><button class="ghost" onclick="codeScreen()">Cancel, it&rsquo;s not mine</button>',2)}
 

@@ -41,7 +41,7 @@ export default function RackSetup() {
         <div style={{ display: 'flex', gap: 12 }}>
           <button onClick={() => setConfirmed(true)}
             style={{ padding: '14px 20px', borderRadius: 12, border: 'none', background: T.lime,
-              color: '#0a1106', fontWeight: 850, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
+              color: 'var(--on-lime)', fontWeight: 850, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
             Set up as Rack
           </button>
           <button onClick={() => navigate(`/${role}`)}

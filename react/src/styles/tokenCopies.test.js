@@ -10,18 +10,17 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { REACT_ROOT, coloursIn, tokens } from './colorScan.js'
-import leftovers from './colorLeftovers.json'
 
 const SETUP_PAGE = join(REACT_ROOT, '../esp32/edge_athlete_node/src/setup_page.h')
 // "#c8b" on the setup page is the id of an element (the code boxes), not a colour.
 const NOT_COLOURS = new Set(['#c8b'])
 
 describe('colours outside the app match tokens.css', () => {
-  it("the sensor's setup page uses only token colours, apart from the listed leftovers", () => {
+  it("the sensor's setup page uses only token colours", () => {
     const values = new Set(Object.values(tokens()))
     const counts = coloursIn(readFileSync(SETUP_PAGE, 'utf8'))
     const off = Object.keys(counts).filter((value) => !values.has(value) && !NOT_COLOURS.has(value))
-    expect(off.sort()).toEqual(Object.keys(leftovers.sensorSetupPage).sort())
+    expect(off, 'Use a value from src/styles/tokens.css').toEqual([])
   })
 
   it("the browser's theme colour and every install manifest use the page background", () => {

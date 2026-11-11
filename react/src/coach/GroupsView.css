@@ -29,11 +29,11 @@
 /* Coral, because an athlete in no group gets no program and no calendar — they
    are invisible everywhere else in PLANNING. Clicking filters to them. */
 .groups-stranded { border-color: var(--coral); color: var(--coral); }
-.groups-stranded:hover { background: rgba(255, 100, 107, .1); }
+.groups-stranded:hover { background: color-mix(in srgb, var(--coral) 10%, transparent); }
 
 .groups-create { display: flex; flex-wrap: wrap; gap: 8px; }
 .groups-create input {
-  background: #0b1114; border: 1px solid var(--line); color: var(--ink);
+  background: var(--field); border: 1px solid var(--line); color: var(--ink);
   font: inherit; font-size: 13px; min-height: 40px; min-width: 220px; padding: 8px 10px;
 }
 .groups-create input:focus-visible { border-color: var(--lime); outline: none; }
@@ -60,7 +60,7 @@
 /* Members of the selected group, tinted. Non-members stay on the list so they
    can be added — the tint is what separates the two halves without hiding
    either. */
-.groups-roster-table tbody tr.is-member td { background: rgba(169, 240, 77, .06); }
+.groups-roster-table tbody tr.is-member td { background: color-mix(in srgb, var(--lime) 6%, transparent); }
 .groups-chip {
   background: var(--panel2); border: 1px solid var(--line); color: var(--ink);
   display: inline-block; font-size: 10px; margin-right: 5px; padding: 3px 8px;
@@ -141,7 +141,7 @@
 .groups-roster { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 
 .groups-roster button {
-  background: #0b1114;
+  background: var(--field);
   border: 1px solid var(--line);
   color: var(--ink);
   cursor: pointer;

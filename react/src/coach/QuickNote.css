@@ -37,7 +37,7 @@
 .quick-note > header b { color: var(--muted); font-size: 10px; text-transform: uppercase; white-space: nowrap; }
 
 .quick-note textarea {
-  background: #0b1114;
+  background: var(--field);
   border: 1px solid var(--line);
   color: var(--ink);
   font: inherit;

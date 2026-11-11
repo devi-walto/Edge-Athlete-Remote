@@ -115,5 +115,5 @@ const CANCEL = {
 }
 const CONFIRM = {
   flex: 2, padding: '16px 20px', fontSize: 16, fontWeight: 850, borderRadius: 12,
-  border: `1px solid ${T.lime}`, background: T.lime, color: '#0a0f07', fontFamily: 'inherit',
+  border: `1px solid ${T.lime}`, background: T.lime, color: 'var(--on-lime)', fontFamily: 'inherit',
 }

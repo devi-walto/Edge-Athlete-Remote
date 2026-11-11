@@ -713,7 +713,7 @@ export function RoomLayout({ token, onAuthLost }) {
         <button
           type="button"
           className="coach-btn coach-btn-ghost"
-          style={{ fontSize: 12, color: '#c0392b' }}
+          style={{ fontSize: 12, color: 'var(--coral-text)' }}
           disabled={busyScreen}
           onClick={releaseAllRacks}
           title="Send EVERY screen back to the waiting list and to its setup screen. Ends any open sets as false. Sensors stay on their racks."
@@ -754,7 +754,7 @@ export function RoomLayout({ token, onAuthLost }) {
                     <button
                       type="button"
                       className="coach-btn coach-btn-ghost"
-                      style={{ marginTop: 6, fontSize: 12, color: '#c0392b' }}
+                      style={{ marginTop: 6, fontSize: 12, color: 'var(--coral-text)' }}
                       disabled={busyScreen}
                       onClick={() => removeScreen(n)}
                       title="Send this tablet back to the waiting list and to its setup screen. Ends any open set as false and resets the controller. The sensor stays on the rack."
