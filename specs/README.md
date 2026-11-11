@@ -1,13 +1,15 @@
 # Specs
 
 Everything that has been **decided but not built**, one file per feature. Read this page
-first: it is the index, the order to build in, and the decisions every spec assumes.
+first: it is the index, the roadmap, and the decisions every spec assumes.
 
 > Specs live here, outside `docs/`, so they are never published to the public docs
 > site (`docs/publish.sh` copies only `docs/`). When a spec is finished, its lasting
 > reasoning moves into `docs/` and the spec is marked Done.
 
-Written 2026-10-06. Owner: Devin Walton. Project: CSC 4903, due **November 11, 2026**.
+Written 2026-10-06 for the CSC 4903 directed study, which ended with the final
+presentation on 2026-11-10 (where each promised item landed: `docs/about/directed-study.md`).
+Rewritten 2026-11-11 as the product's roadmap. Owner: Devin Walton.
 
 ---
 
@@ -37,12 +39,12 @@ Devin's convention, set 2026-10-06:
 |---|---|
 | `SprintBranch` | **The working trunk for this project.** Every feature branch starts from it and merges back into it. It must always pass the tests. |
 | `feature-xyz` | One branch per spec, named `feature-` plus a short name, with underscores between words: `feature-coach_accounts`. Reviewed phase by phase, merged into `SprintBranch` after its last phase. |
-| `main` | **What is deployed.** Nobody commits to it. It is only moved forward to match `SprintBranch` (by hand on Devin's say-so for this class, by a scheduled release workflow later), then tagged; the tag deploys it (spec 12). Until that exists, `main` is moved forward from `SprintBranch` only when Devin says so. |
+| `main` | **What is deployed.** Nobody commits to it. It is only moved forward to match `SprintBranch` by the **Move main forward** workflow on Devin's say-so, then tagged; the tag deploys it (spec 12). |
 
-Feature branch for each spec: `feature-coach_accounts` (01), `feature-roles` (02),
-`feature-deployment_switch` (05), `feature-login_links` (03), `feature-session_link`
-(04), `feature-athlete_home` (10), `feature-design_rules` (06), `feature-planning`
-(07), `feature-session` (08), `feature-analytics` (09), `feature-mine_first` (11).
+Merged feature branches are deleted (locally and on GitHub) once their pull request is in;
+the pull request page keeps the history and can restore the branch. Two unmerged branches
+are kept on GitHub as backups: `feature-rep_counting` (spec 09, one commit) and
+`feature-shared_racks` (spec 18, which lives only on that branch until it is picked up).
 
 Spec and mockup edits that are not part of a feature are committed straight to
 `SprintBranch`. Release tags and the public docs are cut from `main`.
@@ -54,9 +56,8 @@ GitHub does not let anyone approve a pull request opened under their own account
 run on pull requests, not on every push. **`main` takes no pull request**: everything on
 `SprintBranch` has already been through one, so a release just moves `main` forward to
 match `SprintBranch` and tags it (`vX.Y.Z`, patches included), and the tag rolls it out.
-For this class Devin releases by hand when he chooses; later a release workflow does it
-on a schedule (every two weeks is the long-term habit). Until spec 05 Phase 1 is built, commits
-go straight to `SprintBranch` as before.
+Devin releases by hand when he chooses; a scheduled release every two weeks is the
+long-term habit, not switched on yet.
 
 ### Running the tests
 
@@ -68,7 +69,8 @@ cd react && npx vitest run && npm run build
 ./docs/build.sh                      # docs, warnings fatal
 ```
 
-The Django suite had 447 tests on 2026-10-06 and **491 after spec 01** (2026-10-07); the frontend suite has 281.
+By v0.8.3 (2026-11-09) CI ran **1,114 tests** on every pull request: the backend suite twice
+(as a local install and as the remote server) plus the frontend suite.
 
 ### House rules (from earlier sessions, still in force)
 
@@ -79,85 +81,77 @@ The Django suite had 447 tests on 2026-10-06 and **491 after spec 01** (2026-10-
 
 ---
 
-## The specs, in build order
+## The specs
 
-| # | Spec | Form item | Depends on | Status |
-|---|---|---|---|---|
-| 01 | [Secure coach accounts](remote/01-coach-accounts.md) | 2 | — | **Done 2026-10-07**, merged into `SprintBranch` |
-| 02 | [Roles: administrator, coach, athlete](remote/02-roles.md) | 3 | 01 | **Done 2026-10-07**, merged into `SprintBranch` |
-| 05 | [Hosted mode](remote/05-hosted-mode.md) | 3 | 02 | **Done 2026-10-14**, merged into `SprintBranch`. Includes CI (Phase 1) |
-| 12 | [Hosting on k3s, with CD](remote/12-hosting.md) | 1, 5 | 05 | **Phases 0–3 done** (merged): schools on the Dell, deploy on a version tag. Phase 4 (`wss`, then the domain) in progress; Phases 5–7 tabled |
-| 03 | [Athlete login links](remote/03-athlete-login-links.md) | 4 | 02, 05 | **Done 2026-10-18** on `feature-login_links` (Phases 0–4, browser-checked). Coach login codes moved to spec 11, Phase 4 |
-| 04 | [Session link and virtual racks](remote/04-session-link-and-virtual-racks.md) | 3, 4, 5 | 02, 03, 05 | Built 2026-10-19: Phases 0–3 and 5 (demo data, `eactl seed` / `eactl sim`; phantom lifters `eactl sim --phantom` added 2026-10-30). Phase 4 (coach's side) moved to the end of the UI redesign; Phase 6 (rehearsal) skipped |
-| 10 | [The athlete's home page](remote/10-athlete-pages.md) | 4 | 03, 04, 05 | Written. Phase 4 (opening a past session) is built last, if time |
-| 14 | [Sensors online](remote/14-sensors-online.md) | 6, 7 | 03, 04, 12 | Written 2026-10-19. Shared one-time secrets (Phase 0), the broker's sensors door on 443, claim codes, then firmware (needs the sensor) |
-| 06 | [Design rules for the coach interface](ui/06-design-rules.md) | 11 | — | Written |
-| 07 | [Planning](ui/07-planning.md) | 11 | 06, 01 | Written |
-| 08 | [Session](ui/08-session.md) | 11 | 06 | Written |
-| 09 | [Analytics](ui/09-analytics.md) | 11 | 06 | Written |
-| 11 | [Mine first](ui/11-mine-first.md) | 11, 2 | 02, 06 | Written. A coach's own groups, programs, sessions and athletes come first; coaches on a group can be edited; coaches shown by name. Phase 4 (last of the redesign): coach login codes, moved from spec 03 |
-| 16 | [The plate loader on the rack screen](ui/16-plate-loader.md) | 11 | 06 | Written 2026-10-21. Both versions: the plates for one side of the bar before a set, side view, tap to switch lb/kg (remembered per device), closest load with a warning. Mockups `F_Rack_Plates1`–`6` |
+| # | Spec | Status |
+|---|---|---|
+| 01 | [Secure coach accounts](remote/01-coach-accounts.md) | **Done** 2026-10-07 |
+| 02 | [Roles: administrator, coach, athlete](remote/02-roles.md) | **Done** 2026-10-07 |
+| 05 | [Hosted mode](remote/05-hosted-mode.md) | **Done** 2026-10-14 (includes CI) |
+| 12 | [Hosting on k3s, with CD](remote/12-hosting.md) | Phases 0–4 **done**: schools on the Dell, deploy on a version tag, `wss`, the domain. Phases 5–7 tabled |
+| 03 | [Athlete login links](remote/03-athlete-login-links.md) | **Done** 2026-10-18 |
+| 04 | [Session link and virtual racks](remote/04-session-link-and-virtual-racks.md) | Built (Phases 0–3, 5). Phase 4 (coach's side) belongs to the UI redesign |
+| 14 | [Sensors online](remote/14-sensors-online.md) | Phases 0–9 **done**. Phase 10 (Manage sensors, live/standby, Swap) written 2026-11-11 |
+| 10 | [The athlete's pages](remote/10-athlete-pages.md) | Rewritten 2026-11-11 around the approved athlete-account boards; not started |
+| 06 | [Design rules](ui/06-design-rules.md) | Written; rules 10–12 added 2026-11-11 (fewer pages, drill-downs lead only back, the top bar) |
+| 07 | [Planning](ui/07-planning.md) | Written; Add athlete panel and the first/last name split added 2026-11-08 |
+| 08 | [Session](ui/08-session.md) | Written |
+| 09 | [Analytics](ui/09-analytics.md) | Written |
+| 11 | [Mine first](ui/11-mine-first.md) | Written |
+| 16 | [The plate loader on the rack screen](ui/16-plate-loader.md) | Written; its lb/kg choice is shared with the athlete pages |
+| 13 | [Registry of schools and operator's console](later/13-registry-and-console.md) | Written, later |
+| 15 | [Usage history and cloud cost](later/15-usage-and-cost.md) | Written, later (Phase 0, recording, can start any time) |
+| 17 | [Several sessions at once](later/17-concurrent-sessions.md) | Written, later |
+| 18 | Shared racks online (common login) | Written on `feature-shared_racks` only |
 
-**Build 05 before 03 and 04, and 10 after 04. Spec 12 (hosting) starts after 05 and runs alongside 03 and 04.** It is numbered 05 because it was listed fifth, but 03
-and 04 both need its "is this installation hosted?" switch.
+## The roadmap after the class
 
-**The two tracks can interleave.** Specs 01–05 are the remote access work. Specs 06–09
-are the coach interface cleanup. They touch different files for the most part; the
-overlaps are called out inside each spec.
+Five tracks, in the order Devin set on 2026-11-11: housekeeping, then the product.
 
-### Not specced yet
+### 1. Housekeeping (before the repository goes private)
 
-Nothing in the Definition of Done. The last piece, sensors, became spec 14 on 2026-10-19.
+- [x] Spec 07's Add athlete and name-split edits committed.
+- [x] Merged branches deleted; the two unmerged ones backed up on GitHub.
+- [x] This page rewritten.
+- [ ] A last public docs publish (`./docs/publish.sh --push` from a tagged commit).
+- [ ] Devin's own "why" for Postgres, nginx, NetworkManager and systemd in the Stack pages.
 
-Moved into [spec 12](remote/12-hosting.md) on 2026-10-14: hosting on k3s, the demo
-installation, and (as "if there is time") moving a database between a gym box and hosted.
+### 2. Product
 
-### After the class
+The UI redesign and the athlete pages, built from the Final designs page and spec 06's
+rules:
 
-Decided or designed, and deliberately left until after November 11. Pick from this list
-then. Business plans (pricing, billing) are kept out of this repository.
+- **Coach:** specs 06 → 07 (starting with the name audit) → 08 → 09 → 11, with 16 and spec
+  04's Phase 4 alongside; the top bar split (spec 06 rule 12) lands with 06.
+- **Athlete:** spec 10, and spec 14 Phase 10 with it.
+- **Decided, not specced yet:** reps past the prescription aren't saved and the screen says
+  so; the rack screen's Room display button (needs a board, spec 10 Phase 6).
+- **Later in the track:** spec 18 (shared racks), spec 17 (several sessions at once).
+- **Known bugs:** the calendar's Move picker labels the slot's own date "Today"
+  (`react/src/schedule.js`, `moveDateChoices`); `eactl seed --reset` fails once
+  calendar-staged sessions use the demo plan (`seed_active_session._reset`).
+
+### 3. Going private (2026-11-17) and infrastructure
 
 | Work | Why it waits | Where the design is |
 |---|---|---|
-| **The registry of schools and the operator's console** | Two schools (real and demo) are manageable with `eactl list`; a console is for many | [spec 13](later/13-registry-and-console.md) |
-| An installation's name on the sign-in card (reads "Coach workspace") | Read from the registry | spec 13 |
-| **Usage history, a cloud cost estimate, and when to scale** | Not in the Definition of Done. Phase 0 (recording) can start any time, because history can't be collected later | [spec 15](later/15-usage-and-cost.md) |
-| **Several sessions running at once (remote)** | Teams lifting together share one session today (spec 07); separate teams with their own coaches need this. Best with the coach redesign | [spec 17](later/17-concurrent-sessions.md) |
-| Moving a database between a gym box and hosted, both directions | Not in the Definition of Done; "if there is time" in spec 12 | spec 12, `docs/journal/core/remote/databases.md` |
-| Browser logins to the broker | Online it is open to read, accepted while the data is test data; needed before a real program's athletes use it | spec 12, Phase 4 and Non-goals |
-| Un-archiving an athlete from a screen | The server rule exists (spec 02); the button belongs with archived athletes in Analytics | spec 09 |
-| Opening a past session (athlete) | Built last in spec 10, only if there is time | spec 10, Phase 4 |
-| The coach interface redesign | Only if there is time before November 11 | specs 06–09, 11 |
-| Moving CI onto the Dell | Only safe once the repo is private | spec 12, Deferred |
+| Make the repository private | Public until 2026-11-17, Devin's call | — |
+| Moving CI onto the Dell | Only safe once the repository is private | spec 12, Deferred |
+| Unhold the kernel; fix the AppArmor problem properly | Held since 2026-11-05 after kernel 7.0.0-42 broke every container | `docs/handbook/guides/remote-server.md` |
+| Docs published by the release workflow | Published by hand today | — |
 | An image pull key that renews itself (a GitHub App) | The 90-day token is renewed by hand meanwhile | spec 12, Phase 0 result |
-| A real secrets vault (beyond k3s encrypting Secrets on disk) | One server does not need it yet | spec 12, Phase 7 |
-| Ansible in place of `bootstrap.sh` | The script is enough for one machine | spec 12, Deferred |
-| A second node | Cut on 2026-10-14; nothing assumes one node | `docs/journal/core/remote/hosting.md` |
+| Browser logins to the broker | Needed before a real program's athletes use it | spec 12, Phase 4 and Non-goals |
+| A real secrets vault; Ansible in place of `bootstrap.sh` | One server does not need them yet | spec 12 |
+| The hosting spec: bootstrap a fresh Linux PC like a cloud machine | Not written yet | — |
 
----
+### 4. Operations and scale
 
-## The project's Definition of Done
+Spec 13 (registry and console), spec 15 (usage, cost and load baselines), moving a
+database between a local install and the remote server, a second node.
 
-From the submitted form (`~/Downloads/4903 Student Project- Devin Walton.pdf`),
-in priority order:
+### 5. Kept out of this repository
 
-1. The app runs on k3s at a public HTTPS link, with automatic certificates and CI/CD.
-2. Coach accounts secured: setup code, administrator manages coach logins, no
-   well-known demo login in production.
-3. Coach and athlete roles; athletes join only sessions assigned to their group, each
-   on their own rack.
-4. Remote athlete access: personal login link, session link from any network,
-   encrypted live updates.
-5. A separate demo installation from the same template.
-6. Remote sensors over MQTT with TLS, one credential each, settings stored on the sensor.
-7. End to end, live or on video, from a different network with a real sensor.
-8. Developer documentation.
-9. Weekly progress reports to Dr. Prather, with commit links.
-10. Final presentation: slides, 20 minutes plus 10 of questions.
-
-**Item 11, added 2026-10-06 (goes on the next weekly report):** a unified coach
-interface. The front end and back end need to agree, and the local and hosted versions
-need to look and behave alike, before a version is published. Specs 06–09.
+The sensor's own circuit board, and business plans (pricing, billing).
 
 ---
 
