@@ -10,7 +10,6 @@
 //   /coach/analytics → ANALYTICS — one athlete's summary, history, reports, notes
 //   /coach/setup     → coach admin Room Layout (JWT gate + dropdown assign)
 //   /dashboard       → base-station wall display
-//   /connection-test → the API/architecture demo kept from the scaffold
 //   /login-link      → an athlete opening their login link (#link after it)
 //   /athlete         → athlete sign in
 //   /session/:id     → the session link: an online athlete's own rack (athlete/SessionPage)
@@ -22,7 +21,6 @@
 // hard-loading /rack/1 works and lands back here.
 
 import { Component, useEffect, useState } from 'react'
-import ConnectionTest from './ConnectionTest.jsx'
 import RackScreen from './rack/RackScreen.jsx'
 import RackSetup from './rack/RackSetup.jsx'
 import RackNodeSetup from './rack/RackNodeSetup.jsx'
@@ -274,7 +272,6 @@ function RackCommandListener() {
 // ─────────────────────────── the router itself ───────────────────────────
 
 function route(pathname) {
-  if (pathname === '/connection-test') return <ConnectionTest />
   // An athlete's own pages (spec 03): opening the login link a coach sent, and
   // signing in after that.
   if (pathname === '/login-link') return <LoginLinkPage />

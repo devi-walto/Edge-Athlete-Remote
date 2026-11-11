@@ -25,7 +25,6 @@ describe("roleFromPath", () => {
     // whatever is in localStorage. Answering 'rack' here would make every cold
     // boot briefly claim to be the rack app.
     expect(roleFromPath("/")).toBeNull();
-    expect(roleFromPath("/connection-test")).toBeNull();
     expect(roleFromPath("/nonsense")).toBeNull();
   });
 
