@@ -2,7 +2,8 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06
-- Status: Phase 0 done 2026-11-11 (every colour in one token file); Phases 1–3 built 2026-11-11, awaiting review
+- Status: **Done** 2026-11-11, all four phases (pull request #21). The acceptance criteria
+  below come true screen by screen as specs 07–10 rebuild the screens with these pieces
 - Form item: #11 (unified coach interface, added 2026-10-06)
 - Depends on: nothing. **Specs 07, 08, 09 and 10 (the athlete's pages) all depend on this one**
 - Updated 2026-11-11: the shared pieces live in `react/src/ui/` (coach and athlete screens
