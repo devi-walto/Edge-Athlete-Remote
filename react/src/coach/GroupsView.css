@@ -28,7 +28,7 @@
 
 /* Coral, because an athlete in no group gets no program and no calendar — they
    are invisible everywhere else in PLANNING. Clicking filters to them. */
-.groups-stranded { border-color: var(--coral); color: var(--coral); }
+.groups-stranded { border-color: var(--coral); color: var(--coral-text); }
 .groups-stranded:hover { background: color-mix(in srgb, var(--coral) 10%, transparent); }
 
 .groups-create { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -65,7 +65,7 @@
   background: var(--panel2); border: 1px solid var(--line); color: var(--ink);
   display: inline-block; font-size: 10px; margin-right: 5px; padding: 3px 8px;
 }
-.groups-none { color: var(--coral); font-size: 11px; font-weight: 700; }
+.groups-none { color: var(--coral-text); font-size: 11px; font-weight: 700; }
 
 .groups-member-toggle {
   background: transparent; border: 1px solid var(--line); color: var(--ink);

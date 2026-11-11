@@ -77,4 +77,4 @@
 .quick-note.is-empty p { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
 
 .quick-note-status { color: var(--mint); font-size: 11px; margin: 10px 0 0; }
-.quick-note-error { color: var(--coral); font-size: 11px; margin: 10px 0 0; }
+.quick-note-error { color: var(--coral-text); font-size: 11px; margin: 10px 0 0; }

@@ -60,5 +60,5 @@
 .wall-settings-actions { display:flex; gap:8px; }
 .wall-settings-actions button { background:transparent; border:1px solid var(--line); color:var(--ink); cursor:pointer; flex:1; font:inherit; font-size:12px; padding:9px 10px; }
 /* Coral, not lime. This one stops the scoreboard. */
-.wall-settings-actions button.is-danger { border-color:var(--coral); color:var(--coral); }
+.wall-settings-actions button.is-danger { border-color:var(--coral); color:var(--coral-text); }
 .wall-settings-actions button.is-danger:hover { background:var(--coral); color:var(--risk-bg); }

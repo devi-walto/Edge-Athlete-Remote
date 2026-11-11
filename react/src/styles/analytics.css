@@ -93,7 +93,7 @@
 .athlete-assignment-fields label,.athlete-override-list label { color:var(--muted); display:grid; font-size:9px; font-weight:850; gap:6px; letter-spacing:.07em; text-transform:uppercase; }
 .athlete-assignment-fields select,.athlete-override-list input { background:var(--field); border:1px solid var(--line); color:var(--ink); min-height:44px; padding:8px 10px; width:100%; }
 .athlete-assignment-fields button { background:var(--lime); border:1px solid var(--lime); color:var(--on-lime); cursor:pointer; font-weight:900; min-height:44px; padding:8px 14px; }
-.athlete-assignment-fields button.athlete-remove-assignment { background:transparent; border-color:var(--line); color:var(--coral); }
+.athlete-assignment-fields button.athlete-remove-assignment { background:transparent; border-color:var(--line); color:var(--coral-text); }
 .athlete-assignment-fields button:disabled { cursor:not-allowed; opacity:.42; }
 .athlete-override-list { display:grid; gap:9px; }
 .athlete-override-list fieldset { align-items:end; border:1px solid var(--line); display:grid; gap:10px; grid-template-columns:minmax(260px,1.4fr) repeat(3,minmax(100px,.6fr)); margin:0; min-width:0; padding:14px; }
@@ -190,7 +190,7 @@
 .group-history-table tbody tr { cursor:default; }
 .group-history-table tbody tr:hover td { background:transparent; }
 .group-history-table tr.is-behind:hover td { background:color-mix(in srgb, var(--coral) 7%, transparent); }
-.group-history-tag { border:1px solid var(--coral); color:var(--coral); font-size:9px; font-weight:900; letter-spacing:.08em; padding:2px 7px; text-transform:uppercase; white-space:nowrap; }
+.group-history-tag { border:1px solid var(--coral); color:var(--coral-text); font-size:9px; font-weight:900; letter-spacing:.08em; padding:2px 7px; text-transform:uppercase; white-space:nowrap; }
 .group-history-tag.is-unknown { border-color:var(--line); color:var(--muted); }
 
 .visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }

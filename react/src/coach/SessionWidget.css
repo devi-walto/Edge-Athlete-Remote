@@ -95,7 +95,7 @@
 }
 
 .coach-strip-stale { color: var(--muted); }
-.coach-strip-error { color: var(--coral); }
+.coach-strip-error { color: var(--coral-text); }
 
 /* On a narrow tablet the three columns stop fitting; stack rather than squeeze
    the timer into an unreadable width. */

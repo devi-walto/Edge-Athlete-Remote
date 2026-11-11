@@ -47,7 +47,7 @@ function Button({ children, onClick, tone = 'primary' }) {
   const tones = {
     primary: { bg: T.lime, fg: 'var(--on-lime)', border: T.lime },
     ghost: { bg: T.panel, fg: T.ink, border: T.line },
-    danger: { bg: 'transparent', fg: T.coral, border: seeThrough(T.coral, 40) },
+    danger: { bg: 'transparent', fg: 'var(--coral-text)', border: seeThrough(T.coral, 40) },
   }
   const s = tones[tone] || tones.primary
   return (

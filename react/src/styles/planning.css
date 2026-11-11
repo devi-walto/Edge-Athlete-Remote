@@ -56,8 +56,8 @@
 .workout-form-actions button,.workout-catalog-list>button,.workout-program-browser>button { background:var(--lime); border:1px solid var(--lime); color:var(--on-lime); cursor:pointer; font-weight:900; min-height:42px; padding:9px 15px; }
 .workout-form-actions button:disabled,.workout-remove:disabled { cursor:not-allowed; opacity:.42; }
 .workout-form-actions .workout-secondary,.workout-catalog-list>.workout-secondary,.workout-program-browser>.workout-secondary { background:transparent; border-color:var(--line); color:var(--ink); }
-.workout-remove { background:transparent; border:1px solid var(--line); color:var(--coral); cursor:pointer; min-height:42px; padding:7px 10px; }
-.workout-errors { background:color-mix(in srgb, var(--coral) 9%, transparent); border:1px solid color-mix(in srgb, var(--coral) 30%, transparent); color:var(--coral); font-size:11px; line-height:1.5; margin-top:12px; padding:12px 14px; }
+.workout-remove { background:transparent; border:1px solid var(--line); color:var(--coral-text); cursor:pointer; min-height:42px; padding:7px 10px; }
+.workout-errors { background:color-mix(in srgb, var(--coral) 9%, transparent); border:1px solid color-mix(in srgb, var(--coral) 30%, transparent); color:var(--coral-text); font-size:11px; line-height:1.5; margin-top:12px; padding:12px 14px; }
 .workout-errors ul { margin:6px 0 0; padding-left:18px; }
 .workout-status { color:var(--mint); font-size:11px; margin:12px 0 0; }
 .workout-file { margin-top:18px; }
