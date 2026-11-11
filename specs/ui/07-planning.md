@@ -7,7 +7,9 @@
 - Depends on: [06 Design rules](06-design-rules.md); [01 Coach accounts](../remote/01-coach-accounts.md) for archiving an athlete
 - Mockup: `V3a_DesignStep1`, `V3g_CreateProgram`, `V3b_DesignStep2`,
   `V3e_ScheduleOnCalendar`, `V3h_AddToExistingSession`, `V3f_ProgramScheduled`, `V4a_Groups`, `V4b_Roster`,
-  `V4c_Calendar` in [`mockups/coach-ui-final.html`](mockups/coach-ui-final.html)
+  `V4c_Calendar` in [`mockups/coach-ui-final.html`](mockups/coach-ui-final.html); the Add athlete
+  form is `F_AddAthlete`, `F_AddAthlete_Wristband`, `F_AddAthlete_AddAnother` on the canvas's
+  Final designs page (approved 2026-11-08)
 
 ## Why
 
@@ -337,17 +339,78 @@ New tab, mockup `V4b`. New file `react/src/coach/RosterView.jsx`.
 - Filter chips: Everyone and one per group, plus No group.
 - Table: Athlete · Training Groups · Trend · actions (**Change groups**, **Open in
   Analytics**, **Archive**).
-- **Add athlete** (primary): a name, then optionally groups. `POST /api/athletes/`.
-- **Import a roster** (outline): the existing preview-then-import flow, moved here from Design.
-- Archive needs spec 01's `is_active`. Archived athletes are hidden unless a "Show
-  archived" toggle is on.
-- The Trend column shows **Behind** from spec 09's endpoint; until that exists it shows
-  nothing rather than a guess.
-- Hosted only, later: the login and sensor columns from specs 03 and 04.
+- **Add athlete** (primary) opens a **panel under the Roster header** (option A, approved
+  2026-11-08; the popup option B was not), boards `F_AddAthlete`, `F_AddAthlete_Wristband`,
+  `F_AddAthlete_AddAnother`. A local install shows the same panel without Generate login link. While it is open the
+  toolbar's Add athlete button shows as pressed, so the panel's own button is the one lime
+  button on screen. `POST /api/athletes/`. The panel holds:
+  - **First name** and **Last name**, side by side (see "One name becomes two" below).
+    First name is required; last name may be left blank for someone known by one name.
+  - **Training Groups**: chips, optional.
+  - Hosted only: **Generate login link**, a checkbox **ticked to start**. Ticked, the
+    athlete's login link is made as soon as they are added.
+  - Both versions: **Link a wristband**, a checkbox under it, **unticked to start**. Only
+    when ticked does a **Wristband ID** box appear, with the hint that the ID is what the
+    rack reader reads, which can differ from the number printed on the band. On both
+    versions because a wristband node for hosted common-login racks is planned (spec 18).
+  - **Cancel** (quiet), **Add another** (outline) and **Add athlete** (lime).
+    **Add athlete** adds them and closes the panel; with Generate login link ticked, the
+    existing Send a login link dialog opens next. **Add another** adds them, keeps the
+    panel open and empty (the chosen groups stay picked), and their new row shows
+    **Link ready** with **Copy login link**, so a run of names is never interrupted by
+    a dialog.
+  - A name already on the roster asks "There's already a <name> on the roster. Add
+    anyway?" rather than refusing (two athletes can share a name).
+- **One name becomes two** (decided 2026-11-08). `Athlete` has had one `name` field since
+  the project was built from the Privacy Dots code; it was never a decision. It becomes
+  `first_name` + `last_name`, and **`name` is removed everywhere**: no stored copy, no
+  calculated stand-in. Every place that read or wrote it is rewritten to use the two new
+  fields, so there is one source of truth and nothing can drift.
+  - **Audit first.** Before any change, search the whole repository for every use of the
+    athlete's name: the model, serializers, views and services, database queries that
+    sort or filter by it (`athlete__name`, `name__in`, ordering), the roster import, the
+    seeder and phantom lifters, reports and exports, MQTT and API payloads, every React
+    screen, tests and docs. Write the list to `specs/ui/07-name-audit.md`, one line per
+    place (file, what it does with the name, what it becomes). Today's rough count:
+    about 60 places on the server, 28 of them database queries, and 20 screens.
+  - **The audit also checks that removing `name` breaks nothing.** For each place, it
+    says whether first + last can do the job exactly. Anything that can't, or that
+    reaches outside this repository, is **flagged at the top of the audit file and
+    raised with Devin before any code changes**. Examples worth checking: something
+    that matches athletes by a single name string (the import's duplicate check, the
+    seeder's clash check), something that stores or sends a name another program reads
+    (MQTT messages, report PDFs, exports, the firmware), unique constraints or indexes on
+    `name`, and old migrations or saved data that mention it.
+  - The API sends and accepts `first_name` and `last_name`. Screens show a name through
+    one shared helper (first then last; last then first where a list is sorted), so the
+    format is decided in one place.
+  - Migration: split each existing name at its **last** space (one word: first name
+    only), then remove the column. The data is demo and test data today, but the gym
+    install's roster has real names: print the result and look it over.
+  - Lists of athletes sort by **last name, then first name**.
+  - The roster import accepts `first_name` + `last_name` columns, and still accepts a
+    single `athlete_name` column, split the same way after "Lee, Jordan" is flipped as
+    today (rosters arrive in both shapes).
+  - The seeder's invented names are split too; its demo logins use the first name
+    (`jordan` / `jordanpass123`, from `seed --guest-logins`).
+  - **Verify last.** Run the audit's search again: the only hits left for the old field
+    are the migration itself. Every line of `07-name-audit.md` is ticked.
 
 **Done when:**
 
-- [ ] *(Frontend test)* Adding an athlete adds a row without a reload; a blank name is refused.
+- [ ] *(Frontend test)* Adding an athlete adds a row without a reload; a blank first name is refused.
+- [ ] *(Frontend test)* **Add another** keeps the panel open and empty with the groups still
+      picked; the new row shows Link ready (hosted) without opening a dialog.
+- [ ] *(Frontend test)* The Wristband ID box appears only while Link a wristband is ticked;
+      Generate login link starts ticked and shows only on a hosted server.
+- [ ] *(Backend test)* The migration splits "Mary Ann Smith" into "Mary Ann" + "Smith" and
+      "Prince" into "Prince" + "", and the `name` column is gone.
+- [ ] *(Backend test)* The import accepts `first_name` + `last_name`, and `athlete_name` alone.
+- [ ] *(Audit)* `specs/ui/07-name-audit.md` lists every use of the old name, each one
+      ticked; searching the repository again finds the old field only in the migration.
+- [ ] *(Audit)* Every flagged item at the top of the audit file has Devin's answer written
+      beside it before its code was changed; none is left open.
+- [ ] *(Backend test)* Athlete lists come back sorted by last name, then first name.
 - [ ] *(Frontend test)* Each filter shows exactly the right athletes; "No group" shows
       athletes in none.
 - [ ] *(Browser)* Import a roster from the Roster tab; the Design tab no longer offers
