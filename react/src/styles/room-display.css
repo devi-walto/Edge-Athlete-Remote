@@ -44,15 +44,6 @@
 .wall-insight>span { grid-column:1/-1; } .wall-insight strong { font-size:13px; } .wall-insight b { color:var(--lime); font-size:16px; } .wall-insight small { color:var(--muted); font-size:9px; }
 .wall-footer { color:var(--muted); display:flex; font-size:9px; justify-content:space-between; letter-spacing:.06em; padding:0 28px 12px; text-transform:uppercase; }
 .wall-truncation { background:color-mix(in srgb, var(--amber) 12%, transparent); color:var(--amber); font-size:10px; padding:8px 28px; }
-.wall-movement-board { align-content:center; display:grid; gap:24px; min-height:0; padding:clamp(24px,5vw,72px); }
-.wall-movement-board>header { border-left:5px solid var(--lime); padding-left:22px; }
-.wall-movement-board>header span { color:var(--lime); font-size:10px; font-weight:900; letter-spacing:.14em; text-transform:uppercase; }
-.wall-movement-board>header h2 { font-size:clamp(44px,8vw,112px); letter-spacing:-.07em; line-height:.9; margin:8px 0 12px; }
-.wall-movement-board>header p { color:var(--muted); margin:0; }
-.wall-movement-grid { display:grid; gap:18px; grid-template-columns:minmax(360px,1.2fr) minmax(260px,.8fr); }
-.wall-movement-wait { align-items:baseline; border:1px solid var(--line); display:flex; gap:20px; padding:24px; }
-.wall-movement-wait b { color:var(--lime); font-size:24px; letter-spacing:.16em; }
-.wall-movement-wait span { color:var(--muted); }
 
 /* ── the wall's settings cog ──────────────────────────────────────────────
    Replaces the permanent "Change device role" button that used to sit in the

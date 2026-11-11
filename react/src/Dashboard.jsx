@@ -37,7 +37,7 @@ import "./styles/room-display.css";
 import "./styles/coach-workspace.css";
 import "./styles/planning.css";
 import "./styles/analytics.css";
-import "./styles/rack-tablet.css";
+import "./styles/rack-screen.css";
 import "./styles/screen-sizes.css";
 import { navigate } from "./router.js";
 import { coachFetch, fetchCurrentCoach, getCoachToken, getSignedInRole, setCoachToken, setSignedInRole } from "./coach/api.js";

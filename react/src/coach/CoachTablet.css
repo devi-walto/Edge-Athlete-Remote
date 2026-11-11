@@ -60,12 +60,6 @@
   line-height: 1.45;
 }
 
-.coach-form {
-  display: grid;
-  gap: 12px;
-  max-width: 360px;
-}
-
 .coach-label {
   display: grid;
   gap: 6px;
@@ -73,7 +67,6 @@
   color: var(--muted);
 }
 
-.coach-input,
 .coach-select {
   font: inherit;
   font-size: 14px;
@@ -89,7 +82,6 @@
   width: 100%;
 }
 
-.coach-input:focus,
 .coach-select:focus {
   outline: 2px solid color-mix(in srgb, var(--lime) 35%, transparent);
   outline-offset: 1px;

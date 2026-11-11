@@ -1,33 +1,15 @@
 /*
- * coach-workspace.css — the frame of the coach app: the old sign-in card, the top bar,
- * the account menu, the summary strip, and the training day panel (starting, running
- * and ending a day).
+ * coach-workspace.css — the frame of the coach app: the top bar and its buttons, the
+ * summary strip, the Room Layout hardware panel, and the training day panel
+ * (starting, running and ending a day).
  *
  * Why this file exists: these pieces sit around every coach screen, whatever tab is
- * open. Its last section (coach rack selection) is no longer used by any screen and
- * is waiting for a cleanup decision. Colours come from styles/tokens.css.
+ * open. Colours come from styles/tokens.css; never type a colour code here.
  */
 
-/* Coach login */
-.coach-login-screen { display:grid; grid-template-columns:minmax(480px,.9fr) 1.1fr; }
-.coach-login-card { display:flex; flex-direction:column; justify-content:center; max-width:650px; padding:clamp(42px,7vw,110px); }
-/* Bigger than the topbar's copy: on the sign-in screen it is the only mark. */
-.coach-login-card .monitor-brand>img { height:52px; width:52px; }
 .coach-eyebrow { color:var(--lime)!important; font-size:10px!important; font-weight:900; letter-spacing:.14em; margin:70px 0 14px!important; text-transform:uppercase; }
-.coach-login-card h1 { font-size:clamp(42px,5vw,76px); letter-spacing:-.065em; line-height:.94; margin:0; }
-.coach-login-card>p { color:var(--muted); font-size:15px; line-height:1.55; max-width:46ch; }
-.coach-login-card form { display:grid; gap:16px; margin-top:25px; max-width:390px; }
-.coach-login-card label { color:color-mix(in srgb, var(--soft-ink) 96%, var(--bg)); display:grid; font-size:10px; font-weight:850; gap:7px; letter-spacing:.09em; text-transform:uppercase; }
-.coach-login-card input { background:var(--field); border:1px solid var(--line); color:var(--ink); outline:none; padding:13px; }
-.coach-login-card input:focus { border-color:var(--lime); }
-.coach-login-card button { background:var(--lime); border:0; color:var(--on-lime); cursor:pointer; font-weight:900; margin-top:4px; padding:14px; }
-.coach-login-card button:disabled { opacity:.55; }
+
 .coach-login-error { color:var(--coral)!important; font-size:12px!important; margin:0!important; }
-.coach-login-art { align-items:center; background:radial-gradient(circle at 50% 42%,color-mix(in srgb, var(--lime) 15%, var(--panel)) 0,var(--hero-bg) 38%,var(--bg) 72%); border-left:1px solid var(--line); display:flex; flex-direction:column; justify-content:center; min-height:100vh; overflow:hidden; position:relative; }
-.coach-login-art::before { border:1px solid color-mix(in srgb, var(--lime) 20%, transparent); border-radius:50%; content:""; height:56vw; position:absolute; width:56vw; }
-.coach-login-art span { color:var(--muted); font-size:11px; font-weight:900; letter-spacing:.3em; z-index:1; }
-.coach-login-art strong { color:var(--lime); font-size:clamp(110px,16vw,250px); letter-spacing:-.09em; line-height:.9; z-index:1; }
-.coach-login-art b { color:var(--muted); z-index:1; }
 
 /* Coach workspace */
 .coach-monitor { height:100vh; min-height:0; overflow-y:auto; overscroll-behavior:contain; width:100%; }
@@ -47,25 +29,19 @@
 .coach-labeled-button span { font-size:10px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; }
 /* No racks assigned: this button is the only way forward, so it stops being quiet. */
 .coach-button-attention { border-color:var(--lime); color:var(--lime); }
-/* The brand mark doubles as the account menu — log out lives under it now. */
-.coach-brand-menu { position:relative; }
-.coach-brand-button { align-items:center; background:transparent; border:0; color:inherit; cursor:pointer; display:flex; font:inherit; gap:inherit; padding:0; }
-.coach-brand-button span { font:inherit; }
-.coach-brand-dropdown { background:var(--panel); border:1px solid var(--line); left:0; min-width:150px; padding:5px; position:absolute; top:calc(100% + 7px); z-index:20; }
-.coach-brand-dropdown button { background:transparent; border:0; color:var(--muted); cursor:pointer; font-size:11px; padding:8px 11px; text-align:left; width:100%; }
-.coach-brand-dropdown button:hover { color:var(--lime); }
+
 .coach-summary-strip { border-bottom:1px solid var(--line); display:grid; grid-template-columns:repeat(5,1fr); padding:0 24px; }
 .coach-summary-strip>div { border-right:1px solid var(--line); display:grid; gap:4px; padding:13px 18px; }
 .coach-summary-strip>div:first-child { border-left:1px solid var(--line); }
 .coach-summary-strip strong { font-size:19px; } .coach-summary-strip small { color:var(--muted); font-size:10px; }
-.coach-room-warning { background:color-mix(in srgb, var(--amber) 12%, transparent); border-bottom:1px solid color-mix(in srgb, var(--amber) 30%, transparent); color:var(--amber); font-size:11px; padding:9px 24px; }
+
 .training-day-shell { border-bottom:1px solid var(--line); padding:14px 24px; }
-.training-day-start,.training-day-active,.training-report { background:var(--panel); border:1px solid var(--line); padding:18px; }
-.training-day-start>header,.training-day-active,.training-report>header { align-items:start; display:flex; gap:20px; justify-content:space-between; }
-.training-day-start>header span,.training-day-active>div>span,.training-report>header span,.training-report-athletes>section>header span,.training-report-prescription>header>span { color:var(--lime); font-size:9px; font-weight:900; letter-spacing:.11em; text-transform:uppercase; }
-.training-day-start h3,.training-day-active h3,.training-report>header h3 { font-size:22px; margin:3px 0; }
-.training-day-start>header p,.training-day-active p,.training-report>header p { color:var(--muted); font-size:11px; margin:4px 0 0; }
-.training-day-start>header>b,.training-day-active>b,.training-report>header>b { color:var(--lime); font-size:10px; text-transform:uppercase; }
+.training-day-start,.training-report { background:var(--panel); border:1px solid var(--line); padding:18px; }
+.training-day-start>header,.training-report>header { align-items:start; display:flex; gap:20px; justify-content:space-between; }
+.training-day-start>header span,.training-report>header span,.training-report-athletes>section>header span,.training-report-prescription>header>span { color:var(--lime); font-size:9px; font-weight:900; letter-spacing:.11em; text-transform:uppercase; }
+.training-day-start h3,.training-report>header h3 { font-size:22px; margin:3px 0; }
+.training-day-start>header p,.training-report>header p { color:var(--muted); font-size:11px; margin:4px 0 0; }
+.training-day-start>header>b,.training-report>header>b { color:var(--lime); font-size:10px; text-transform:uppercase; }
 .training-day-start>label { color:var(--muted); display:grid; font-size:9px; font-weight:850; gap:6px; margin-top:14px; text-transform:uppercase; }
 .training-day-start input[type="text"],.training-day-start>label input { background:var(--field); border:1px solid var(--line); color:var(--ink); min-height:44px; padding:8px 10px; }
 .training-day-start fieldset { border:1px solid var(--line); margin:14px 0; padding:12px; }
@@ -73,14 +49,9 @@
 .training-day-start fieldset>div { display:grid; gap:7px; grid-template-columns:repeat(4,minmax(0,1fr)); max-height:190px; overflow-y:auto; }
 .training-day-start fieldset label { align-items:center; background:var(--field); cursor:pointer; display:flex; font-size:11px; gap:8px; min-height:40px; padding:8px; }
 .training-day-start fieldset input { accent-color:var(--lime); height:17px; width:17px; }
-.training-day-start>button,.training-day-active>button,.training-day-confirm button { background:var(--lime); border:1px solid var(--lime); color:var(--on-lime); cursor:pointer; font-weight:900; min-height:44px; padding:8px 15px; }
-.training-day-start>button:disabled,.training-day-active button:disabled,.training-day-confirm button:disabled { cursor:not-allowed; opacity:.42; }
-.training-day-active { align-items:center; }
-.training-day-active.simulation { background:color-mix(in srgb, var(--amber) 8%, transparent); border-color:color-mix(in srgb, var(--amber) 30%, transparent); }
-.training-day-active.simulation>div>span,.training-day-active.simulation>b { color:var(--amber); }
-.training-day-confirm { align-items:center; display:flex; gap:9px; }
-.training-day-confirm strong { font-size:11px; max-width:260px; }
-.training-day-confirm button.workout-secondary { background:transparent; border-color:var(--line); color:var(--ink); }
+.training-day-start>button { background:var(--lime); border:1px solid var(--lime); color:var(--on-lime); cursor:pointer; font-weight:900; min-height:44px; padding:8px 15px; }
+.training-day-start>button:disabled { cursor:not-allowed; opacity:.42; }
+
 /* Days staged from the calendar and waiting to be started. Lime-edged like the
    running-day strip, because it is the same kind of thing one step earlier —
    but a dashed edge, because nothing is holding the racks yet. */
@@ -117,7 +88,7 @@
 .training-report-target>div { display:grid; gap:3px; }
 .training-report-target span,.training-report-set header span,.training-report-set li span { color:var(--muted); font-size:9px; text-transform:uppercase; }
 .training-report-target b { font-size:11px; }
-.training-report-sets { display:grid; gap:7px; margin-top:9px; }
+
 .training-report-results { border-top:1px solid var(--line); margin-top:14px; padding-top:12px; }
 .training-report-results>h5 { font-size:12px; margin:0 0 8px; }
 .training-report-set { border:1px solid var(--line); padding:9px; }
@@ -156,7 +127,7 @@
 .coach-zone-row { border-top:1px solid var(--line); display:flex; gap:16px; margin-top:14px; padding-top:13px; }
 .coach-zone-row span { align-items:center; color:var(--muted); display:flex; font-size:9px; gap:5px; } .coach-zone-row i { background:color-mix(in srgb, var(--faint) 90%, var(--panel)); border-radius:50%; height:6px; width:6px; }
 .coach-zone-row i.green { background:var(--mint); } .coach-zone-row i.yellow { background:var(--amber); } .coach-zone-row i.red { background:var(--coral); } .coach-zone-row b { color:var(--ink); }
-.coach-hardware-panel { margin-top:14px; } .coach-warning { background:color-mix(in srgb, var(--amber) 15%, transparent); color:var(--amber)!important; padding:5px 8px; }
+.coach-hardware-panel { margin-top:14px; }
 .coach-rack-observation { margin-bottom:14px; }
 .coach-observation-grid { display:grid; gap:1px; grid-template-columns:repeat(3,minmax(0,1fr)); margin-top:14px; }
 .coach-observation-grid>div { background:var(--field); display:grid; gap:6px; min-height:72px; padding:12px; }
@@ -165,24 +136,5 @@
 .coach-observation-conflict { color:var(--amber); }
 .coach-node { align-items:center; border-top:1px solid var(--line); display:grid; gap:12px; grid-template-columns:8px 1fr auto; padding:12px 0; }
 .coach-node>i { background:var(--coral); border-radius:50%; height:8px; width:8px; } .coach-node>i.online { background:var(--mint); } .coach-node>span { display:grid; gap:2px; }
-.coach-node strong { font-size:11px; } .coach-node small { color:var(--muted); font-size:9px; } .coach-node>b { font-size:13px; } .coach-screen-count,.coach-truncation { color:var(--muted); font-size:9px; margin-bottom:0; }
+.coach-node strong { font-size:11px; } .coach-node small { color:var(--muted); font-size:9px; } .coach-node>b { font-size:13px; }
 
-/* Coach rack selection */
-.coach-rack-selection { margin-bottom:14px; }
-.coach-rack-selection-fields { align-items:end; display:grid; gap:12px; grid-template-columns:1fr 1fr auto; margin-top:16px; }
-.coach-rack-selection-fields label { color:var(--muted); display:grid; font-size:9px; font-weight:850; gap:6px; letter-spacing:.08em; text-transform:uppercase; }
-.coach-rack-selection-fields select { background:var(--field); border:1px solid var(--line); color:var(--ink); min-height:44px; padding:8px 10px; width:100%; }
-.coach-rack-selection-fields button { background:var(--lime); border:0; color:var(--on-lime); cursor:pointer; font-weight:900; min-height:44px; padding:8px 16px; }
-.coach-rack-selection-fields button:disabled { cursor:not-allowed; opacity:.45; }
-.coach-selection-status { color:var(--mint); font-size:11px; margin-top:10px; }
-.coach-assignment-current { background:var(--field); border:1px solid var(--line); display:grid; gap:5px 14px; grid-template-columns:auto 1fr; margin-top:16px; padding:12px 14px; }
-.coach-assignment-current span { color:var(--muted); font-size:9px; text-transform:uppercase; }
-.coach-assignment-current b { font-size:11px; overflow-wrap:anywhere; }
-.coach-assignment-subhead { color:var(--ink); font-size:12px; margin:18px 0 0; }
-.coach-catalog-assignment { border-top:1px solid var(--line); margin-top:18px; padding-top:2px; }
-.coach-catalog-assignment>p { color:var(--muted); font-size:10px; line-height:1.5; }
-.coach-catalog-assignment-fields { align-items:end; display:grid; gap:10px; grid-template-columns:repeat(3,minmax(130px,1fr)) auto; margin-top:12px; }
-.coach-catalog-assignment-fields label { color:var(--muted); display:grid; font-size:9px; font-weight:850; gap:6px; letter-spacing:.08em; text-transform:uppercase; }
-.coach-catalog-assignment-fields select { background:var(--field); border:1px solid var(--line); color:var(--ink); min-height:44px; padding:8px 10px; width:100%; }
-.coach-catalog-assignment-fields button { background:var(--lime); border:0; color:var(--on-lime); cursor:pointer; font-weight:900; min-height:44px; padding:8px 16px; }
-.coach-catalog-assignment-fields button:disabled { cursor:not-allowed; opacity:.45; }
