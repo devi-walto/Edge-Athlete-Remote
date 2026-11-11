@@ -2,7 +2,7 @@
 this page — the CSC 4903 directed study the remote work was built for: what I
 promised, where each piece ended up, and what changed from the plan and why.
 
-Written at the start (Sep 24) and finished at the end (Nov 6). The plan is kept
+Written at the start (Sep 24) and finished at the end (Nov 6); the presentation was Nov 10. The plan is kept
 next to what happened on purpose: the changes are the useful part.
 -->
 
@@ -35,7 +35,7 @@ The Definition of Done from the project form, in priority order:
 | 7 | End to end, live or on video, from a different network with a real sensor | **Done**, shown live Oct 27 | {doc}`../journal/core/remote/sensors` |
 | 8 | Developer docs: deploying on k3s, and the key decisions | **Done** | {doc}`../handbook/guides/remote-server`, the {doc}`Journal <../journal/index>` |
 | 9 | Weekly progress reports to Dr. Prather, with links to commits | **Done** | the final report, Nov 6 |
-| 10 | The final presentation | **Scheduled** | before Nov 11 |
+| 10 | The final presentation | **Done**, Nov 10 | a setup video, then a live demo: planning, the server from a terminal, a live set with the real sensor, analytics |
 
 ## The plan vs what happened
 

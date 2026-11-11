@@ -42,7 +42,10 @@ the set I'm about to start, so I can load it without doing the maths.
 - **Pounds by default. Tapping anywhere on the card switches between pounds and
   kilograms**; the small LB | KG pill only shows which one is on. **The choice is
   remembered on that tablet or phone** until it's tapped again. A school-wide setting
-  can come later.
+  can come later. **It is one setting shared with the athlete's pages** (spec 10, decided
+  2026-11-11): the LB | KG toggle in My Recent Progress's movement panel and this card
+  read and change the same remembered choice, so every load an athlete sees on that
+  phone is in one unit.
 - **One standard plate set per school**, not editable for now (a coach setting would
   add clutter for little gain):
 

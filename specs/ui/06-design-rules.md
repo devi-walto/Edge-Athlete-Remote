@@ -182,6 +182,31 @@ the exception is a banner that announces something.
   `panel` card with a 10px corner; inputs are `#0b1114` with a `line` border and a 6px
   corner. A dialog sits over a dimmed page.
 
+### 10. Fewer pages: do the job where it already is
+
+Decided 2026-11-11 (Devin). The redesign exists to cut how many pages a coach, or an
+athlete, drills through on average. Before adding a page, check whether the job fits on
+the page already open: a row that expands, a panel that opens in place. Do it where it
+fits; never cram a page to avoid one.
+
+### 11. A drill-down page leads only back
+
+Decided 2026-11-11 (Devin). A page opened to look closer at one thing (all sessions, a
+sensor list, one past day) never branches into another workflow. Its one way out is a
+back link, just under the top bar, to wherever it was opened from. A flow that has to
+leave it (adding a sensor from the sensor list) returns to it when done.
+
+### 12. The top bar: the picture goes Home, the name opens the menu
+
+Decided 2026-11-11 (Devin), for coach and athlete screens alike, on every page:
+
+- **The picture / logo at the top-left always goes Home.** A coach's Home is **Planning**,
+  always, whether or not a training day is running. An athlete's Home is their home page.
+- **The signed-in person's name, beside it, opens the account menu.** Coaches: Coaches
+  (administrators only), Change password, Log out. Athletes: Account, Sign out.
+- Today the coach's corner is one button (the picture and "Edge Athlete") that opens the
+  account menu (`react/src/coach/AccountMenu.jsx`); it splits into the two targets above.
+
 ## Tokens
 
 From `react/src/theme.js` and `App.css` — existing values, unchanged:
