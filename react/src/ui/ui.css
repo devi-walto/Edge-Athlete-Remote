@@ -1,0 +1,182 @@
+/*
+ * ui.css — the look of the shared pieces in react/src/ui/ (spec 06, Phase 1).
+ *
+ * Why this file exists: every coach and athlete screen is meant to be built from the
+ * same few pieces (a button, a row, a focus card, a step, a badge), so they look and
+ * behave alike everywhere. Their styles live here, once. Measurements come from the
+ * Final designs boards; colours come only from styles/tokens.css.
+ *
+ * Every pressable thing is at least 44px tall: a coach taps these on a tablet.
+ */
+
+/* ── Button: the only way to make a button on these screens (rule 2) ── */
+.ui-button {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-button);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  gap: 8px;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+}
+.ui-button:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+.ui-button:disabled { cursor: default; opacity: .45; }
+.ui-button-icon { display: inline-flex; }
+
+/* Primary: the one next step on a screen. "Next" is the same, with an arrow. */
+.ui-button--primary,
+.ui-button--next { background: var(--lime); border-color: var(--lime); color: var(--on-lime); }
+/* Solid: a real but secondary action. Key: the main secondary action (Copy session link). */
+.ui-button--solid,
+.ui-button--key { background: var(--panel2); border-color: var(--button-edge); color: var(--ink); }
+.ui-button--key { border-color: var(--lime); }
+/* End: every button that ends something, in both versions. */
+.ui-button--end { background: transparent; border-color: var(--coral); color: var(--coral-text); }
+/* Danger: only inside a confirm dialog, for removing something for good. */
+.ui-button--danger { background: var(--danger-fill); border-color: var(--danger-fill); color: var(--ink); font-size: 19px; min-height: 52px; }
+/* Quiet: row actions, Close, Cancel. Quiet lime: the action in a dashed "waiting" row. */
+.ui-button--quiet,
+.ui-button--quiet-lime { background: transparent; padding: 0 10px; }
+.ui-button--quiet { color: var(--muted); font-weight: 700; }
+.ui-button--quiet:hover { color: var(--ink); }
+.ui-button--quiet-lime { color: var(--lime); }
+
+/* ── SectionLabel: the small grey uppercase label over a group of rows ── */
+.ui-section-label {
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  margin: 0;
+  padding: 16px 0 6px;
+  text-transform: uppercase;
+}
+
+/* ── FocusCard: the one thing on a screen the person is working on (rule 1) ── */
+.ui-focus {
+  background: var(--focus-bg);
+  border: 1px solid var(--lime);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 22px;
+}
+.ui-focus-label { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.ui-focus-title { color: var(--ink); font-size: 24px; font-weight: 850; letter-spacing: -.02em; line-height: 1.15; margin: 0; }
+.ui-focus-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* ── QuietRow: one list row, its own solid block (rule 9) ── */
+.ui-row {
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: flex;
+  gap: 14px;
+  min-height: 56px;
+  padding: 6px 8px 6px 16px;
+}
+.ui-row + .ui-row { margin-top: 6px; }
+.ui-row-text { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
+.ui-row-name { color: var(--soft-ink); font-size: 14px; font-weight: 650; overflow-wrap: anywhere; }
+.ui-row-meta { color: var(--muted); font-size: 12px; }
+.ui-row-badge { display: flex; flex: none; }
+.ui-row-actions { display: flex; flex: none; gap: 2px; }
+
+/* ── Step: a numbered step; the open one is loud, the others are one thin row ── */
+.ui-step { display: flex; flex-direction: column; }
+.ui-step + .ui-step { margin-top: 8px; }
+.ui-step-row {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  display: flex;
+  font: inherit;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0;
+  text-align: left;
+  width: 100%;
+}
+button.ui-step-row { cursor: pointer; }
+button.ui-step-row:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+.ui-step-number {
+  border: 1px solid color-mix(in srgb, var(--button-edge) 61%, var(--panel));
+  border-radius: 50%;
+  color: var(--muted);
+  display: grid;
+  flex: none;
+  font-size: 11px;
+  font-weight: 800;
+  height: 26px;
+  place-items: center;
+  width: 26px;
+}
+.ui-step-title { color: var(--soft-ink); font-size: 14px; font-weight: 650; }
+.ui-step-summary { color: var(--muted); font-size: 12px; margin-left: auto; }
+.ui-step-arrow { color: var(--muted); margin-left: auto; }
+.ui-step.is-active .ui-step-number { background: var(--lime); border-color: var(--lime); color: var(--on-lime); font-size: 15px; font-weight: 900; height: 34px; width: 34px; }
+.ui-step.is-active .ui-step-title { color: var(--ink); font-size: 24px; font-weight: 850; letter-spacing: -.02em; }
+.ui-step-body { border-left: 3px solid var(--lime); display: flex; flex-direction: column; gap: 12px; margin: 10px 0 0 15px; padding-left: 20px; }
+
+/* ── Badge: a small status label ── */
+/* Pills: whether a Training Program is scheduled. */
+.ui-badge {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 800;
+  gap: 6px;
+  letter-spacing: .06em;
+  padding: 4px 10px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.ui-badge-dot { border-radius: 50%; flex: none; height: 6px; width: 6px; }
+.ui-badge--scheduled { border-color: color-mix(in srgb, var(--mint) 60%, var(--bg)); color: color-mix(in srgb, var(--mint) 50%, var(--ink)); }
+.ui-badge--scheduled .ui-badge-dot { background: var(--mint); }
+.ui-badge--not-scheduled { border-color: var(--muted); color: var(--ink); }
+.ui-badge--not-scheduled .ui-badge-dot { border: 1.5px solid var(--ink); box-sizing: border-box; }
+/* Chips: a rack's state and its sensor, on a rack card. */
+.ui-badge--lifting,
+.ui-badge--idle,
+.ui-badge--sensor-on,
+.ui-badge--sensor-off { font-size: 11px; font-weight: 700; letter-spacing: 0; min-height: 30px; padding: 0 10px; text-transform: none; }
+.ui-badge--lifting .ui-badge-dot,
+.ui-badge--idle .ui-badge-dot,
+.ui-badge--sensor-on .ui-badge-dot { height: 7px; width: 7px; }
+.ui-badge--lifting { color: var(--ink); }
+.ui-badge--lifting .ui-badge-dot { background: var(--lime); }
+.ui-badge--idle { color: var(--ink); }
+.ui-badge--idle .ui-badge-dot { background: color-mix(in srgb, var(--faint) 76%, var(--bg)); }
+.ui-badge--sensor-on { color: var(--muted); }
+.ui-badge--sensor-on .ui-badge-dot { background: var(--mint); }
+.ui-badge--sensor-off { background: var(--warn-bg); border-color: var(--amber); color: var(--amber); font-weight: 800; }
+
+/* ── RiskTag: an athlete who is Behind ── */
+.ui-risk {
+  align-items: center;
+  border: 1px solid var(--coral);
+  border-radius: 999px;
+  color: var(--coral-text);
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 800;
+  gap: 5px;
+  letter-spacing: .04em;
+  padding: 3px 8px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.ui-risk svg,
+.ui-risk-mark { fill: var(--coral); flex: none; }
+.ui-risk-mark { display: inline-block; vertical-align: middle; }

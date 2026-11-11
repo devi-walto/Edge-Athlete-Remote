@@ -5,11 +5,13 @@
 // stylesheet and component for a colour written out by hand (#a9f04d, rgba(...)), and to
 // read the token file itself. Only the tests use it; the app never imports it.
 import { readFileSync, readdirSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-// The react/ folder, worked out from where this file sits (react/src/styles/).
-export const REACT_ROOT = fileURLToPath(new URL('../../', import.meta.url))
+// The react/ folder, worked out from where this file sits (react/src/styles/). Done with
+// plain path steps: the browser-like test setup (jsdom) replaces the URL class, which
+// Node's file helpers then refuse.
+export const REACT_ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../')
 export const TOKENS_FILE = 'src/styles/tokens.css'
 
 // A colour code: #rgb, #rgba, #rrggbb, #rrggbbaa, or rgb()/rgba()/hsl()/hsla().

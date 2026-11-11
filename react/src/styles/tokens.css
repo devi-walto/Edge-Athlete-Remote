@@ -67,11 +67,12 @@
    *   soft-ink   body text inside a card or dialog, and titles that are not in focus.
    *   muted      labels, captions, secondary details, quiet buttons.
    *   faint      the quietest text: small uppercase section labels, archived rows.
+   *              The lightest grey that still reads at 4.5:1 on every surface.
    */
   --ink: #f5f7f2;
   --soft-ink: #c9d1d5;
   --muted: #89969d;
-  --faint: #6f7c83;
+  --faint: #7a868c;
 
   /*
    * LIME: "you are here" and "press this next" (rule 5). The brand colour.
