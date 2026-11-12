@@ -54,7 +54,7 @@ from .models import (Node, RackScreen, Athlete, TrainingSession, Set, Rep, Athle
 # Coaches are Django users; there is no separate coach table. See docs/about/original-spec.md.
 User = get_user_model()
 from .permissions import (
-    COACH_ROLES, ONLINE_ANY_ROLE, ONLINE_COACH, ONLINE_COACH_OR_RACK_OWNER,
+    COACH_ROLES, COMMON_OWN_RACK, COMMON_READ, ONLINE_ANY_ROLE, ONLINE_COACH, ONLINE_COACH_OR_RACK_OWNER,
     ONLINE_COACH_OR_SAME_ATHLETE, ONLINE_REFUSE, IsCoach, open_on_local,
     refuse_while_password_change_due)
 from .roles import role_of
@@ -1019,7 +1019,7 @@ def rack_sensor_health(request, rack_number):
 
 
 @api_view(["GET", "PATCH"])
-@permission_classes([open_on_local(ONLINE_COACH_OR_RACK_OWNER)])
+@permission_classes([open_on_local(ONLINE_COACH_OR_RACK_OWNER, common=COMMON_OWN_RACK)])
 def rack_state(request, rack_number):
     """Read the authoritative rack mirror or apply one fenced state transition."""
     if request.method == "GET":
@@ -1193,7 +1193,7 @@ def rack_state(request, rack_number):
 
 
 @api_view(["POST"])
-@permission_classes([open_on_local(ONLINE_COACH_OR_RACK_OWNER)])
+@permission_classes([open_on_local(ONLINE_COACH_OR_RACK_OWNER, common=COMMON_OWN_RACK)])
 def rack_controller_acquire(request, rack_number):
     """Claim or renew ownership after validating the physical rack identity."""
     required = {"device_id", "client_instance_id", "controller_token"}
@@ -1347,7 +1347,7 @@ def _acquire_owned_rack(request, runtime, client_instance_id, token):
 
 
 @api_view(["POST"])
-@permission_classes([open_on_local(ONLINE_COACH_OR_RACK_OWNER)])
+@permission_classes([open_on_local(ONLINE_COACH_OR_RACK_OWNER, common=COMMON_OWN_RACK)])
 def rack_controller_heartbeat(request, rack_number):
     """Extend the current lease using server time; heartbeats are not visible events."""
     if request.data:
@@ -1372,7 +1372,7 @@ def rack_controller_heartbeat(request, rack_number):
 
 
 @api_view(["POST"])
-@permission_classes([open_on_local(ONLINE_COACH_OR_RACK_OWNER)])
+@permission_classes([open_on_local(ONLINE_COACH_OR_RACK_OWNER, common=COMMON_OWN_RACK)])
 def rack_controller_release(request, rack_number):
     """Release a quiet rack without allowing an open set to lose its owner."""
     if set(request.data) != {"expected_state_version", "command_id"}:
@@ -1426,7 +1426,7 @@ _active_session = active_session
 
 
 @api_view(["POST"])
-@permission_classes([open_on_local(ONLINE_COACH_OR_RACK_OWNER)])
+@permission_classes([open_on_local(ONLINE_COACH_OR_RACK_OWNER, common=COMMON_OWN_RACK)])
 def rack_checkin(request, rack_number):
     """Record that an athlete signed in at this rack (Phase 11 Step 2). Append-only:
     writes a new RackCheckIn, which makes THIS rack the athlete's current one for the
@@ -1489,7 +1489,7 @@ def rack_checkin(request, rack_number):
 
 
 @api_view(["GET"])
-@permission_classes([open_on_local(ONLINE_COACH_OR_RACK_OWNER)])
+@permission_classes([open_on_local(ONLINE_COACH_OR_RACK_OWNER, common=COMMON_OWN_RACK)])
 def rack_checkins(request, rack_number):
     """The rack's HOT LIST: athletes this rack currently 'owns' — those whose NEWEST
     check-in this session is this rack. Surfaced first on the check-in screen for
@@ -1864,7 +1864,7 @@ def _visible_athletes(request, athletes):
 
 
 @api_view(["GET"])
-@permission_classes([open_on_local(ONLINE_ANY_ROLE)])
+@permission_classes([open_on_local(ONLINE_ANY_ROLE, common=COMMON_READ)])
 def sessions_active(request):
     """The rack tablet's ONE startup fetch (open, no login). Returns the current
     session plus everything the rack screen needs to run a whole set-logging
@@ -1980,7 +1980,7 @@ def sessions_active(request):
 
 
 @api_view(["GET"])
-@permission_classes([open_on_local(ONLINE_COACH_OR_SAME_ATHLETE)])
+@permission_classes([open_on_local(ONLINE_COACH_OR_SAME_ATHLETE, common=COMMON_READ)])
 def athlete_progress(request, athlete_id):
     """The rack's athlete DAY-VIEW (open, no login). For one athlete in the active
     session, returns their planned movements (from Program) with live progress
@@ -2102,7 +2102,7 @@ def athlete_progress(request, athlete_id):
 
 
 @api_view(["GET"])
-@permission_classes([open_on_local(ONLINE_ANY_ROLE)])
+@permission_classes([open_on_local(ONLINE_ANY_ROLE, common=COMMON_READ)])
 def session_status(request):
     """Room state for the active session: each athlete's live status + since-when.
     The rack's rest/check-in cards turn this into a ticking timer + status label,
@@ -2174,7 +2174,7 @@ def session_status(request):
 # ─────────────────────────── sets ───────────────────────────
 
 @api_view(["POST"])
-@permission_classes([open_on_local(ONLINE_COACH_OR_RACK_OWNER)])
+@permission_classes([open_on_local(ONLINE_COACH_OR_RACK_OWNER, common=COMMON_OWN_RACK)])
 def set_create(request):
     """Start a set: create the empty set record when an athlete begins, so the
     finish endpoint has something to fill in. Body: session, athlete, exercise,
@@ -2277,7 +2277,7 @@ def set_create(request):
 
 
 @api_view(["POST"])
-@permission_classes([open_on_local(ONLINE_COACH_OR_RACK_OWNER)])
+@permission_classes([open_on_local(ONLINE_COACH_OR_RACK_OWNER, common=COMMON_OWN_RACK)])
 def set_complete(request, set_id):
     """Save a finished set. Take all its reps + totals and write them to the
     database in ONE all-or-nothing step (if anything fails, nothing saves). This
@@ -2500,7 +2500,7 @@ def analytics_athlete(request, athlete_id):
 # ─────────────────────────── room state (derived) ───────────────────────────
 
 @api_view(["GET"])
-@permission_classes([open_on_local(ONLINE_COACH)])
+@permission_classes([open_on_local(ONLINE_COACH, common=COMMON_READ)])
 def room_state(request):
     """The live picture of the room, for the wall display and the coach tablet.
 

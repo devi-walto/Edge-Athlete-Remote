@@ -251,21 +251,131 @@ class WhoMayDoWhatTests(CommonLoginTestCase):
 # Open to anyone by nature (signing in, a sensor claiming itself with its one-time code),
 # and "who am I", which every signed-in login may ask.
 OPEN_TO_COMMON = OPEN_EVERYWHERE | {'token_obtain_pair', 'token_refresh', 'sensor_claim', 'coach_session'}
+# Phase 1: read only, whatever the address (an athlete's day needs a real athlete, and
+# the walk's stand-in isn't one, so it is refused there and tested below).
+COMMON_READS = {'sessions_active', 'session_status', 'room_state'}
+# Phase 1: only for a rack its own device made. The walk's stand-in rack (999999) isn't
+# one, so the walk sees them refused too; the tests below use a real one.
+COMMON_OWN_RACK = {'rack_state', 'rack_controller_acquire', 'rack_controller_heartbeat',
+                   'rack_controller_release', 'rack_checkin', 'rack_checkins',
+                   'set_create', 'set_complete'}
 
 
 @override_settings(EA_DEPLOYMENT='remote')
-class TheRouteWalkTests(APITestCase):
-    """The route walk's common column: until Phase 1 opens a few routes to it by name,
-    the common login is turned away at the door of every route."""
+class TabletTestCase(CommonLoginTestCase):
+    """A tablet signed in with the common login, its device owning Rack 3; another
+    device owns Rack 4. A running session with two athletes."""
 
-    def test_every_route_refuses_the_common_login(self):
-        common = make_common()
+    def setUp(self):
+        super().setUp()
+        from .models import Exercise, Node, RackScreen, TrainingSession
+        make_common()
+        self.tokens = self.tablet('tablet-3')
+        RackScreen.objects.create(device_id='tablet-3', rack_number=3)
+        RackScreen.objects.create(device_id='tablet-4', rack_number=4)
+        self.node3 = Node.objects.create(node_id='bar-3', rack_number=3)
+        self.node4 = Node.objects.create(node_id='bar-4', rack_number=4)
+        self.session = TrainingSession.objects.create(label='Thursday', started_at=timezone.now())
+        self.riley = Athlete.objects.create(name='Riley Brooks')
+        self.jordan = Athlete.objects.create(name='Jordan Lee')
+        self.session.athletes.add(self.riley, self.jordan)
+        self.outsider = Athlete.objects.create(name='Not Here Today')
+        self.squat, _ = Exercise.objects.get_or_create(name='Back Squat')
         self.client.raise_request_exception = False
-        self.client.force_authenticate(user=common)
+
+    def call(self, method, url, body=None):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.tokens['access']}")
+        response = getattr(self.client, method)(url, body or {}, format='json')
+        self.client.credentials()
+        return response
+
+    def refused(self, response):
+        if response.status_code == 401:
+            return True
+        detail = response.data.get('detail') if isinstance(getattr(response, 'data', None), dict) else None
+        return response.status_code == 403 and getattr(detail, 'code', None) == 'permission_denied'
+
+
+class TheRouteWalkTests(TabletTestCase):
+    """The route walk's common column: through only where Phase 1 opens a route to it."""
+
+    def test_every_route_refuses_the_common_login_except_what_phase_1_opens(self):
         for route in ROUTES:
             if route['name'] in OPEN_TO_COMMON:
                 continue
             for method in route['methods']:
                 with self.subTest(route=route['name'], method=method.upper()):
-                    response = getattr(self.client, method)(route['url'], {}, format='json')
-                    self.assertIn(response.status_code, (401, 403), response.status_code)
+                    response = self.call(method, route['url'])
+                    if route['name'] in COMMON_READS and method == 'get':
+                        self.assertFalse(self.refused(response), response.status_code)
+                    else:
+                        self.assertTrue(self.refused(response), response.status_code)
+
+
+class WhatATabletReadsTests(TabletTestCase):
+    """What the rack screen needs (Devin, 2026-11-12): the names, At this rack, statuses."""
+
+    def test_the_check_in_names_come_from_the_running_session(self):
+        response = self.call('get', '/api/sessions/active/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(sorted(a['name'] for a in response.data['roster']), ['Jordan Lee', 'Riley Brooks'])
+
+    def test_at_this_rack_for_its_own_rack_only(self):
+        from .models import RackCheckIn
+        # Checking in needs the rack's controller lease (its own tests cover that); here,
+        # only that the door lets the tablet in on its own rack.
+        self.assertFalse(self.refused(self.call('post', '/api/racks/3/checkin/', {'athlete': self.riley.pk})))
+        RackCheckIn.objects.create(session=self.session, athlete=self.riley, rack_number=3)
+        at_rack = self.call('get', '/api/racks/3/checkins/')
+        self.assertEqual(at_rack.status_code, 200)
+        self.assertEqual([a['name'] for a in at_rack.data['athletes']], ['Riley Brooks'])
+        self.assertTrue(self.refused(self.call('get', '/api/racks/4/checkins/')))
+        self.assertTrue(self.refused(self.call('post', '/api/racks/4/checkin/', {'athlete': self.riley.pk})))
+
+    def test_resting_lifting_ready_for_everyone_in_the_session(self):
+        response = self.call('get', '/api/sessions/active/status/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual({a['athlete_id'] for a in response.data['athletes']}, {self.riley.pk, self.jordan.pk})
+
+    def test_an_athletes_day_only_for_someone_in_the_session(self):
+        url = '/api/sessions/active/athlete/{}/progress/'
+        self.assertEqual(self.call('get', url.format(self.riley.pk)).status_code, 200)
+        self.assertTrue(self.refused(self.call('get', url.format(self.outsider.pk))))
+
+    def test_the_room_display_without_the_coach_details(self):
+        self.assertEqual(self.call('get', '/api/room-state/').status_code, 200)
+        self.assertIn(self.call('get', '/api/room-state/?details=true').status_code, (401, 403))
+
+    def test_reading_never_writes(self):
+        self.assertTrue(self.refused(self.call('post', '/api/sessions/active/')))
+
+
+class ItsOwnRackTests(TabletTestCase):
+    def test_its_racks_state_and_controller(self):
+        for method, url in (('get', '/api/racks/3/state/'), ('patch', '/api/racks/3/state/'),
+                            ('post', '/api/racks/3/controller/acquire/'),
+                            ('post', '/api/racks/3/controller/heartbeat/'),
+                            ('post', '/api/racks/3/controller/release/')):
+            with self.subTest(method=method, url=url):
+                self.assertFalse(self.refused(self.call(method, url)))
+                self.assertTrue(self.refused(self.call(method, url.replace('/3/', '/4/'))))
+
+    def test_starting_a_set_names_its_own_rack(self):
+        body = {'session': self.session.pk, 'athlete': self.riley.pk, 'exercise': self.squat.pk,
+                'set_number': 1, 'rack_number': 3}
+        self.assertFalse(self.refused(self.call('post', '/api/sets/', body)))
+        self.assertTrue(self.refused(self.call('post', '/api/sets/', {**body, 'rack_number': 4})))
+        self.assertTrue(self.refused(self.call('post', '/api/sets/', {k: v for k, v in body.items() if k != 'rack_number'})))
+
+    def test_finishing_a_set_on_its_own_rack_only(self):
+        from .models import Set
+        mine = Set.objects.create(session=self.session, athlete=self.riley, exercise=self.squat,
+                                  set_number=1, node=self.node3)
+        theirs = Set.objects.create(session=self.session, athlete=self.jordan, exercise=self.squat,
+                                    set_number=1, node=self.node4)
+        self.assertFalse(self.refused(self.call('post', f'/api/sets/{mine.pk}/complete/')))
+        self.assertTrue(self.refused(self.call('post', f'/api/sets/{theirs.pk}/complete/')))
+
+    def test_a_signed_out_device_loses_its_rack(self):
+        CommonDevice.objects.filter(device_id='tablet-3').update(signed_out_at=timezone.now())
+        self.assertEqual(self.call('get', '/api/racks/3/checkins/').status_code, 401)

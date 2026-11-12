@@ -56,7 +56,7 @@ athlete login could exist.
 | Administrator | active, has a coach profile, and Django's staff flag is on |
 | Coach | active and has a coach profile |
 | Athlete | active and attached to an athlete record (`Athlete.user`) |
-| Common | active and attached to the school's common login (`CommonLogin.user`): the one login every rack tablet and TV online shares (spec 18). Refused everywhere except signing in and "who am I" until spec 18 Phase 1 opens the rack routes to it |
+| Common | active and attached to the school's common login (`CommonLogin.user`): the one login every rack tablet and TV online shares (spec 18). On top of each route's online rule, a second rule says what it may do: the rack and set routes only for racks its own device made, and read-only the running session, statuses, an athlete's day (someone in the session) and the room display. Refused everywhere else |
 | None | anything else: **refused everywhere, including at sign-in** |
 
 Every permission class asks that one function. `IsCoach` kept its name on purpose: 43
@@ -236,12 +236,12 @@ Rack screens, and the sensors on them.
 | `/api/ble/verifications/` | `POST` | 🔒 coach | — | `ble_verifications` |
 | `/api/racks/<int:rack_number>/ble-selection/` | `PUT` | 🔒 coach | — | `rack_ble_selection` |
 | `/api/racks/<int:rack_number>/sensor-health/` | `GET` | local: open · online: coach, or the rack's own athlete | — | `rack_sensor_health` |
-| `/api/racks/<int:rack_number>/state/` | `GET,PATCH` | local: open · online: coach, or the rack's own athlete | Read the authoritative rack mirror or apply one fenced state transition | `rack_state` |
-| `/api/racks/<int:rack_number>/controller/acquire/` | `POST` | local: open · online: coach, or the rack's own athlete | Claim or renew ownership after validating the physical rack identity | `rack_controller_acquire` |
-| `/api/racks/<int:rack_number>/controller/heartbeat/` | `POST` | local: open · online: coach, or the rack's own athlete | Extend the current lease using server time; heartbeats are not visible events | `rack_controller_heartbeat` |
-| `/api/racks/<int:rack_number>/controller/release/` | `POST` | local: open · online: coach, or the rack's own athlete | Release a quiet rack without allowing an open set to lose its owner | `rack_controller_release` |
-| `/api/racks/<int:rack_number>/checkin/` | `POST` | local: open · online: coach, or the rack's own athlete | Record that an athlete signed in at this rack (Phase 11 Step 2) | `rack_checkin` |
-| `/api/racks/<int:rack_number>/checkins/` | `GET` | local: open · online: coach, or the rack's own athlete | The rack's HOT LIST: athletes this rack currently 'owns' — those whose NEWEST check-in this session is this rack | `rack_checkins` |
+| `/api/racks/<int:rack_number>/state/` | `GET,PATCH` | local: open · online: coach, or the rack's own athlete; tablets: own racks | Read the authoritative rack mirror or apply one fenced state transition | `rack_state` |
+| `/api/racks/<int:rack_number>/controller/acquire/` | `POST` | local: open · online: coach, or the rack's own athlete; tablets: own racks | Claim or renew ownership after validating the physical rack identity | `rack_controller_acquire` |
+| `/api/racks/<int:rack_number>/controller/heartbeat/` | `POST` | local: open · online: coach, or the rack's own athlete; tablets: own racks | Extend the current lease using server time; heartbeats are not visible events | `rack_controller_heartbeat` |
+| `/api/racks/<int:rack_number>/controller/release/` | `POST` | local: open · online: coach, or the rack's own athlete; tablets: own racks | Release a quiet rack without allowing an open set to lose its owner | `rack_controller_release` |
+| `/api/racks/<int:rack_number>/checkin/` | `POST` | local: open · online: coach, or the rack's own athlete; tablets: own racks | Record that an athlete signed in at this rack (Phase 11 Step 2) | `rack_checkin` |
+| `/api/racks/<int:rack_number>/checkins/` | `GET` | local: open · online: coach, or the rack's own athlete; tablets: own racks | The rack's HOT LIST: athletes this rack currently 'owns' — those whose NEWEST check-in this session is this rack | `rack_checkins` |
 | `/api/racks/<int:rack_number>/nfc-tap/` | `POST` | local: open · online: refused | Consume one NFC tap and resolve it to an athlete in the active session | `rack_nfc_tap` |
 | `/api/racks/<int:rack_number>/` | `DELETE` | 🔒 coach | Coach-only: FORCE-CLEAR a rack so a fresh screen can take it over | `rack_remove` |
 | `/api/nodes/` | `GET` | local: open · online: coach | Open: list every sensor node and its latest status | `nodes_list` |
@@ -343,11 +343,11 @@ The live session, and the room's current picture.
 <!-- routes:running-a-training-day:start -->
 | Route | Methods | Access | What it does | Handler |
 |---|---|---|---|---|
-| `/api/room-state/` | `GET` | local: open · online: coach | The live picture of the room, for the wall display and the coach tablet | `room_state` |
+| `/api/room-state/` | `GET` | local: open · online: coach; tablets: read | The live picture of the room, for the wall display and the coach tablet | `room_state` |
 | `/api/sessions/` | `POST` | 🔒 coach | Coach-only: start a training session | `sessions_view` |
-| `/api/sessions/active/` | `GET` | local: open · online: anyone signed in | The rack tablet's ONE startup fetch (open, no login) | `sessions_active` |
-| `/api/sessions/active/athlete/<int:athlete_id>/progress/` | `GET` | local: open · online: coach, or the athlete asked about | The rack's athlete DAY-VIEW (open, no login) | `athlete_progress` |
-| `/api/sessions/active/status/` | `GET` | local: open · online: anyone signed in | Room state for the active session: each athlete's live status + since-when | `session_status` |
+| `/api/sessions/active/` | `GET` | local: open · online: anyone signed in; tablets: read | The rack tablet's ONE startup fetch (open, no login) | `sessions_active` |
+| `/api/sessions/active/athlete/<int:athlete_id>/progress/` | `GET` | local: open · online: coach, or the athlete asked about; tablets: read | The rack's athlete DAY-VIEW (open, no login) | `athlete_progress` |
+| `/api/sessions/active/status/` | `GET` | local: open · online: anyone signed in; tablets: read | Room state for the active session: each athlete's live status + since-when | `session_status` |
 | `/api/sessions/<int:session_id>/` | `PATCH` | 🔒 coach | Coach-only: update a session | `session_detail` |
 | `/api/sessions/<int:session_id>/join/` | `POST` | remote only · athlete | Join a session online: get your own rack, checked in, with your own sensor on it | `session_join` |
 | `/api/sessions/<int:session_id>/participation/` | `GET,POST,DELETE` | 🔒 coach | Coach-only: which TrainingGroups are training in this session, and what they're doing | `session_participation_view` |
@@ -370,8 +370,8 @@ Sets, reps, prescriptions, maxes, and everything derived from them.
 | `/api/reports/<int:report_id>/` | `GET` | 🔒 coach | Coach-only: one finished day in full | `report_detail_view` |
 | `/api/reports/<int:report_id>/pdf/` | `GET` | 🔒 coach | Coach-only: the same finished day, as a printable PDF | `report_pdf_view` |
 | `/api/reference-maxes/` | `POST` | 🔒 coach | Coach-only: record what athletes can currently lift | `reference_maxes_view` |
-| `/api/sets/` | `POST` | local: open · online: coach, or the rack's own athlete | Start a set: create the empty set record when an athlete begins, so the finish endpoint has something to fill in | `set_create` |
-| `/api/sets/<int:set_id>/complete/` | `POST` | local: open · online: coach, or the rack's own athlete | Save a finished set | `set_complete` |
+| `/api/sets/` | `POST` | local: open · online: coach, or the rack's own athlete; tablets: own racks | Start a set: create the empty set record when an athlete begins, so the finish endpoint has something to fill in | `set_create` |
+| `/api/sets/<int:set_id>/complete/` | `POST` | local: open · online: coach, or the rack's own athlete; tablets: own racks | Save a finished set | `set_complete` |
 | `/api/analytics/session/<int:session_id>/` | `GET` | 🔒 coach | Coach-only: a quick summary of one session — how many sets and reps total, and each athlete's average velocity | `analytics_session` |
 | `/api/analytics/athlete/<int:athlete_id>/` | `GET` | 🔒 coach | Coach-only: everything the athlete and history tabs need (P13) | `analytics_athlete` |
 <!-- routes:performed-work:end -->

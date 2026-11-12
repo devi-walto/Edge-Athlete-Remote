@@ -342,12 +342,33 @@ really reads them from.
 
 **Done when:**
 
-- [ ] *(Unit test)* The route walk: each route lets the common login through exactly as
+- [x] *(Unit test)* The route walk: each route lets the common login through exactly as
       listed, and refuses it on another device's rack.
-- [ ] *(Unit test)* From a tablet signed in with the common login: the check-in names, the
+- [x] *(Unit test)* From a tablet signed in with the common login: the check-in names, the
       "At this rack" list and each athlete's Resting / Lifting / Ready all answer.
-- [ ] Local is unchanged: the walk's local pass still finds every route open.
-- [ ] Full suite passes in both modes.
+- [x] Local is unchanged: the walk's local pass still finds every route open.
+- [x] Full suite passes in both modes.
+
+**Phase 1 result (2026-11-12).**
+- **The rule:** `open_on_local()` takes a second rule for the common login (`permissions.py`):
+  - `COMMON_OWN_RACK`: the rack in the address, or in a new set's body, or under a set's
+    sensor (else the athlete's newest check-in) must be one of the device's own rack
+    screens, found through the device named in its sign-in.
+  - `COMMON_READ`: GET only, and an athlete's day only for someone in the running session.
+- **Applied to:** the 8 rack and set routes, and the 4 read routes listed above. Nothing
+  else changed.
+- **A small fix on the way:** the common login trying to change its own password now
+  gets the standard refusal (it used a home-made 403 before).
+
+Tests: 10 new in `test_common_login.py`:
+- the walk (through exactly where opened, on GET for the reads, refused on a stand-in
+  rack);
+- the names, "At this rack" (own rack only), statuses, an athlete's day (in-session
+  only), the room display without coach details, reading never writes;
+- own-rack state and controller, starting a set (own rack only, rack required),
+  finishing one (own rack only), and a signed-out device losing its rack.
+
+Server 824 in each version (local skips 8).
 
 **Stop. Devin reviews.**
 

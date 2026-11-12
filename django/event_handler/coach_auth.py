@@ -14,7 +14,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework import serializers
-from rest_framework.exceptions import APIException
+from rest_framework.exceptions import APIException, PermissionDenied
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -393,8 +393,7 @@ class PasswordChangeView(APIView):
 
     def post(self, request):
         if role_of(request.user) == COMMON:
-            return Response({'detail': 'An administrator changes the common login\'s password.',
-                             'code': 'permission_denied'}, status=403)
+            raise PermissionDenied("An administrator changes the common login's password.")
         form = PasswordChangeSerializer(data=request.data, context={'user': request.user})
         form.is_valid(raise_exception=True)
         with transaction.atomic():

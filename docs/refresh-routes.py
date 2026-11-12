@@ -122,15 +122,18 @@ ONLINE_RULES = {
     "ONLINE_COACH_OR_RACK_OWNER": "coach, or the rack's own athlete",
     "ONLINE_REFUSE": "refused",
 }
+COMMON_RULES = {"COMMON_OWN_RACK": "own racks", "COMMON_READ": "read"}
 
 
 def access_label(perm):
     """'open', '🔒 coach', 'local: open · online: coach', … from a permission list."""
     if "open_on_local" in perm:
         # The whole rule name: ONLINE_COACH is also the start of ONLINE_COACH_OR_….
-        named = re.search(r"open_on_local\((\w+)\)", perm)
+        named = re.search(r"open_on_local\((\w+)(?:,\s*common=(\w+))?\)", perm)
         rule = ONLINE_RULES.get(named.group(1), "?") if named else "?"
-        return f"local: open · online: {rule}"
+        # The school's common login (spec 18) has a second rule of its own.
+        common = COMMON_RULES.get(named.group(2)) if named and named.group(2) else None
+        return f"local: open · online: {rule}" + (f"; tablets: {common}" if common else "")
     remote = "remote only · " if "RemoteOnly" in perm else ""
     if "IsInstallationAdmin" in perm:
         return remote + "🔒 administrator"

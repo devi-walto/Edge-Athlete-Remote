@@ -10,7 +10,7 @@ don't use this bouncer.
 from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.permissions import BasePermission
 
-from .roles import ADMINISTRATOR, ATHLETE, COACH, role_of
+from .roles import ADMINISTRATOR, ATHLETE, COACH, COMMON, role_of
 
 COACH_ROLES = (ADMINISTRATOR, COACH)
 
@@ -123,6 +123,11 @@ ONLINE_COACH_OR_SAME_ATHLETE = 'coach_or_same_athlete'  # an athlete may read th
 ONLINE_COACH_OR_RACK_OWNER = 'coach_or_rack_owner'      # an athlete may use their OWN rack
 ONLINE_REFUSE = 'refuse'                        # nobody: there is no shared room online
 
+# What the school's common login (a rack tablet or TV online, spec 18) may do on such a
+# route, on top of the rule above. None (the default): refused.
+COMMON_OWN_RACK = 'own_rack'   # only for a rack its own device made
+COMMON_READ = 'read'           # read only (GET); the route itself decides what's in it
+
 
 def _asks_about_own_athlete(request, view):
     """True when an athlete is READING something about themselves: the athlete in
@@ -170,6 +175,66 @@ def _owns_the_rack(request, view):
     return rack_number is None or owns(rack_number)
 
 
+def _common_device(request):
+    """The common-login device this request comes from, from its sign-in (spec 18).
+    authentication.py has already refused a signed-out one."""
+    from .authentication import DEVICE_CLAIM
+    from .models import CommonDevice
+    token = getattr(request, 'auth', None)
+    device_pk = token.get(DEVICE_CLAIM) if token is not None and hasattr(token, 'get') else None
+    if device_pk is None:
+        return None
+    return CommonDevice.objects.filter(pk=device_pk, signed_out_at=None,
+                                       common_login__user=request.user).first()
+
+
+def _common_owns_the_rack(request, view):
+    """Is this common-login device using a rack it made itself? (spec 18, Phase 1)
+
+    A device's racks are the rack screens with its device id (Phase 2 makes them). The
+    rack comes from the address, or for starting a set from the body (`rack_number`,
+    which the rack screen always sends), or for finishing one from the set's sensor,
+    else the athlete's newest check-in.
+    """
+    from .models import RackCheckIn, RackScreen, Set
+    device = _common_device(request)
+    if device is None:
+        return False
+    racks = set(RackScreen.objects.filter(device_id=device.device_id)
+                .exclude(rack_number=None).values_list('rack_number', flat=True))
+    if not racks:
+        return False
+    kwargs = getattr(request, 'parser_context', {}).get('kwargs', {}) or {}
+    if 'rack_number' in kwargs:
+        return int(kwargs['rack_number']) in racks
+    if 'set_id' in kwargs:
+        found = Set.objects.filter(pk=kwargs['set_id']).select_related('node').first()
+        if found is None:
+            return False
+        if found.node is not None and found.node.rack_number is not None:
+            return found.node.rack_number in racks
+        newest = (RackCheckIn.objects.filter(athlete_id=found.athlete_id)
+                  .order_by('-checked_in_at').values_list('rack_number', flat=True).first())
+        return newest in racks
+    data = request.data if isinstance(request.data, dict) else {}
+    try:
+        return int(data.get('rack_number')) in racks
+    except (TypeError, ValueError):
+        return False
+
+
+def _common_reads(request, view):
+    """Read only. An athlete's day only for someone in the running session."""
+    if request.method not in ('GET', 'HEAD', 'OPTIONS'):
+        return False
+    kwargs = getattr(request, 'parser_context', {}).get('kwargs', {}) or {}
+    if 'athlete_id' in kwargs:
+        from .services.active_session import active_session
+        session = active_session()
+        return session is not None and session.athletes.filter(pk=kwargs['athlete_id']).exists()
+    return True
+
+
 class OpenOnLocal(BasePermission):
     """Open on a gym box. On a hosted installation, apply `online_rule`.
 
@@ -177,6 +242,7 @@ class OpenOnLocal(BasePermission):
     so a test can read every route's rule straight from the URL configuration.
     """
     online_rule = None
+    common_rule = None
 
     def has_permission(self, request, view):
         from .deployment import is_hosted  # read at request time, so tests can switch it
@@ -195,13 +261,22 @@ class OpenOnLocal(BasePermission):
                 return _asks_about_own_athlete(request, view)
             if self.online_rule == ONLINE_COACH_OR_RACK_OWNER:
                 return _owns_the_rack(request, view)
+        if role == COMMON:
+            if self.common_rule == COMMON_OWN_RACK:
+                return _common_owns_the_rack(request, view)
+            if self.common_rule == COMMON_READ:
+                return _common_reads(request, view)
         return False
 
 
-def open_on_local(online_rule):
-    """A permission class for one route: open on a gym box, `online_rule` when hosted."""
+def open_on_local(online_rule, common=None):
+    """A permission class for one route: open on a gym box, `online_rule` when hosted,
+    and `common` (COMMON_OWN_RACK, COMMON_READ, or None: refused) for the common login."""
     allowed = (ONLINE_COACH, ONLINE_ANY_ROLE, ONLINE_COACH_OR_SAME_ATHLETE,
                ONLINE_COACH_OR_RACK_OWNER, ONLINE_REFUSE)
     if online_rule not in allowed:
         raise ValueError(f'unknown online rule {online_rule!r}')
-    return type(f'OpenOnLocal_{online_rule}', (OpenOnLocal,), {'online_rule': online_rule})
+    if common not in (None, COMMON_OWN_RACK, COMMON_READ):
+        raise ValueError(f'unknown common-login rule {common!r}')
+    name = f'OpenOnLocal_{online_rule}' + (f'_common_{common}' if common else '')
+    return type(name, (OpenOnLocal,), {'online_rule': online_rule, 'common_rule': common})
