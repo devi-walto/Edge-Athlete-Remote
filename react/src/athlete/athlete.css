@@ -39,9 +39,6 @@
 .athlete-dot { background: var(--button-edge); border-radius: 50%; flex: none; height: 10px; width: 10px; }
 .athlete-dot.is-on { background: var(--lime); }
 .athlete-dot.is-waiting { background: var(--amber); }
-.athlete-bar.is-back { padding: 8px; }
-.athlete-back { font-size: 15px; }
-.athlete-title { font-size: 26px; font-weight: 850; letter-spacing: -.02em; margin: 2px 0 0; }
 .athlete-code-card { background: var(--focus-bg); border: 1px solid var(--lime); display: flex; flex-direction: column; gap: 6px; padding: 16px; }
 .athlete-code-row { align-items: center; display: flex; gap: 12px; justify-content: space-between; }
 .athlete-code { font-family: var(--font-mono); font-size: 36px; font-weight: 800; letter-spacing: .08em; line-height: 1.1; }
@@ -70,6 +67,8 @@
 /* ── The athlete's own pages (spec 10): the frame, Home's greeting and banner ── */
 .athlete-app { background: var(--bg); color: var(--ink); font-family: var(--font-sans); min-height: 100vh; }
 .athlete-app-bar { align-items: center; border-bottom: 1px solid var(--line); box-sizing: border-box; display: flex; height: 60px; padding: 0 10px; }
+/* Add my sensor: its cards spaced like the page it used to have to itself. */
+.athlete-add-sensor { display: flex; flex-direction: column; gap: 16px; }
 .athlete-app-body { box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; margin: 0 auto; max-width: 560px; padding: 14px 16px 32px; }
 .athlete-page-title { font-size: 24px; font-weight: 850; letter-spacing: -.02em; margin: 4px 0 0; }
 .athlete-greeting { background: var(--hero-bg); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 5px; padding: 16px 18px; }

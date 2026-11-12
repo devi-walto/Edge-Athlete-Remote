@@ -38,7 +38,7 @@ export default function Account() {
         <QuietRow name={me.username || '--'} meta="Username" />
         <QuietRow name={me.groups.join(' · ') || 'Not on a team yet'} meta="Teams" />
       </div>
-      <SensorRow />
+      <SensorRow from="account" />
       <div className="athlete-account-help">
         <Button kind="quiet-lime" aria-expanded={helping} aria-controls="password-help"
           onClick={() => setHelping(!helping)}>Changing your password? {helping ? '▴' : '▾'}</Button>

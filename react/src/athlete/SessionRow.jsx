@@ -5,9 +5,10 @@
 // The page it opens is told where it was opened from, so its back link can say so.
 import { navigate } from '../router.js'
 import QuietRow from '../ui/QuietRow.jsx'
+import { SESSIONS_PATH } from './AthletePage.jsx'
 import { dayLabel } from './athleteApi.js'
 
-export const SESSIONS_PATH = '/athlete/sessions'
+export { SESSIONS_PATH }
 
 /** "9 / 9 sets", amber when short of the plan. */
 export function SetsCount({ done, planned }) {

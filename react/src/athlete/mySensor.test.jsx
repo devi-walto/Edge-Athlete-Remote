@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 // Tests for "My sensor" on the athlete's page (spec 14, Phase 2): adding a sensor with
 // a one-time code, the page noticing by itself when the sensor uses it, and removing a
-// sensor. Online only: a gym's page never shows it.
+// sensor. Online only: a gym's page never shows it. And (spec 10) the way in and out:
+// with no sensor, Add my sensor goes straight to the codes; every back link and Done lead
+// to where the page was opened from.
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -28,7 +30,10 @@ if (typeof globalThis.localStorage?.clear !== 'function') {
 
 const { default: AthleteSignIn } = await import('./AthleteSignIn.jsx')
 const { default: ManageSensors } = await import('./ManageSensors.jsx')
-const { schoolPart, sensorStatus } = await import('./MySensor.jsx')
+const { AddSensorPage, schoolPart, sensorStatus } = await import('./MySensor.jsx')
+const { default: SensorRow } = await import('./SensorRow.jsx')
+const { backFor } = await import('./AthletePage.jsx')
+const { navigate } = await import('../router.js')
 const { setCoachToken, setSignedInRole } = await import('../coach/api.js')
 
 function token(seconds) {
@@ -46,6 +51,8 @@ beforeEach(() => {
   setCoachToken(token(3600))
   calls = []
   sensors = []
+  vi.mocked(navigate).mockReset()
+  at('/athlete/sensors')
   codeStatus = { status: 'waiting', sensor: null }
   globalThis.fetch = vi.fn((url, options = {}) => {
     const method = options.method || 'GET'
@@ -70,6 +77,9 @@ afterEach(() => {
   deployment = 'remote'
 })
 
+/** Put the page at this address (path and ?from=…), as if it had been opened there. */
+function at(address) { window.history.replaceState({}, '', address) }
+
 async function show(page = <ManageSensors />) {
   await act(async () => { root.render(page) })
   await act(async () => {})
@@ -92,11 +102,10 @@ describe('whether a sensor is connected', () => {
 })
 
 describe('adding a sensor', () => {
-  it('shows None yet, then the code, then notices by itself when the sensor uses it', async () => {
+  it('shows the code, then notices by itself when the sensor uses it; Done goes back', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
-    await show()
-    expect(container.textContent).toContain('None yet')
-    await press('Add my sensor')
+    at('/athlete/sensors/add')
+    await show(<AddSensorPage />)
     expect(container.textContent).toContain('K7MQ-2XPR')
     expect(container.textContent).toContain('Waiting for your sensor…')
 
@@ -105,10 +114,8 @@ describe('adding a sensor', () => {
     expect(container.textContent).toContain('ea-3f9c is added and connected')
     expect(container.textContent).toContain("Used. It won't work again.")
 
-    sensors = [{ node_id: 'ea-3f9c', last_seen: new Date().toISOString(), is_active: true }]
     await press('Done')
-    expect(container.textContent).toContain('ea-3f9c')
-    expect(container.textContent).toContain('Connected · seen just now')
+    expect(navigate).toHaveBeenCalledWith('/athlete/home', { replace: true })
   })
 
   // The sensor's setup page fills the phone's screen, so the code is the one thing the
@@ -116,8 +123,7 @@ describe('adding a sensor', () => {
   it('copies the code with one press', async () => {
     const writeText = vi.fn(() => Promise.resolve())
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
-    await show()
-    await press('Add my sensor')
+    await show(<AddSensorPage />)
     await press('Copy')
     expect(writeText).toHaveBeenCalledWith('K7MQ-2XPR')
     expect(container.textContent).toContain('Copied ✓')
@@ -126,14 +132,61 @@ describe('adding a sensor', () => {
 
   it('says when the code ran out, and a new code can be got', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
-    await show()
-    await press('Add my sensor')
+    await show(<AddSensorPage />)
     codeStatus = { status: 'expired', sensor: null }
     await act(async () => { await vi.advanceTimersByTimeAsync(3100) })
     expect(container.textContent).toContain('This code ran out.')
     await press('Get a new sensor code')
     expect(calls.filter((c) => c === 'POST /api/athlete/sensor-code/')).toHaveLength(2)
     expect(container.textContent).toContain('Waiting for your sensor…')
+  })
+})
+
+describe('the way in and out (spec 10)', () => {
+  it('with no sensor, Add my sensor opens the codes straight away, saying where from', async () => {
+    await show(<SensorRow from="account" />)
+    expect(container.textContent).toContain('None yet')
+    await press('Add my sensor')
+    expect(navigate).toHaveBeenCalledWith('/athlete/sensors/add?from=account')
+    vi.mocked(navigate).mockReset()
+    await show(<SensorRow />)
+    await press('Add my sensor')
+    expect(navigate).toHaveBeenCalledWith('/athlete/sensors/add')
+  })
+
+  it('with a sensor, Manage opens My sensors, saying where from', async () => {
+    sensors = [{ node_id: 'ea-3f9c', last_seen: null, is_active: true }]
+    await show(<SensorRow from="account" />)
+    await press('Manage')
+    expect(navigate).toHaveBeenCalledWith('/athlete/sensors?from=account')
+  })
+
+  it('the codes opened from Account lead back to Account, by the shared back link', async () => {
+    at('/athlete/sensors/add?from=account')
+    await show(<AddSensorPage />)
+    const back = container.querySelectorAll('.ui-backlink')
+    expect(back).toHaveLength(1)                                   // the shared one, no hand-drawn copy
+    expect(back[0].textContent).toBe('‹ Account')
+    await act(async () => { back[0].click() })
+    expect(navigate).toHaveBeenCalledWith('/athlete/account')
+  })
+
+  it('My sensors opened from Account: back to Account, and adding keeps that on the way back', async () => {
+    at('/athlete/sensors?from=account')
+    await show()
+    expect(container.querySelector('.ui-backlink').textContent).toBe('‹ Account')
+    await press('Add my sensor')
+    expect(navigate).toHaveBeenCalledWith('/athlete/sensors/add?from=sensors&up=account')
+    expect(backFor('?from=sensors&up=account')).toEqual({ label: 'My sensors', to: '/athlete/sensors?from=account' })
+  })
+
+  it('every back link names where the page was opened from, or Home', () => {
+    expect(backFor('')).toEqual({ label: 'Home', to: '/athlete/home' })
+    expect(backFor('?from=account')).toEqual({ label: 'Account', to: '/athlete/account' })
+    expect(backFor('?from=sessions')).toEqual({ label: 'All sessions', to: '/athlete/sessions' })
+    expect(backFor('?from=sensors')).toEqual({ label: 'My sensors', to: '/athlete/sensors' })
+    expect(backFor('?from=elsewhere')).toEqual({ label: 'Home', to: '/athlete/home' })
+    expect(backFor('?from=account&up=sessions')).toEqual({ label: 'Account', to: '/athlete/account' })
   })
 })
 

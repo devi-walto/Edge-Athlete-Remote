@@ -15,11 +15,15 @@
 //                    1 · the school code (green, big, to remember), 2 · the sensor code
 //                    (with Copy). The same two words are used on the sensor's page. It
 //                    asks the server every few seconds, so it changes by itself when the
-//                    sensor claims the code.
+//                    sensor claims the code. Its own address (/athlete/sensors/add), so the
+//                    sensor row can open it straight away when there's no sensor yet; its
+//                    back link and Done lead to wherever it was opened from.
 // Remote only: a gym's sensors are linked to racks by a coach, as before.
 
 import { useCallback, useEffect, useState } from 'react'
 import { signInHeaders } from '../api/client.js'
+import { navigate } from '../router.js'
+import AthletePage, { SENSOR_ADD_PATH, backFor } from './AthletePage.jsx'
 
 const CODE = '/api/athlete/sensor-code/'
 const SENSORS = '/api/athlete/sensors/'
@@ -120,7 +124,11 @@ export function MySensorSection({ onAdd }) {
   </section>
 }
 
-export function AddSensorPage({ onDone }) {
+export function AddSensorPage() {
+  const search = window.location.search
+  const back = backFor(search)
+  // replace: Back after Done must not reopen this page, which would ask for a new code.
+  const done = () => navigate(back.to, { replace: true })
   // code: the text, shown once; status: waiting | used | expired | offline
   const [code, setCode] = useState(null)
   const [state, setState] = useState({ status: 'loading' })
@@ -163,12 +171,9 @@ export function AddSensorPage({ onDone }) {
       setCopied(false)
     }
   }
-  return <main className="athlete-page">
-    <header className="athlete-bar is-back">
-      <button type="button" className="acct-quiet is-strong athlete-back" onClick={onDone}>‹ Home</button>
-    </header>
-    <div className="athlete-body">
-      <h1 className="athlete-title">Add my sensor</h1>
+  return <AthletePage here={SENSOR_ADD_PATH + search} back={back}>
+    <div className="athlete-add-sensor">
+      <h1 className="athlete-page-title">Add my sensor</h1>
       {state.status === 'offline' && <p className="acct-error" role="alert">
         The school couldn't be reached. Check your connection, then get a code again.</p>}
       {code && school && !used && <div className="athlete-school-card">
@@ -200,9 +205,9 @@ export function AddSensorPage({ onDone }) {
             : 'Waiting for your sensor…'}</b>
       </div>}
       {used
-        ? <button type="button" className="acct-primary athlete-wide" onClick={onDone}>Done</button>
+        ? <button type="button" className="acct-primary athlete-wide" onClick={done}>Done</button>
         : <button type="button" className="acct-solid athlete-wide" onClick={newCode}
           disabled={state.status === 'loading'}>Get a new sensor code</button>}
     </div>
-  </main>
+  </AthletePage>
 }

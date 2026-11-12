@@ -480,6 +480,23 @@ closes in place; sign out leaves nothing to go Back to), server 1. Browser, test
 name menu → Account → help open → back to Home; Account → Sign out of this phone → sign-in,
 and Back from there stays on sign-in.
 
+**After review (Devin, 2026-11-12): no extra level to add a sensor, and back links name
+where you came from.** With no sensor there's nothing to manage, so the My sensor row's
+**Add my sensor** opens the codes page straight away instead of an empty My sensors page;
+with a sensor, **Manage** opens My sensors as before. The codes page got its own address
+(`/athlete/sensors/add`) and the shared top bar and back link (it had its own hand-drawn
+"‹ Home" before). One rule for every back link, `backFor` in `AthletePage.jsx` (it moved
+there from the past-session page): a page opened from Account, All sessions or My sensors
+is told so in its address (`?from=account`) and its back link names that place, otherwise
+Home. Done on the codes page goes back the same way, replacing the page so Back can't ask
+for another code. Adding from My sensors keeps My sensors' own way back
+(`?from=sensors&up=account`). Tests: frontend 5 new in `mySensor.test.jsx` (the shortcut,
+Manage, the codes page's back link from Account, My sensors from Account, the back-link
+rule); the add-sensor tests now open the codes page directly. Browser, test stack, 375 px,
+Jordan with no sensor: Account → Add my sensor → codes with "‹ Account" → back to Account;
+Home → Add my sensor → "‹ Home", browser Back → Home. With three test sensors: Account →
+Manage → "‹ Account" → back to Account.
+
 **Stop. Devin reviews.**
 
 ## Phase 6 — moved to spec 19

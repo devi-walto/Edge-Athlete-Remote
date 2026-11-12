@@ -7,6 +7,9 @@
 // has one back link under the bar. It also checks the phone is still signed in: if not,
 // it goes to sign-in and comes back here afterwards. And it knows the athlete's name, so a
 // page never has to fetch it just for the top bar.
+//
+// backFor() is the one rule for where a back link goes: a page opened from somewhere other
+// than Home is told so in its address (?from=account), and its back link names that place.
 import { useEffect, useState } from 'react'
 import { navigate } from '../router.js'
 import BackLink from '../ui/BackLink.jsx'
@@ -19,6 +22,29 @@ import './athlete.css'
 export const HOME_PATH = '/athlete/home'
 export const ACCOUNT_PATH = '/athlete/account'
 export const SENSORS_PATH = '/athlete/sensors'
+export const SENSOR_ADD_PATH = '/athlete/sensors/add'
+export const SESSIONS_PATH = '/athlete/sessions'
+
+// The places a drill-down page can be opened from, by the word its address carries.
+const FROM = {
+  account: { label: 'Account', to: ACCOUNT_PATH },
+  sessions: { label: 'All sessions', to: SESSIONS_PATH },
+  sensors: { label: 'My sensors', to: SENSORS_PATH },
+}
+
+/** The back link for a page opened with ?from=<place>: that place, or Home. My sensors can
+ *  itself have been opened from Account, so ?from=sensors&up=account goes back to My sensors
+ *  with its own way back kept. */
+export function backFor(search) {
+  const params = new URLSearchParams(search)
+  const place = FROM[params.get('from')]
+  if (!place) return { label: 'Home', to: HOME_PATH }
+  const up = params.get('from') === 'sensors' && FROM[params.get('up')] ? `?from=${params.get('up')}` : ''
+  return { ...place, to: place.to + up }
+}
+
+/** "?from=<place>" for a link opened from `place`, or nothing from Home. */
+export const fromQuery = (place) => (place && FROM[place] ? `?from=${place}` : '')
 
 /** Not signed in (or no longer): off to sign-in, and back to `here` afterwards. */
 export function toSignIn(here) {

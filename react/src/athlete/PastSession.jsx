@@ -16,17 +16,9 @@ import { velocityColor } from '../rack/velocity.js'
 import BarChart from '../ui/BarChart.jsx'
 import { formatLoad, useUnit } from '../units.js'
 import SectionLabel from '../ui/SectionLabel.jsx'
-import AthletePage, { HOME_PATH, toSignIn } from './AthletePage.jsx'
+import AthletePage, { SESSIONS_PATH, backFor, toSignIn } from './AthletePage.jsx'
 import { SESSIONS, dayLabel, getJson } from './athleteApi.js'
 import { DayTiles, speedLabel } from './SessionEnded.jsx'
-import { SESSIONS_PATH } from './SessionRow.jsx'
-
-/** The back link: All sessions when opened from there (?from=sessions), otherwise Home. */
-export function backFor(search) {
-  return new URLSearchParams(search).get('from') === 'sessions'
-    ? { label: 'All sessions', to: SESSIONS_PATH }
-    : { label: 'Home', to: HOME_PATH }
-}
 
 /** "Set 2 · 225 lb × 5 · 0.66 m/s", or "… · not measured" for a typed-in set. The load is in
  *  the phone's chosen unit ("102 kg × 5"); the speed is always m/s. */

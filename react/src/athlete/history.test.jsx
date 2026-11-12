@@ -26,7 +26,8 @@ vi.mock('../useDeployment.js', () => ({ default: () => 'remote', useInstallation
 
 const { navigate } = await import('../router.js')
 const { default: Sessions, byMonth } = await import('./Sessions.jsx')
-const { default: PastSession, backFor, setLine } = await import('./PastSession.jsx')
+const { default: PastSession, setLine } = await import('./PastSession.jsx')
+const { backFor } = await import('./AthletePage.jsx')
 const { default: Home } = await import('./Home.jsx')
 const { setCoachToken, setSignedInRole } = await import('../coach/api.js')
 

@@ -75,7 +75,7 @@ describe('Account', () => {
     const labels = [...host.querySelectorAll('main button')].map((b) => b.textContent.trim())
     expect(labels).toEqual(['', 'Chris Vale▾', '‹ Home', 'Manage', 'Changing your password? ▾', 'Sign out of this phone'])
     await act(async () => { button('Manage').click() })
-    expect(navigate).toHaveBeenCalledWith('/athlete/sensors')
+    expect(navigate).toHaveBeenCalledWith('/athlete/sensors?from=account')
     await act(async () => { button('Changing your password?').click() })
     expect(writes).toEqual([])                                                   // nothing was sent anywhere
   })
