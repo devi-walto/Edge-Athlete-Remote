@@ -133,12 +133,16 @@ describe('the movements', () => {
     expect([...host.querySelectorAll('.ui-bar-inside')].map((e) => e.textContent)).toEqual(['225 lb', '235 lb', '245 lb'])
     expect([...host.querySelectorAll('.ui-bar-below')].map((e) => e.textContent)).toEqual(['Oct 14', 'Oct 21', 'Nov 4'])
     expect(text()).toContain('Est. max')
+    const values = [...host.querySelectorAll('.athlete-progress-panel .ui-tiles b')]
+    expect(values.map((b) => b.textContent)).toEqual(['0.78 m/s', '245 lb', '300 lb'])
+    expect(values.map((b) => b.className)).toEqual(['is-mint', '', 'is-lime'])          // as on F_Ath_P2
     await act(async () => { button('Bench Press').click() })
     expect(host.querySelectorAll('.athlete-progress-panel')).toHaveLength(1)
     expect(text()).toContain('Each bar = 1 week · its best top set (m/s)')
     expect(text()).toContain('Lighter bars: periods the range only partly covers')
     expect(host.querySelector('.ui-bar-fill.is-faded')).not.toBeNull()
     expect(text()).toContain('--')
+    expect(text()).toContain('No max yet: it appears after a set of 1 to 12 reps')
   })
 
   it('the ⓘ opens its explanation in place', async () => {
@@ -146,7 +150,7 @@ describe('the movements', () => {
     await act(async () => { button('Back Squat').click() })
     expect(host.querySelector('.athlete-progress-explain')).toBeNull()
     await act(async () => { host.querySelector('.athlete-info').click() })
-    expect(host.querySelector('.athlete-progress-explain').textContent).toContain('the max your weights are worked out from')
+    expect(host.querySelector('.athlete-progress-explain').textContent).toContain('The max your weights are worked out from')
   })
 
   it('with kilograms chosen every load reads kg (nearest 0.5) and every speed still reads m/s', async () => {
@@ -159,6 +163,8 @@ describe('the movements', () => {
     expect(text()).not.toMatch(/\d lb\b/)
     expect([...host.querySelectorAll('.ui-bar-above')].every((e) => e.textContent.endsWith('m/s'))).toBe(true)
     expect(localStorage.getItem('ea_load_unit')).toBe('kg')
+    // LB | KG is a setting, not the screen's action: chosen in grey, never a second lime
+    expect(host.querySelector('.athlete-progress-legend .ui-pills').classList.contains('ui-pills--quiet')).toBe(true)
   })
 
   it('the PDF asks for the same range in the chosen unit', async () => {
@@ -177,7 +183,8 @@ describe('the helpers and Home', () => {
     expect(legendFor('quarter')).toBe('Each bar = 1 quarter · its best top set (m/s)')
     expect(changeLabel(null)).toBeNull()
     expect(changeLabel(-0.003)).toBe('±0.00 m/s')                               // too small to show: not a drop
-    expect(maxTile({ weight_lbs: 300, source: 'manual' }, 'lb')).toEqual({ label: 'Max', value: '300 lb' })
+    expect(maxTile({ weight_lbs: 300, source: 'manual' }, 'lb')).toEqual({ label: 'Max', value: '300 lb', tone: 'lime' })
+    expect(maxTile({ weight_lbs: 262, source: 'estimated' }, 'lb').label).toBe('Est. max')
     expect(maxTile(null, 'lb')).toEqual({ label: 'Est. max', value: '--', quiet: true })
   })
 

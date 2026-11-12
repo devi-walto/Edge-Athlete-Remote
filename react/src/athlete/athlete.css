@@ -115,7 +115,7 @@
 .athlete-progress-legend-text { color: var(--muted); display: flex; flex: 1; flex-direction: column; font-size: 11px; gap: 2px; line-height: 1.4; min-width: 0; }
 .athlete-progress-legend .ui-pills { flex: none; }
 .athlete-progress-note { color: var(--muted); font-size: 11px; }
-.athlete-progress-explain { color: var(--soft-ink); display: flex; flex-direction: column; font-size: 12px; gap: 4px; line-height: 1.45; margin: 0; }
+.athlete-progress-explain { color: var(--soft-ink); font-size: 12px; line-height: 1.5; margin: 0; }
 .athlete-info { background: transparent; border: 0; color: var(--muted); cursor: pointer; font: inherit; font-size: 13px; line-height: 1; min-height: 24px; padding: 0 4px; }
 .athlete-info:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
 .athlete-progress-link { align-self: flex-start; margin: 4px 0 0 -10px; }

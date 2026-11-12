@@ -6,12 +6,13 @@ import './ui.css'
 
 /** size: 'normal', or 'small' for three tiles inside a narrow panel (numbers with a unit,
  *  "185 lb", stay on one line). items [{ label, value, of (a quieter "/ 9" after it), quiet (a word, not a number, e.g.
- *  "not measured"), short (amber: under plan), info (an element after the label) }] */
+ *  "not measured"), short (amber: under plan), tone ('lime' the key number, e.g. a max;
+ *  'mint' a speed), info (an element after the label) }] */
 export default function Tiles({ items, size = 'normal', className = '' }) {
   return <div className={`ui-tiles${size === 'small' ? ' ui-tiles--small' : ''}${className ? ` ${className}` : ''}`} style={{ '--tiles': items.length }}>
     {items.map((t) => <div key={t.label}>
       <span className="ui-tile-label">{t.label}{t.info}</span>
-      <b className={[t.quiet && 'is-quiet', t.short && 'is-short'].filter(Boolean).join(' ') || undefined}>
+      <b className={[t.quiet && 'is-quiet', t.short && 'is-short', t.tone && !t.quiet && `is-${t.tone}`].filter(Boolean).join(' ') || undefined}>
         {t.value}{t.of != null && <small> / {t.of}</small>}
       </b>
     </div>)}

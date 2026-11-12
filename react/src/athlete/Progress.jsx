@@ -50,7 +50,7 @@ export const wentDown = (change) => change != null && Math.round(change * 100) <
 /** The max tile: EST. MAX (the app worked it out), MAX (the coach entered it), or --. */
 export function maxTile(max, unit) {
   if (!max) return { label: 'Est. max', value: '--', quiet: true }
-  return { label: max.source === 'manual' ? 'Max' : 'Est. max', value: formatLoad(max.weight_lbs, unit) }
+  return { label: max.source === 'manual' ? 'Max' : 'Est. max', value: formatLoad(max.weight_lbs, unit), tone: 'lime' }
 }
 
 function MovementPanel({ movement, unit }) {
@@ -76,16 +76,17 @@ function MovementPanel({ movement, unit }) {
       }))} />
     {partial && <span className="athlete-progress-note">Lighter bars: periods the range only partly covers</span>}
     <Tiles size="small" items={[
-      { label: 'Best rep', value: movement.best_rep_velocity == null ? 'not measured' : `${movement.best_rep_velocity.toFixed(2)}`,
-        quiet: movement.best_rep_velocity == null },
+      { label: 'Best rep', value: movement.best_rep_velocity == null ? 'not measured' : `${movement.best_rep_velocity.toFixed(2)} m/s`,
+        quiet: movement.best_rep_velocity == null, tone: 'mint' },
       { label: 'Top load', value: formatLoad(movement.top_load_lbs, unit) ?? '--', quiet: movement.top_load_lbs == null },
       { ...max, info: <button type="button" className="athlete-info" aria-expanded={explaining}
-        aria-label="What is this number?" onClick={() => setExplaining(!explaining)}>ⓘ</button> },
+        aria-label={`What is ${max.label}?`} onClick={() => setExplaining(!explaining)}>ⓘ</button> },
     ]} />
     {explaining && <p className="athlete-progress-explain" role="note">
-      <span>This is the max your weights are worked out from.</span>
-      <span>Est. max: the app worked it out from your best set when a session ended. Max: your coach entered it.</span>
+      The max your weights are worked out from. After each session the app estimates it from
+      your best set, so it can go up or down. If your coach enters one, it shows without "Est."
     </p>}
+    {!movement.max && <span className="athlete-progress-note">No max yet: it appears after a set of 1 to 12 reps, or when your coach enters one.</span>}
   </div>
 }
 

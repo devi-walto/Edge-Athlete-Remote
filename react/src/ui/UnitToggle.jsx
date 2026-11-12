@@ -8,6 +8,6 @@ import { setUnit, useUnit } from '../units.js'
 import PillGroup from './PillGroup.jsx'
 
 export default function UnitToggle({ className }) {
-  return <PillGroup className={className} label="Units" value={useUnit()} onChange={setUnit}
+  return <PillGroup className={className} tone="quiet" label="Units" value={useUnit()} onChange={setUnit}
     choices={[{ value: 'lb', label: 'LB' }, { value: 'kg', label: 'KG' }]} />
 }
