@@ -311,19 +311,45 @@ Server 814 in each version (local skips 8), frontend 502, build passes.
 
 ## Phase 1 — What the common login may do online
 
-- The rack routes allow it **for racks its own device made**, and no other rack.
-- `athletes_view` (the check-in list's roster), `prescriptions_view` and
-  `athlete_progress` allow it, the last two only for athletes checked in at its rack.
-- `room_state` (the room display) allows it.
-- Registering a rack, asking its number and the NFC tap stay refused: online a rack is
-  made by signing in with the common login (Phase 2).
+**Checked against every call the rack screen and the TV make** (2026-11-12, Devin asked:
+`api/client.js`, `rack/*`, `useLiveRoomState.js`). The first version of this list named the
+coach's whole athlete list for the check-in names and missed the two routes the screen
+really reads them from.
+
+- **For racks its own device made, and no other** (the device's `RackScreen` rows; Phase 2
+  makes them): the rack's state (read and change), the controller lease (acquire,
+  heartbeat, release), check in, the rack's "At this rack" list (`rack_checkins`), and
+  starting and finishing a set (`set_create` names the rack; `set_complete` is allowed for a
+  set on one of its racks).
+- **Read only:** the running session and its roster, the check-in list's names
+  (`sessions_active`); each athlete's Lifting / Resting / Ready with its timer
+  (`session_status`); an athlete's day on the rack (`athlete_progress`), for an athlete in
+  the running session (not only one checked in at its rack: the screen asks for it the
+  moment an athlete is picked, sometimes before the check-in lands); and the room display
+  (`room_state`, names only; `?details=true` stays coach-only).
+- **Refused online, on purpose:** the coach's athlete list (`athletes_view`, archived
+  athletes and all) and prescriptions (`prescriptions_view`): the rack screen reads neither;
+  the less a shared password reads, the better. The NFC tap, registering a rack and asking
+  its number (online a rack is made by its device, Phase 2). The sensor list, linking a
+  sensor and the Bluetooth routes (`nodes_list`, `node-assignment`, `ble/*`,
+  `ble-selection`, `sensor-health`): pairing replaces them (Phase 3).
+- **Already fine, nothing to open:** live reps, the rack's live state, rack commands from
+  Room Layout: all reach the tablet over the broker's screens door, which any browser may
+  read without a login.
+- **For Phase 2 and 3's new routes** (make and name a rack, which rack am I, the school's
+  sensors, pairing): each is open on a gym box with no login (Phase 5's local flow uses
+  them) and, online, allowed to the common login for its own device.
 
 **Done when:**
 
 - [ ] *(Unit test)* The route walk: each route lets the common login through exactly as
       listed, and refuses it on another device's rack.
+- [ ] *(Unit test)* From a tablet signed in with the common login: the check-in names, the
+      "At this rack" list and each athlete's Resting / Lifting / Ready all answer.
 - [ ] Local is unchanged: the walk's local pass still finds every route open.
 - [ ] Full suite passes in both modes.
+
+**Stop. Devin reviews.**
 
 ## Phase 2 — Racks that make and name themselves
 
