@@ -240,6 +240,10 @@ hand-drawn version comes back.
   Group, LB | KG), `ui/RangePicker` (presets + From / To + label, coach History and athlete
   progress), `ui/UnitToggle` and `ui/Load` (pounds or kilograms, one device setting in
   `units.js`), `ui/TrendLine`, `ui/Tiles`.
+- **Wanted later (Devin, 2026-11-11), not built:** `ui/RangePicker`'s From and To boxes become
+  one inline calendar where both the start and the end are picked by tapping days, with the
+  days between highlighted. The presets stay. Being the shared piece, the change reaches the
+  coach's History and the athlete's My Recent Progress at once. Needs a board first.
 - Copies that already exist elsewhere are for a later audit spec; meanwhile, one found
   while working in a file is folded in then.
 

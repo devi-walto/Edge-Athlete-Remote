@@ -2,8 +2,9 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06; rewritten 2026-11-11 after the athlete-account design was approved
-- Status: Phases 0–4 built 2026-11-11 (the Home route, the Home page, the session-ended page,
-  All sessions and a past session, My Recent Progress), awaiting review. Phase 5 (Account) left. No decisions
+- Status: all phases (0–5) built 2026-11-11 (the Home route, the Home page, the session-ended
+  page, All sessions and a past session, My Recent Progress, Account), awaiting review and
+  the PR. Left: the docs below, and the Phase 1–2 browser checks that need a live session. No decisions
   open. (Phase 6, the room display for athletes, moved to spec 19 on 2026-11-11)
 - Form item: Definition of Done #4 (remote athlete access)
 - Depends on: [03 Login links](03-athlete-login-links.md) (the sign-in pages),
@@ -466,9 +467,18 @@ name, username and groups come from the athlete's session details.
 
 **Done when:**
 
-- [ ] *(Frontend test)* Nothing on the page edits anything except through Manage.
-- [ ] *(Frontend test)* The password help opens and closes in place.
-- [ ] *(Browser)* Name menu → Account → back; Sign out from Account.
+- [x] *(Frontend test)* Nothing on the page edits anything except through Manage.
+- [x] *(Frontend test)* The password help opens and closes in place.
+- [x] *(Browser)* Name menu → Account → back; Sign out from Account.
+
+**Phase 5 result (2026-11-11).** `athlete/Account.jsx` to the boards: the header card, Name /
+Username / Teams rows (read-only), My sensor with Manage (the shared `SensorRow`), the lime
+"Changing your password?" opening the coach-link text in place, and Sign out of this phone.
+No route of its own: Home's details gained `username`. Tests: frontend 4 in
+`account.test.jsx` (no inputs, only Manage leads anywhere, nothing is sent; help opens and
+closes in place; sign out leaves nothing to go Back to), server 1. Browser, test stack, 390 px:
+name menu → Account → help open → back to Home; Account → Sign out of this phone → sign-in,
+and Back from there stays on sign-in.
 
 **Stop. Devin reviews.**
 

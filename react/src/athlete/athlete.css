@@ -119,3 +119,9 @@
 .athlete-info { background: transparent; border: 0; color: var(--muted); cursor: pointer; font: inherit; font-size: 13px; line-height: 1; min-height: 24px; padding: 0 4px; }
 .athlete-info:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
 .athlete-progress-link { align-self: flex-start; margin: 4px 0 0 -10px; }
+
+/* ── Account (spec 10, Phase 5; boards F_Ath_A1, A2) ── */
+.athlete-account-rows { display: flex; flex-direction: column; }
+.athlete-account-help { display: flex; flex-direction: column; gap: 6px; }
+.athlete-account-help > .ui-button { align-self: flex-start; font-size: 14px; margin-left: -10px; }
+.athlete-account-help-text { background: var(--panel); border: 1px solid var(--line); color: var(--soft-ink); font-size: 13px; line-height: 1.5; margin: 0; padding: 12px 14px; }

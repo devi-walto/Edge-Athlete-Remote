@@ -148,6 +148,7 @@ def home_for(athlete):
     group_names = {n for _, n in groups}
     return {
         'athlete': {'name': athlete.name, 'first_name': _first_name(athlete.name),
+                    'username': athlete.user.username if athlete.user_id else None,
                     'groups': [n for _, n in groups]},
         'live': _live(athlete, group_names),
         'coming_up': _coming_up(athlete, group_ids, timezone.localdate()),

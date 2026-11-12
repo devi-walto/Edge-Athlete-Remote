@@ -205,6 +205,9 @@ class HomeTests(APITestCase):
             self.assertNotIn(other.name.split()[0], body)
         self.assertNotIn('JV', body)
 
+    def test_their_own_username_for_the_account_page(self):
+        self.assertEqual(self.home(self.riley).data['athlete']['username'], 'riley')
+
     def test_a_coach_is_refused_and_no_login_is_unauthorised(self):
         coach = User.objects.create_user('coach', password='x-Unique-2026!')
         CoachProfile.objects.get_or_create(user=coach)
