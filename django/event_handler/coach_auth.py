@@ -27,7 +27,9 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .models import CoachProfile, InstallationSetup
 from .services import one_time_secrets
 from .deployment import is_hosted
-from .roles import ATHLETE, role_of
+from .authentication import DEVICE_CLAIM, check_still_signed_in
+from .roles import ATHLETE, COMMON, role_of
+from .services.passwords import set_new_password
 
 # How long a locally-issued setup code stays valid. Long enough to walk a
 # head coach through booting the box, short enough that a code left on a
@@ -256,7 +258,14 @@ class CoachTokenObtainPairSerializer(TokenObtainPairSerializer):
     HERE, with a plain sentence. Without this it would be handed a token that
     every route then refuses, and the person would see a signed-in screen where
     nothing works.
+
+    The common login (spec 18) signs in on a rack tablet or TV, online only, and
+    says which device it is (`device_id`, the id the browser made for itself): each
+    sign-in makes that device's record, and its tokens carry the record's id, so a
+    coach can sign that one device out later.
     """
+    device_id = serializers.RegexField(r'^[A-Za-z0-9_-]{1,64}$', required=False, write_only=True)
+    device_label = serializers.CharField(required=False, allow_blank=True, max_length=80, write_only=True)
 
     @classmethod
     def get_token(cls, user):
@@ -273,9 +282,34 @@ class CoachTokenObtainPairSerializer(TokenObtainPairSerializer):
             raise AuthenticationFailed(
                 'This login is not set up as a coach or an athlete. '
                 'Ask an administrator to set it up.', code='no_role')
+        if info['role'] == COMMON:
+            data.update(self._device_sign_in(attrs))
         data['must_change_password'] = must_change_password(self.user)
         data.update(info)
         return data
+
+    def _device_sign_in(self, attrs):
+        """Make this device's record and put its id in the tokens."""
+        from .models import CommonDevice
+        if not is_hosted():
+            raise AuthenticationFailed(
+                'The common login is for the online version. Rack tablets in a gym need no login.',
+                code='no_role')
+        device_id = attrs.get('device_id')
+        if not device_id:
+            raise serializers.ValidationError({'device_id': 'This device must say which device it is.'})
+        common = self.user.common_login
+        now = timezone.now()
+        with transaction.atomic():
+            # Signing in again closes this device's older sign-in, so it can't come back.
+            CommonDevice.objects.filter(common_login=common, device_id=device_id,
+                                        signed_out_at=None).update(signed_out_at=now)
+            device = CommonDevice.objects.create(
+                common_login=common, device_id=device_id, last_seen_at=now,
+                label=(attrs.get('device_label') or '').strip())
+        refresh = self.get_token(self.user)
+        refresh[DEVICE_CLAIM] = device.pk
+        return {'refresh': str(refresh), 'access': str(refresh.access_token)}
 
 
 class CoachTokenObtainPairView(LimitWrongAttempts, TokenObtainPairView):
@@ -299,6 +333,8 @@ class CheckedTokenRefreshSerializer(TokenRefreshSerializer):
         user = get_user_model().objects.filter(**{jwt_settings.USER_ID_FIELD: claim}).first()
         if role_of(user) is None:
             raise AuthenticationFailed('This login can no longer sign in.', code='user_inactive')
+        # A new password since, or this device signed out: no renewal (spec 18).
+        check_still_signed_in(user, RefreshToken(attrs['refresh']))
         data = super().validate(attrs)
         # Renewing hands out a new renewal token (ROTATE_REFRESH_TOKENS), which
         # would get the usual 7 days; an athlete keeps 30.
@@ -345,17 +381,26 @@ class PasswordChangeSerializer(serializers.Serializer):
 
 
 class PasswordChangeView(APIView):
-    """Let a signed-in coach replace their own password."""
+    """Let a signed-in coach replace their own password.
+
+    A new password signs out every other device signed in with the old one (spec 18),
+    this one included, so this device is handed a fresh sign-in in the answer. The
+    common login can't change its own password: an administrator does that, from
+    Room Layout, so a tablet can't lock every other one out.
+    """
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        if role_of(request.user) == COMMON:
+            return Response({'detail': 'An administrator changes the common login\'s password.',
+                             'code': 'permission_denied'}, status=403)
         form = PasswordChangeSerializer(data=request.data, context={'user': request.user})
         form.is_valid(raise_exception=True)
         with transaction.atomic():
             user = get_user_model().objects.select_for_update().get(pk=request.user.pk)
-            user.set_password(form.validated_data['new_password'])
-            user.save(update_fields=['password'])
+            set_new_password(user, form.validated_data['new_password'])
             CoachProfile.objects.update_or_create(
                 user=user, defaults={'must_change_password': False})
-        return Response(status=204)
+        fresh = CoachTokenObtainPairSerializer.get_token(user)
+        return Response({'refresh': str(fresh), 'access': str(fresh.access_token)})

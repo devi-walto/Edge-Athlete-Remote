@@ -216,7 +216,7 @@ class TemporaryPasswordTests(APITestCase):
         self.assertEqual(self.client.get('/api/auth/me/').status_code, 200)
         changed = self.client.post('/api/auth/password/', {
             'current_password': temp, 'new_password': 'Their-own-choice-2026!'}, format='json')
-        self.assertEqual(changed.status_code, 204)
+        self.assertEqual(changed.status_code, 200)   # with a fresh sign-in (spec 18)
 
         self.sign_in('newcoach', 'Their-own-choice-2026!')
         for route in self.COACH_ROUTES:

@@ -266,18 +266,48 @@ devices and signing one out (Phase 0).
 
 **Done when:**
 
-- [ ] The common login's role is common; a half-made or switched-off one gets nothing.
-- [ ] After a password change, no device signed in before it can renew, for a coach,
+- [x] The common login's role is common; a half-made or switched-off one gets nothing.
+- [x] After a password change, no device signed in before it can renew, for a coach,
       an athlete and the common login alike; the device that changed it stays signed in.
-- [ ] After signing out one device, the others still can renew.
-- [ ] An administrator makes the common login and changes its password; a plain coach
+- [x] After signing out one device, the others still can renew.
+- [x] An administrator makes the common login and changes its password; a plain coach
       gets 403 for both but can show the password and sign out one device; an athlete or
       the common login itself can't show it; there is never a second one.
-- [ ] The password is never in a list or any other answer than Show's, and Show gives the
+- [x] The password is never in a list or any other answer than Show's, and Show gives the
       new one right after a change.
-- [ ] *(Unit test)* The route walk gains a common column: every route that isn't opened
+- [x] *(Unit test)* The route walk gains a common column: every route that isn't opened
       to it in Phase 1 refuses it.
-- [ ] Full suite passes in both modes.
+- [x] Full suite passes in both modes.
+
+**Phase 0 result (2026-11-12).** Server only; the card and the tablet's sign-in screen
+come in Phase 4.
+- **Tables** (migration 0030, new and empty): `CommonLogin` (one row at most),
+  `CommonDevice` (one per sign-in on a tablet or TV), `PasswordSetAt`.
+- **The role:** `roles.py` answers `common`. A login attached to more than one kind is
+  refused.
+- **Signing in:** the common login signs in with its `device_id`, online only. Each sign-in
+  makes a device record whose id travels in its tokens; signing in again closes the old one.
+- **New passwords:** every password is now set through `services/passwords.py`
+  (`set_new_password`): a coach's own change, an administrator's reset, an athlete's login
+  link, the common login. A new
+  `CheckedJWTAuthentication` (now the app's sign-in check) refuses any sign-in made before
+  the password was last set, or from a signed-out device, **at once** (not just at
+  renewal, as first written: an 8-hour sign-in would otherwise keep working), and renewal
+  asks the same. A coach changing their own password gets a fresh sign-in in the answer
+  (200, was 204); the coach screens keep it. The common login can't change its own.
+- **Routes** (`common_login.py`, online only): the card (any coach; never the
+  password), Set up and Change password (administrators), Show (any coach, `no-store`),
+  sign one device out (any coach).
+- **Show:** the password is sealed with a key made from the server's secret
+  (`services/sealed.py`, new dependency `cryptography`).
+- **Security:** `IsCoachOrAthlete` no longer lets the common login through.
+
+Tests: 19 in `test_common_login.py`, including the route walk's common column (every
+route refuses it but signing in, "who am I" and the open-by-nature ones); 4 older tests
+updated for the 200 and the wording; 1 frontend test (the fresh sign-in is handed up).
+Server 814 in each version (local skips 8), frontend 502, build passes.
+
+**Stop. Devin reviews.**
 
 ## Phase 1 — What the common login may do online
 

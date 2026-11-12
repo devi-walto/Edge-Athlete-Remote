@@ -464,5 +464,23 @@ An online athlete's own pages: Home, their past sessions, their progress (spec 1
 <!-- routes:the-athlete-s-pages:end -->
 
 :::::
+
+## Unsorted
+
+Not filed into a group yet. Add a prefix to `GROUPS` in `docs/refresh-routes.py`.
+
+:::::{dropdown} 5 routes
+
+<!-- routes:unsorted:start -->
+| Route | Methods | Access | What it does | Handler |
+|---|---|---|---|---|
+| `/api/common-login/` | `GET` | remote only · 🔒 coach | The card: set up or not, its username, and the devices signed in with it | `common_login` |
+| `/api/common-login/set-up/` | `POST` | remote only · 🔒 administrator | Make the common login: a username and a password, typed by an administrator | `common_login_set_up` |
+| `/api/common-login/password/` | `POST` | remote only · 🔒 administrator | A new password, typed by an administrator | `common_login_password` |
+| `/api/common-login/show/` | `POST` | remote only · 🔒 coach | Show: the password, for a coach about to sign a tablet in | `common_login_show` |
+| `/api/common-login/devices/<int:device_pk>/sign-out/` | `POST` | remote only · 🔒 coach | Sign one device out (a lost or stuck tablet) | `common_device_sign_out` |
+<!-- routes:unsorted:end -->
+
+:::::
 <!-- ROUTES SECTION END -->
 

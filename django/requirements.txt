@@ -11,3 +11,4 @@ whitenoise==6.8.2           # lets Django serve its own admin/DRF static files u
 djangorestframework-simplejwt==5.3.1 # JWT token auth for the React frontend
 django-cors-headers==4.4.0 # Allows React (port 5173) to call Django (port 8000)
 reportlab==4.5.1           # renders the immutable DailyReport snapshot as a printable PDF
+cryptography==43.0.3       # seals the two passwords the app must show again (common login, rack Wi-Fi), spec 18

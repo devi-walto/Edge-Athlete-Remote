@@ -265,6 +265,69 @@ class CoachProfile(models.Model):
         return f"coach profile for {self.user.username}"
 
 
+class PasswordSetAt(models.Model):
+    """When a login's password was last set (spec 18, Phase 0).
+
+    A new password signs out every device signed in with the old one, for every kind of
+    login: a sign-in made before this moment is refused, both when it is used and when
+    it asks to be renewed (authentication.py). Written only by services/passwords.py,
+    the one place a password is set. A login with no row here has never had its password
+    changed since this was added, so nothing is refused.
+    """
+    user = models.OneToOneField('auth.User', on_delete=models.CASCADE, related_name='password_set_at')
+    at = models.DateTimeField()
+
+    def __str__(self):
+        return f"password set for {self.user.username} at {self.at:%Y-%m-%d %H:%M}"
+
+
+class CommonLogin(models.Model):
+    """The school's common login: one username and password shared by every rack
+    tablet and TV online (spec 18, Phase 0).
+
+    Like every login here, its role comes from what it is attached to (roles.py):
+    a login attached to this row is "common". One per school, so one row at most
+    (`one` is always 1, and unique). An administrator makes it and changes its
+    password; every coach may read it back with Show (a coach signs the tablets in),
+    so it is also kept sealed (`password_sealed`, services/sealed.py), which a normal
+    password never is. Online only: a gym box needs no login on its racks.
+    """
+    one = models.PositiveSmallIntegerField(default=1, unique=True, editable=False)
+    user = models.OneToOneField('auth.User', on_delete=models.CASCADE, related_name='common_login')
+    password_sealed = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(one=1), name='one_common_login')]
+
+    def __str__(self):
+        return f"common login {self.user.username}"
+
+
+class CommonDevice(models.Model):
+    """One device signed in with the common login: a rack tablet or a TV (spec 18).
+
+    Made at each sign-in; its id travels inside that sign-in's tokens, so signing one
+    device out (`signed_out_at`) stops that device at once and leaves the others alone.
+    A device signing in again gets a new row and its older open row is closed, so an
+    old sign-in can never come back to life. Rows are kept after sign-out, for the
+    record; the coach's list shows only the open ones.
+    """
+    common_login = models.ForeignKey(CommonLogin, on_delete=models.CASCADE, related_name='devices')
+    # The id the browser made for itself (device.js), the same one a rack tablet uses.
+    device_id = models.CharField(max_length=64)
+    label = models.CharField(max_length=80, blank=True)
+    signed_in_at = models.DateTimeField(auto_now_add=True)
+    last_seen_at = models.DateTimeField(null=True, blank=True)
+    signed_out_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['common_login', 'signed_out_at'])]
+
+    def __str__(self):
+        return f"{self.label or self.device_id} on {self.common_login}"
+
+
 class Athlete(models.Model):
     """A lifter. Optionally carries an NFC tag id for tap-to-identify at a rack."""
     name = models.CharField(max_length=255)

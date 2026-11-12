@@ -10,6 +10,8 @@ Nothing stores a role. A login's role comes from what it is attached to:
   - attached to a coach profile, with the staff flag on  -> "administrator"
   - attached to a coach profile                          -> "coach"
   - attached to an athlete record                        -> "athlete"
+  - attached to the school's common login (spec 18)      -> "common": the one
+    login every rack tablet and TV online shares
   - attached to nothing, or switched off, or not signed in -> None (refused)
 
 Every check in the app asks role_of(). That way a half-made account, or a new
@@ -24,6 +26,7 @@ logger = logging.getLogger(__name__)
 ADMINISTRATOR = 'administrator'
 COACH = 'coach'
 ATHLETE = 'athlete'
+COMMON = 'common'
 
 
 def _attached(user, name):
@@ -35,25 +38,29 @@ def _attached(user, name):
 
 
 def role_of(user):
-    """Return 'administrator', 'coach', 'athlete', or None.
+    """Return 'administrator', 'coach', 'athlete', 'common', or None.
 
-    None means "refuse". A login attached to BOTH a coach profile and an athlete
-    record is a data mistake, not a person with two jobs: we cannot tell which
-    it was meant to be, so it gets None and a warning in the log.
+    None means "refuse". A login attached to more than one of a coach profile, an
+    athlete record and the common login is a data mistake, not a person with two
+    jobs: we cannot tell which it was meant to be, so it gets None and a warning in
+    the log.
     """
     if user is None or not user.is_authenticated or not user.is_active:
         return None
 
     is_coach = _attached(user, 'coach_profile') is not None
     is_athlete = _attached(user, 'athlete') is not None
+    is_common = _attached(user, 'common_login') is not None
 
-    if is_coach and is_athlete:
+    if is_coach + is_athlete + is_common > 1:
         logger.warning(
-            'login %s is attached to both a coach profile and an athlete record; '
-            'refusing it until one of the two is removed', user.pk)
+            'login %s is attached to more than one of a coach profile, an athlete '
+            'record and the common login; refusing it until only one is left', user.pk)
         return None
     if is_coach:
         return ADMINISTRATOR if user.is_staff else COACH
     if is_athlete:
         return ATHLETE
+    if is_common:
+        return COMMON
     return None

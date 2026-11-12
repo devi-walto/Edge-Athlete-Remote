@@ -970,7 +970,7 @@ export default function Dashboard({ mode = "wall", coachState = "planning" }) {
   // same thing on every coach route, so this is the polite version of a locked door.
   if (needsCoach && me?.must_change_password) {
     return <ChangePassword accessToken={accessToken} forced onLogout={forget}
-      onChanged={() => setMe({ ...me, must_change_password: false })} />;
+      onChanged={(fresh) => { if (fresh) setAccessToken(fresh); setMe({ ...me, must_change_password: false }); }} />;
   }
   if (mode === "coach") {
     return <CoachView monitor={monitor} accessToken={accessToken} onLogout={forget} coachState={coachState} me={me} />;

@@ -49,7 +49,8 @@ class RoleOfTests(TestCase):
         both = make_login('both', coach=True, athlete=True)
         with self.assertLogs('event_handler.roles', level='WARNING') as logs:
             self.assertIsNone(role_of(both))
-        self.assertIn('both a coach profile and an athlete record', logs.output[0])
+        self.assertIn('more than one of a coach profile, an athlete record and the common login',
+                      logs.output[0])
 
     def test_a_switched_off_login_of_any_kind_is_refused(self):
         for name, kind in (('off_admin', dict(coach=True, is_staff=True)),

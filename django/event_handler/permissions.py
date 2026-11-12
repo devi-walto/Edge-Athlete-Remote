@@ -65,7 +65,8 @@ class IsInstallationAdmin(BasePermission):
     """Let through an administrator only.
 
     The administrator flag is the sole difference between an administrator and
-    an ordinary coach, and it guards exactly one thing: managing coach logins.
+    an ordinary coach, and it guards managing logins: coach logins, and making the
+    school's common login or changing its password (spec 18).
     ("Head coach" is only a label on a training group and is never checked.)
     """
 
@@ -96,11 +97,12 @@ class RemoteOnly(BasePermission):
 
 
 class IsCoachOrAthlete(BasePermission):
-    """Let through anyone with a role; refuse a login attached to nothing."""
+    """Let through a coach or an athlete; refuse a login attached to nothing, and the
+    common login (spec 18), which only gets the routes Phase 1 opens to it by name."""
 
     def has_permission(self, request, view):
         role = _role(request)
-        if role is None:
+        if role not in (ADMINISTRATOR, COACH, ATHLETE):
             return False
         if role in COACH_ROLES:
             refuse_while_password_change_due(request.user)

@@ -15,6 +15,7 @@ from django.urls import path
 from . import views
 from . import athlete_logins
 from . import athlete_sensors
+from . import common_login
 from . import athlete_pages
 from . import remote_sessions
 from . import deployment
@@ -104,6 +105,15 @@ urlpatterns = [
     path('athlete/sensors/', athlete_sensors.my_sensors, name='my_sensors'),
     path('athlete/sensors/<str:node_id>/', athlete_sensors.my_sensor, name='my_sensor'),
     path('sensors/claim/', athlete_sensors.SensorClaimView.as_view(), name='sensor_claim'),
+    # Remote only: the school's common login for rack tablets and TVs (spec 18;
+    # common_login.py). Any coach reads it, shows it, signs a device out; an
+    # administrator makes it and changes its password.
+    path('common-login/', common_login.common_login, name='common_login'),
+    path('common-login/set-up/', common_login.common_login_set_up, name='common_login_set_up'),
+    path('common-login/password/', common_login.common_login_password, name='common_login_password'),
+    path('common-login/show/', common_login.common_login_show, name='common_login_show'),
+    path('common-login/devices/<int:device_pk>/sign-out/', common_login.common_device_sign_out,
+         name='common_device_sign_out'),
 
     # exercise catalog
     path('exercises/', views.exercises_list, name='exercises_list'),

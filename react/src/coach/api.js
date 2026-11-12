@@ -116,12 +116,20 @@ export function fetchCurrentCoach(token) {
   return coachFetch('/api/auth/me/', { token })
 }
 
-export function changePassword(token, currentPassword, newPassword) {
-  return coachFetch('/api/auth/password/', {
+/** Change your own password. A new password signs out every device that was signed in
+ *  with the old one, this one included (spec 18), so the answer carries a fresh sign-in:
+ *  it is kept here, and returned so the screen holding the old token can switch to it. */
+export async function changePassword(token, currentPassword, newPassword) {
+  const fresh = await coachFetch('/api/auth/password/', {
     token,
     method: 'POST',
     body: { current_password: currentPassword, new_password: newPassword },
   })
+  if (fresh?.access) {
+    setCoachToken(fresh.access)
+    if (fresh.refresh) setRefreshToken(fresh.refresh)
+  }
+  return fresh
 }
 
 export function listCoaches(token) {

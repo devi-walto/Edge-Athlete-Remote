@@ -206,7 +206,9 @@ class PasswordChangeTests(APITestCase):
     def test_successful_change_clears_the_forced_flag_and_swaps_the_login(self):
         url = '/api/auth/password/'
         response = self.client.post(url, {'current_password': 'Temp-pass-2026!x', 'new_password': 'Brand-new-pass-2026!'}, format='json')
-        self.assertEqual(response.status_code, 204, response.data)
+        # 200 with a fresh sign-in: the new password signs out the old one (spec 18).
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(set(response.data), {'access', 'refresh'})
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password('Brand-new-pass-2026!'))
         self.assertFalse(CoachProfile.objects.get(user=self.user).must_change_password)

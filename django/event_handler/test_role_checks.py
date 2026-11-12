@@ -129,11 +129,12 @@ class CoachRoutesTests(RouteWalk):
 
 
 class AdministratorRoutesTests(RouteWalk):
-    def test_the_walk_found_them_and_they_are_all_coach_logins(self):
+    def test_the_walk_found_them_and_they_are_all_logins_an_admin_manages(self):
+        # Coach logins, and (spec 18) making the common login or changing its password.
         found = routes_guarded_by(IsInstallationAdmin)
-        self.assertGreaterEqual(len(found), 3)
+        self.assertGreaterEqual(len(found), 5)
         for route in found:
-            self.assertTrue(route['url'].startswith('/api/coaches/'), route['url'])
+            self.assertTrue(route['url'].startswith(('/api/coaches/', '/api/common-login/')), route['url'])
 
     def test_a_coach_gets_403(self):
         self.for_each(IsInstallationAdmin,

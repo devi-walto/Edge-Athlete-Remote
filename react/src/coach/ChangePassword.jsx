@@ -26,9 +26,10 @@ export default function ChangePassword({ accessToken, forced = false, onChanged,
     setBusy(true)
     setError('')
     try {
-      await changePassword(accessToken, current, next)
+      // The old sign-in stops working with the old password; hand the fresh one up.
+      const fresh = await changePassword(accessToken, current, next)
       setCurrent(''); setNext(''); setAgain('')
-      onChanged()
+      onChanged(fresh?.access || null)
     } catch (err) {
       setError(err.message || 'The password could not be changed.')
     } finally {

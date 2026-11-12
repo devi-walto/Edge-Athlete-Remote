@@ -44,10 +44,10 @@ export default function AccountPage({ page }) {
   // A temporary password comes first, whatever page was asked for.
   if (me?.must_change_password) {
     return <ChangePassword accessToken={token} forced onLogout={signOut}
-      onChanged={() => setMe({ ...me, must_change_password: false })} />
+      onChanged={(fresh) => { if (fresh) setToken(fresh); setMe({ ...me, must_change_password: false }) }} />
   }
   if (page === 'password') {
-    return <ChangePassword accessToken={token} onChanged={back} onCancel={back} />
+    return <ChangePassword accessToken={token} onChanged={(fresh) => { if (fresh) setToken(fresh); back() }} onCancel={back} />
   }
 
   return <main className="acct-page">

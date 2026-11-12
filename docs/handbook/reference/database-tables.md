@@ -1710,5 +1710,88 @@ code is how the school knows the sensor that sends it belongs to that athlete (s
   typing sensor IDs on the roster (claiming does it).
 
 :::::
+
+### `PasswordSetAt`
+
+When a login's password was last set (spec 18, Phase 0). A new password signs out every device signed in with the old one, for every kind of login: a sign-in made before this moment is refused, both when it is used and when it asks to be renewed (authentication.py). Written only by services/passwords.py, the one place a password is set. A login with no row here has never had its password changed since this was added, so nothing is refused.
+
+:::::{dropdown} Schema
+
+<!-- schema:PasswordSetAt:start -->
+| Column | Type | Notes |
+|---|---|---|
+| `user` | one-to-one → | → `auth.User`, on delete: `CASCADE`, reverse: `password_set_at` |
+| `at` | date + time | — |
+<!-- schema:PasswordSetAt:end -->
+
+<!-- TO FILL IN: move these two lines out of this comment, then retitle
+     the dropdown above from 'Schema' to 'Schema and decisions'.
+
+**Why it exists.** (what this table is for, in one or two sentences)
+
+**Decisions.** (what was chosen here, and what was rejected)
+-->
+
+:::::
+
+### `CommonLogin`
+
+The school's common login: one username and password shared by every rack tablet and TV online (spec 18, Phase 0). Like every login here, its role comes from what it is attached to (roles.py): a login attached to this row is "common". One per school, so one row at most (`one` is always 1, and unique). An administrator makes it and changes its password; every coach may read it back with Show (a coach signs the tablets in), so it is also kept sealed (`password_sealed`, services/sealed.py), which a normal password never is. Online only: a gym box needs no login on its racks.
+
+:::::{dropdown} Schema
+
+<!-- schema:CommonLogin:start -->
+| Column | Type | Notes |
+|---|---|---|
+| `one` | PositiveSmallIntegerField | **unique**, default `1` |
+| `user` | one-to-one → | → `auth.User`, on delete: `CASCADE`, reverse: `common_login` |
+| `password_sealed` | long text | — |
+| `created_at` | date + time | set on create |
+
+**Table rules**
+
+- `constraints = [models.CheckConstraint(condition=models.Q(one=1), name='one_common_login')]`
+<!-- schema:CommonLogin:end -->
+
+<!-- TO FILL IN: move these two lines out of this comment, then retitle
+     the dropdown above from 'Schema' to 'Schema and decisions'.
+
+**Why it exists.** (what this table is for, in one or two sentences)
+
+**Decisions.** (what was chosen here, and what was rejected)
+-->
+
+:::::
+
+### `CommonDevice`
+
+One device signed in with the common login: a rack tablet or a TV (spec 18). Made at each sign-in; its id travels inside that sign-in's tokens, so signing one device out (`signed_out_at`) stops that device at once and leaves the others alone. A device signing in again gets a new row and its older open row is closed, so an old sign-in can never come back to life. Rows are kept after sign-out, for the record; the coach's list shows only the open ones.
+
+:::::{dropdown} Schema
+
+<!-- schema:CommonDevice:start -->
+| Column | Type | Notes |
+|---|---|---|
+| `common_login` | link → | → `CommonLogin`, on delete: `CASCADE`, reverse: `devices` |
+| `device_id` | text | max 64 |
+| `label` | text | max 80 |
+| `signed_in_at` | date + time | set on create |
+| `last_seen_at` | date + time | optional |
+| `signed_out_at` | date + time | optional |
+
+**Table rules**
+
+- `indexes = [models.Index(fields=['common_login', 'signed_out_at'])]`
+<!-- schema:CommonDevice:end -->
+
+<!-- TO FILL IN: move these two lines out of this comment, then retitle
+     the dropdown above from 'Schema' to 'Schema and decisions'.
+
+**Why it exists.** (what this table is for, in one or two sentences)
+
+**Decisions.** (what was chosen here, and what was rejected)
+-->
+
+:::::
 <!-- SCHEMA SECTION END -->
 

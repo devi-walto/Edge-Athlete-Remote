@@ -17,6 +17,7 @@ from rest_framework.views import APIView
 
 from .models import CoachProfile
 from .permissions import IsInstallationAdmin
+from .services.passwords import set_new_password
 
 
 def _username_field():
@@ -159,8 +160,7 @@ class CoachResetPasswordView(APIView):
         temporary_password = generate_temporary_password()
         with transaction.atomic():
             user = get_user_model().objects.select_for_update().get(pk=user_id)
-            user.set_password(temporary_password)
-            user.save(update_fields=['password'])
+            set_new_password(user, temporary_password)   # signs out every device it was on (spec 18)
             CoachProfile.objects.update_or_create(
                 user=user, defaults={'must_change_password': True})
         body = serialize_coach(user)

@@ -237,6 +237,18 @@ it('changes a temporary password and reports success', async () => {
   expect(changed).toHaveBeenCalledTimes(1)
 })
 
+// Spec 18: a new password signs out the old sign-in, so the screen must hand the fresh
+// one up to whatever is holding the old token.
+it('hands the fresh sign-in up after a change', async () => {
+  changePassword.mockResolvedValue({ access: 'fresh-access', refresh: 'fresh-refresh' })
+  const changed = vi.fn()
+  await render(<ChangePassword accessToken="token" onChanged={changed} onCancel={vi.fn()} />)
+  const [current, next, again] = container.querySelectorAll('input')
+  await fill(current, 'old-pass'); await fill(next, 'my-own-password'); await fill(again, 'my-own-password')
+  await submit()
+  expect(changed).toHaveBeenCalledWith('fresh-access')
+})
+
 it('shows why a password change was refused', async () => {
   changePassword.mockRejectedValue(new Error('That password is incorrect.'))
   const changed = vi.fn()

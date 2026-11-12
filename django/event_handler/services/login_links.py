@@ -28,6 +28,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from .passwords import set_new_password
 from ..models import Athlete, AthleteLoginLink
 from . import one_time_secrets
 
@@ -85,9 +86,10 @@ def redeem(link_text, username, password):
             raise ValidationError({'username': ['That username is already taken.']})
         new_login = User(username=username)
         validate_password(password, user=new_login)
-        new_login.set_password(password)
+        new_login.set_unusable_password()
         new_login.full_clean(exclude=['password'])   # a taken or invalid username stops here
         new_login.save()
+        set_new_password(new_login, password)   # the one place a password is set (spec 18)
 
         athlete.user = new_login
         athlete.save(update_fields=['user'])
