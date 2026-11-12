@@ -32,7 +32,10 @@ their own phone.
   the others, it is not stored as a role: the login's role comes from what it is
   attached to (`roles.py`). **One per school, shared by every tablet and TV** (a
   username and password the staff know). Each device signed in with it gets its own
-  record, so a coach can see them and the racks they made.
+  record, so a coach can see them and the racks they made. **An administrator makes it
+  and changes its password directly, typing both; no login link** (Devin, 2026-11-12): a
+  link lets an athlete choose a password their coach never sees, but this one is a staff
+  password someone has to type into every tablet anyway.
 - **The flow on a tablet (Devin, 2026-10-27), kept as simple as the rack screen is:**
   1. **The normal sign-in screen, unchanged** (the athlete's, `F_Ath_R2`). Only where it
      lands afterwards differs.
@@ -102,9 +105,8 @@ their own phone.
   force-clears the rack, as today. (Why: see "Reps kept on the tablet" below.)
 - **The risk of a shared password is accepted.** Anyone who knows it can read the
   roster and the room, take an idle sensor, and check athletes in and log sets for them
-  while a session is running, from anywhere. If it is misused, a coach resets the common
-  login the same way as any other account (a fresh login link to set a new password);
-  every device is then signed out and signs in again with the new one. The sign-in's
+  while a session is running, from anywhere. If it is misused, an administrator types a
+  new password; every device is then signed out and signs in again with the new one. The sign-in's
   wrong-password limit applies to it as to any login.
 - **Local works the same way later**, after the class: same naming and pairing in a
   gym, minus the login, which a gym doesn't need. The local flow works today and is what
@@ -231,8 +233,16 @@ devices and signing one out (Phase 0).
   signed in with it.
 - `role_of()` answers **common** for it. A login attached to it and to anything else is
   refused, like the existing two-attachment case.
-- Any coach sets it up and resets it the way they do an athlete's login: a login link
-  to set the password (spec 03). A coach can also sign out one device.
+- **An administrator sets it up and changes its password directly** (Devin, 2026-11-12):
+  a username and a password typed in Room Layout's Common login strip, no login link.
+  The same rules as any password here (length, not a common one). Only administrators;
+  a plain coach sees the strip (the username, how many devices are signed in) and can
+  sign out one device, a lost or stuck tablet, but can't make the login or change its
+  password. Boards on the canvas's Proposed page (2026-11-12, the pieces
+  `F_RoomLayout_Remote` didn't draw): `F_CommonLogin_Setup` (an administrator makes it),
+  `F_CommonLogin_Change` (changes the password; every device signed out) and
+  `F_CommonLogin_CoachView` (a plain coach, set up or not). They need approval before
+  Phase 4 builds them.
 - **A new password signs out every device signed in with the old one, for every kind of
   login** (Devin, 2026-10-27), not just the common one. Passwords are set in three places
   today (a coach's own change in `coach_auth.py`, a coach's reset in `coach_accounts.py`,
@@ -248,6 +258,8 @@ devices and signing one out (Phase 0).
 - [ ] After a password change, no device signed in before it can renew, for a coach,
       an athlete and the common login alike; the device that changed it stays signed in.
 - [ ] After signing out one device, the others still can renew.
+- [ ] An administrator makes the common login and changes its password; a plain coach
+      gets 403 for both but can sign out one device; there is never a second one.
 - [ ] *(Unit test)* The route walk gains a common column: every route that isn't opened
       to it in Phase 1 refuses it.
 - [ ] Full suite passes in both modes.
