@@ -245,10 +245,10 @@ devices and signing one out (Phase 0).
   opens a **dialog over the page** (like Clear a rack), not a form in the card. A plain
   coach with none set up reads "ask an administrator". This replaces the strip
   `F_RoomLayout_Remote` drew above the racks; the TV's row from that strip is in the card's
-  list. Boards on the canvas's Proposed page: `F_CommonLogin_CoachView`,
-  `F_CommonLogin_Admin`, `F_CommonLogin_Change`, `F_CommonLogin_Setup` (proposed
-  2026-11-12, v4); once approved they go to Final designs and `F_RoomLayout_Remote` is
-  redrawn with the card.
+  list. Boards **approved 2026-11-12**, on Final designs in the Room Layout row (after
+  `F_Rack_Pairing`): `F_CommonLogin_CoachView`, `F_CommonLogin_Admin`,
+  `F_CommonLogin_Change`, `F_CommonLogin_Setup`. They win over `F_RoomLayout_Remote`'s
+  strip, whose title says so.
 - **Show needs the password kept readable** (a normal password is stored scrambled one
   way, and can't be shown again). This one is also kept encrypted with the server's key,
   read only by a coach's request to show it, never in any list, and replaced on every
@@ -349,6 +349,51 @@ devices and signing one out (Phase 0).
 - [ ] *(Browser)* Pairing a simulated sensor on a rack tablet, start to finish.
 - [ ] Full suite passes in both modes.
 
+## Phase 3b — One shared dialog (added 2026-11-12)
+
+Devin, 2026-11-12: the dialog over the page (a dark layer, a panel with a heading, a line
+of text, fields or a warning, then Cancel and one main button) is becoming common, so it
+is one shared piece before the screens below use it (spec 06 rule 13).
+
+- **`ui/Dialog`**, to the approved boards (`F_ClearRack`, `F_RemoveRack`,
+  `F_CommonLogin_Change`, `F_CommonLogin_Setup`): the small coloured label, the heading,
+  the line under it, then whatever goes inside, then the buttons at the bottom right:
+  Cancel and one main button, lime, or red-outlined for something that removes or ends
+  (Clear, Remove). Escape and Cancel close it; the keyboard stays inside it while it is
+  open and goes back to the button that opened it; the page behind doesn't scroll. At
+  phone width it fills the screen's width less the usual 16-pixel edge. A `size` option
+  for the rack tablet's bigger look (spec 06 rule 8: the corner switch's "Switch Rack 3
+  to the room display?").
+- **`ui/Field`**: a label, its box, a hint under it and an error in place of the hint,
+  wired so a screen reader reads them together. Used by the dialogs here and by any form
+  after.
+- **`ui/Notice`**: the boxed warning inside a dialog, amber (`F_CommonLogin_Change`: "All 9
+  devices … are signed out") or red (`F_ClearRack`: "Riley Brooks has a set in
+  progress").
+- **Folded in now** (the two dialogs already drawn by hand): the athlete's Remove sensor
+  confirm (`athlete/MySensor.jsx`) and the coach's login link dialog
+  (`coach/LoginLinkDialog.jsx`), each looking as it does today.
+- **Known, left for the coach specs or the audit spec:** 13 browser pop-ups
+  (`window.confirm`) on coach screens (Workouts, Planning, Coaches, Notes, the coach
+  tablet, archiving an athlete, cancelling a login link). They aren't drawn copies, but
+  each should become a `ui/Dialog` when its screen is rebuilt.
+- Spec 06 rule 13's list of shared pieces gains Dialog, Field and Notice.
+
+**Done when:**
+
+- [ ] *(Frontend test)* Dialog: Escape and Cancel close it; the keyboard can't leave it;
+      closing puts the keyboard back on the opener; one main button, lime or red; its
+      heading names it for a screen reader.
+- [ ] *(Frontend test)* Field: the label, hint and error are read with the box; the error
+      replaces the hint.
+- [ ] *(Frontend test, guard)* A `role="dialog"` or `aria-modal` written anywhere outside
+      `react/src/ui/` fails the suite.
+- [ ] The Remove sensor confirm and the login link dialog look as before (their existing
+      tests pass unchanged) and are built on Dialog.
+- [ ] Frontend suite and build pass.
+
+**Stop. Devin reviews.**
+
 ## Phase 4 — The screens
 
 **Approved 2026-10-27, on the Final designs page** (row "the coach's Room Layout for
@@ -379,7 +424,7 @@ PR #14).
 
 **Done when:**
 
-- [ ] Each screen matches its approved board.
+- [ ] Each screen matches its approved board; every dialog in it is `ui/Dialog`.
 - [ ] *(Browser)* A fresh tablet: sign in, keep or change the suggested name, pair a
       sensor, check an athlete in, finish a set.
 - [ ] *(Browser)* With no session running, a rack shows the waiting message (local and
