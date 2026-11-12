@@ -41,6 +41,21 @@ def _text(value, *, unit=""):
     return escape(f"{value}{unit}")
 
 
+def kg(lbs):
+    """Pounds to kilograms, to the nearest half kilogram (how the athlete's pages show it)."""
+    return round(lbs * 0.45359237 * 2) / 2
+
+
+def _load(lbs, unit):
+    """A load in the reader's unit, with the unit written: "225 lbs" or "102 kg"."""
+    if lbs is None:
+        return "Not measured"
+    if unit == "kg":
+        value = kg(lbs)
+        return escape(f"{value:g} kg")
+    return escape(f"{lbs} lbs")
+
+
 def _paragraph(value, style):
     return Paragraph(escape(str(value)) if value is not None else "Not measured", style)
 
@@ -67,7 +82,7 @@ def _styles():
     }
 
 
-def _result_table(workout_sets, styles):
+def _result_table(workout_sets, styles, unit="lb"):
     rows = [[
         _paragraph("Set ID", styles["body"]),
         _paragraph("Result", styles["body"]),
@@ -86,7 +101,7 @@ def _result_table(workout_sets, styles):
             _paragraph(workout_set.get("exercise"), styles["body"]),
             _paragraph(workout_set.get("set_number"), styles["body"]),
             _paragraph(workout_set.get("rack_number"), styles["body"]),
-            _paragraph(_text(workout_set.get("weight_lbs"), unit=" lbs"), styles["body"]),
+            _paragraph(_load(workout_set.get("weight_lbs"), unit), styles["body"]),
             _paragraph(workout_set.get("reps_completed"), styles["body"]),
             _paragraph(_text(workout_set.get("avg_velocity"), unit=" m/s"), styles["body"]),
             _paragraph(_text(workout_set.get("peak_velocity"), unit=" m/s"), styles["body"]),
@@ -121,7 +136,7 @@ def _result_table(workout_sets, styles):
     return table
 
 
-def _athlete_story(entry, styles):
+def _athlete_story(entry, styles, unit="lb"):
     athlete = entry.get("athlete", {})
     story = [
         _paragraph(athlete.get("name") or "Athlete unavailable", styles["heading"]),
@@ -153,20 +168,19 @@ def _athlete_story(entry, styles):
                 story.append(_paragraph(
                     f"Exercise {exercise.get('id')}: {exercise.get('position')}. {exercise.get('exercise')} | "
                     f"{_text(exercise.get('sets'))} x {_text(exercise.get('reps'))} | "
-                    f"{_text(exercise.get('default_weight_lbs'), unit=' lbs')} | {velocity}",
+                    f"{_load(exercise.get('default_weight_lbs'), unit)} | {velocity}",
                     styles["body"],
                 ))
     story.append(_paragraph("Persisted set records and reps", styles["subheading"]))
     workout_sets = entry.get("sets", [])
     if workout_sets:
-        story.append(_result_table(workout_sets, styles))
+        story.append(_result_table(workout_sets, styles, unit))
     else:
         story.append(_paragraph("No persisted set records.", styles["body"]))
     return story
 
 
-def render_report_pdf(detail):
-    styles = _styles()
+def _day_story(detail, styles, unit="lb"):
     session = detail.get("session", {})
     athletes = detail.get("athletes")
     if athletes is None:
@@ -183,8 +197,11 @@ def render_report_pdf(detail):
     for index, athlete in enumerate(athletes):
         if index:
             story.append(PageBreak())
-        story.extend(_athlete_story(athlete, styles))
+        story.extend(_athlete_story(athlete, styles, unit))
+    return story
 
+
+def _build(story, title):
     output = BoundedPdfBuffer()
     document = SimpleDocTemplate(
         output,
@@ -193,7 +210,7 @@ def render_report_pdf(detail):
         leftMargin=0.45 * inch,
         topMargin=0.45 * inch,
         bottomMargin=0.45 * inch,
-        title=f"Report {detail.get('id')}",
+        title=title,
         author="Edge Athlete",
         creator="Edge Athlete",
         pageCompression=0,
@@ -208,3 +225,22 @@ def render_report_pdf(detail):
     if len(value) > MAX_PDF_BYTES:
         raise PdfTooLarge
     return value
+
+
+def render_report_pdf(detail):
+    return _build(_day_story(detail, _styles()), f"Report {detail.get('id')}")
+
+
+def render_athlete_reports_pdf(details, title, unit="lb"):
+    """One athlete's own copy of several days (spec 10, Phase 4: Download my report). Each
+    day keeps the daily report's layout, one after another; `details` are athlete copies
+    (athlete_report_detail), so no other athlete is in them. Loads in the athlete's unit."""
+    styles = _styles()
+    story = [_paragraph(title, styles["title"])]
+    if not details:
+        story.append(_paragraph("No sessions in this range.", styles["body"]))
+    for index, detail in enumerate(details):
+        if index:
+            story.append(PageBreak())
+        story.extend(_day_story(detail, styles, unit))
+    return _build(story, title)

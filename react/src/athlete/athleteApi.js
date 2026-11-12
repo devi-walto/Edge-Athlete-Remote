@@ -9,6 +9,7 @@ import { signInHeaders } from '../api/client.js'
 export const HOME = '/api/athlete/home/'
 export const SENSORS = '/api/athlete/sensors/'
 export const SESSIONS = '/api/athlete/sessions/'
+export const PROGRESS = '/api/athlete/progress/'
 
 export async function getJson(url, { fetchImpl = fetch } = {}) {
   try {
@@ -16,6 +17,25 @@ export async function getJson(url, { fetchImpl = fetch } = {}) {
     return { status: response.status, body: await response.json().catch(() => ({})) }
   } catch {
     return { status: 0, body: {} }
+  }
+}
+
+/** Download a file that needs the sign-in (a link can't carry it): fetch it, then hand the
+ *  phone the bytes under `filename`. Returns the status (200 when it worked). */
+export async function downloadFile(url, filename, { fetchImpl = fetch } = {}) {
+  try {
+    const response = await fetchImpl(url, { headers: await signInHeaders() })
+    if (!response.ok) return response.status
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(await response.blob())
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    setTimeout(() => URL.revokeObjectURL(link.href), 10000)
+    return 200
+  } catch {
+    return 0
   }
 }
 

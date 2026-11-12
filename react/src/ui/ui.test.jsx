@@ -11,6 +11,13 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import BarChart, { TONES } from './BarChart.jsx'
+import Load from './Load.jsx'
+import PillGroup from './PillGroup.jsx'
+import RangePicker from './RangePicker.jsx'
+import Tiles from './Tiles.jsx'
+import TrendLine from './TrendLine.jsx'
+import UnitToggle from './UnitToggle.jsx'
+import { formatLoad, toKg } from '../units.js'
 import Badge, { BADGE_KINDS } from './Badge.jsx'
 import Button, { BUTTON_KINDS } from './Button.jsx'
 import FocusCard from './FocusCard.jsx'
@@ -239,6 +246,58 @@ describe('BarChart', () => {
     const offenders = appFiles().filter((file) => !file.startsWith('src/ui/'))
       .filter((file) => /height:\s*`\$\{[^`]*%`/.test(readFileSync(join(REACT_ROOT, file), 'utf8')))
     expect(offenders).toEqual([])
+  })
+})
+
+describe('PillGroup, RangePicker, TrendLine, Tiles, units', () => {
+  it('PillGroup: one lime pill, pressing another reports it', () => {
+    const chosen = vi.fn()
+    render(<PillGroup label="Scope" value="a" onChange={chosen} choices={[{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }]} />)
+    const pills = [...host.querySelectorAll('.ui-pills button')]
+    expect(pills.map((p) => p.getAttribute('aria-pressed'))).toEqual(['true', 'false'])
+    act(() => pills[1].click())
+    expect(chosen).toHaveBeenCalledWith('b')
+  })
+
+  it('RangePicker: a preset reports both dates; dates the wrong way round are swapped', () => {
+    const changed = vi.fn()
+    render(<RangePicker value={{ from: '2026-11-01', to: '2026-11-10' }} onChange={changed} />)
+    expect(host.querySelectorAll('.ui-pills button.is-on')).toHaveLength(0)
+    act(() => host.querySelectorAll('.ui-pills button')[0].click())
+    expect(changed.mock.calls[0][0].to).toBe(changed.mock.calls[0][0].to)
+    const [from] = host.querySelectorAll('input[type="date"]')
+    const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
+    act(() => { set.call(from, '2026-11-20'); from.dispatchEvent(new Event('input', { bubbles: true })) })
+    expect(changed).toHaveBeenLastCalledWith({ from: '2026-11-10', to: '2026-11-20' })
+  })
+
+  it('TrendLine: a line through the numbers, nulls skipped, one number a dot, none nothing', () => {
+    render(<TrendLine values={[0.5, null, 0.7]} label="t" />)
+    expect(host.querySelector('polyline').getAttribute('points').split(' ')).toHaveLength(2)
+    render(<TrendLine values={[0.5]} label="t" />)
+    expect(host.querySelector('circle')).not.toBeNull()
+    render(<TrendLine values={[null]} label="t" />)
+    expect(host.querySelector('svg')).toBeNull()
+  })
+
+  it('Tiles: label over number, "/ planned" quieter, amber when short', () => {
+    render(<Tiles items={[{ label: 'Sets', value: 7, of: 9, short: true }, { label: 'Avg m/s', value: 'not measured', quiet: true }]} />)
+    expect([...host.querySelectorAll('.ui-tiles b')].map((b) => b.textContent)).toEqual(['7 / 9', 'not measured'])
+    expect(host.querySelector('b.is-short')).not.toBeNull()
+    expect(host.querySelector('b.is-quiet')).not.toBeNull()
+  })
+
+  it('units: kilograms to the nearest half; every Load follows the toggle (even with no storage)', () => {
+    expect(toKg(225)).toBe(102)
+    expect(toKg(235)).toBe(106.5)
+    expect(formatLoad(null)).toBeNull()
+    render(<><UnitToggle /><span id="a"><Load lbs={225} /></span><span id="b"><Load lbs={null} /></span></>)
+    expect(host.querySelector('#a').textContent).toBe('225 lb')
+    expect(host.querySelector('#b').textContent).toBe('--')
+    act(() => [...host.querySelectorAll('.ui-pills button')].find((b) => b.textContent === 'KG').click())
+    expect(host.querySelector('#a').textContent).toBe('102 kg')
+    act(() => [...host.querySelectorAll('.ui-pills button')].find((b) => b.textContent === 'LB').click())
+    expect(host.querySelector('#a').textContent).toBe('225 lb')
   })
 })
 

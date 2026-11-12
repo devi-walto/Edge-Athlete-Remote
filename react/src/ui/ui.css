@@ -298,6 +298,11 @@ button.ui-step-row:focus-visible { outline: 2px solid var(--lime); outline-offse
 /* Text inside a bar reads upward, dark on the colour: the load ("225 lb"). */
 .ui-bar-inside { color: var(--bg); font-size: 11px; font-weight: 800; padding: 6px 0; transform: rotate(180deg); white-space: nowrap; writing-mode: vertical-rl; }
 
+/* dense: more than 8 bars, so 14 still fit a phone */
+.ui-bars--normal.is-dense .ui-bars-row { gap: 3px; }
+.ui-bars--normal.is-dense .ui-bar-above { font-size: 9.5px; letter-spacing: -.02em; }
+.ui-bars--normal.is-dense .ui-bar-below { font-size: 9px; line-height: 1.15; white-space: normal; }
+.ui-bars--normal.is-dense .ui-bar-inside { font-size: 10px; }
 /* spark: a glance, no words */
 .ui-bars--spark .ui-bars-row { gap: 4px; height: 46px; }
 .ui-bars--spark .ui-bar { gap: 0; min-width: 4px; }
@@ -310,3 +315,33 @@ button.ui-step-row:focus-visible { outline: 2px solid var(--lime); outline-offse
 .ui-bars--large .ui-bar-track { background: var(--bg); height: 100%; }
 .ui-bars--large .ui-bar-above { color: var(--ink); font-size: 10px; }
 .ui-bars--large .ui-bar-below { font-size: 9px; }
+
+/* ── PillGroup: one chosen pill, lime (rule 13) ── */
+.ui-pills { background: var(--panel2); border: 1px solid var(--line); border-radius: 999px; display: inline-flex; gap: 2px; padding: 3px; }
+.ui-pills button { background: transparent; border: 0; border-radius: 999px; color: var(--muted); cursor: pointer; font: inherit; font-size: 11px; font-weight: 850; letter-spacing: .06em; min-height: 32px; padding: 0 12px; }
+.ui-pills button.is-on { background: var(--lime); color: var(--on-lime); }
+.ui-pills button:hover:not(.is-on) { color: var(--ink); }
+.ui-pills button:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+
+/* ── RangePicker: presets, From, To, and what's chosen ── */
+.ui-range { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; }
+.ui-range label { align-items: center; color: var(--muted); display: flex; font-size: 9px; font-weight: 900; gap: 7px; letter-spacing: .1em; text-transform: uppercase; }
+.ui-range input[type="date"] { background: var(--field); border: 1px solid var(--line); color: var(--ink); font: inherit; font-size: 12px; letter-spacing: normal; min-height: 36px; padding: 6px 8px; text-transform: none; }
+.ui-range input[type="date"]:focus-visible { border-color: var(--lime); outline: none; }
+.ui-range-label { color: var(--muted); font-size: 11px; }
+
+/* ── TrendLine: a glance at which way it goes, teal ── */
+.ui-trend { display: block; flex: none; }
+.ui-trend polyline { stroke: var(--mint); }
+.ui-trend circle { fill: var(--mint); }
+
+/* ── Tiles: big numbers under small labels ── */
+.ui-tiles { display: grid; gap: 8px; grid-template-columns: repeat(var(--tiles, 3), minmax(0, 1fr)); }
+.ui-tiles > div { background: var(--panel); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 12px 14px; }
+.ui-tile-label { align-items: center; color: var(--muted); display: flex; font-size: 10px; font-weight: 800; gap: 4px; letter-spacing: .1em; text-transform: uppercase; }
+.ui-tiles b { font-size: 24px; font-variant-numeric: tabular-nums; font-weight: 850; overflow-wrap: anywhere; }
+.ui-tiles b small { color: var(--muted); font-size: 16px; font-weight: 750; }
+.ui-tiles b.is-short { color: var(--amber); }
+.ui-tiles b.is-quiet { color: var(--muted); font-size: 14px; font-weight: 700; padding-top: 6px; }
+.ui-tiles--small > div { padding: 10px 12px; }
+.ui-tiles--small b { font-size: 19px; overflow-wrap: normal; white-space: nowrap; }

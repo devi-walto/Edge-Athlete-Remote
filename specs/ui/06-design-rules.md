@@ -236,6 +236,10 @@ hand-drawn version comes back.
   number above, text inside (written upward), label below, colour per bar, lighter bars,
   legend lines, a fixed top, scroll or fit, height. `ui.test.jsx` fails on a bar height set
   by hand anywhere outside `ui/`.
+- Also shared (spec 10, Phase 4): `ui/PillGroup` (one chosen pill: range presets, Athlete /
+  Group, LB | KG), `ui/RangePicker` (presets + From / To + label, coach History and athlete
+  progress), `ui/UnitToggle` and `ui/Load` (pounds or kilograms, one device setting in
+  `units.js`), `ui/TrendLine`, `ui/Tiles`.
 - Copies that already exist elsewhere are for a later audit spec; meanwhile, one found
   while working in a file is folded in then.
 

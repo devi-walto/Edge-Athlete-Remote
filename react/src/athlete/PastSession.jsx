@@ -14,6 +14,7 @@
 import { useEffect, useState } from 'react'
 import { velocityColor } from '../rack/velocity.js'
 import BarChart from '../ui/BarChart.jsx'
+import { formatLoad, useUnit } from '../units.js'
 import SectionLabel from '../ui/SectionLabel.jsx'
 import AthletePage, { HOME_PATH, toSignIn } from './AthletePage.jsx'
 import { SESSIONS, dayLabel, getJson } from './athleteApi.js'
@@ -27,9 +28,10 @@ export function backFor(search) {
     : { label: 'Home', to: HOME_PATH }
 }
 
-/** "Set 2 · 225 lb × 5 · 0.66 m/s", or "… · not measured" for a typed-in set. */
-export function setLine(s) {
-  const load = s.weight_lbs ? `${s.weight_lbs} lb × ${s.reps}` : `${s.reps} reps`
+/** "Set 2 · 225 lb × 5 · 0.66 m/s", or "… · not measured" for a typed-in set. The load is in
+ *  the phone's chosen unit ("102 kg × 5"); the speed is always m/s. */
+export function setLine(s, unit) {
+  const load = s.weight_lbs ? `${formatLoad(s.weight_lbs, unit)} × ${s.reps}` : `${s.reps} reps`
   const speed = s.avg_velocity == null ? 'not measured' : `${s.avg_velocity.toFixed(2)} m/s`
   return `Set ${s.set_number} · ${load} · ${speed}`
 }
@@ -48,13 +50,14 @@ export function RepBars({ speeds, zoneMin }) {
 }
 
 function SetRow({ set, zoneMin, open, onToggle }) {
+  const unit = useUnit()
   const measured = set.reps_detail.length > 0
   if (!measured) {
-    return <div className="ui-row athlete-set"><span className="ui-row-name">{setLine(set)}</span></div>
+    return <div className="ui-row athlete-set"><span className="ui-row-name">{setLine(set, unit)}</span></div>
   }
   return <div className={`athlete-set-wrap${open ? ' is-open' : ''}`}>
     <button type="button" className="ui-row athlete-set is-pressable" aria-expanded={open} onClick={onToggle}>
-      <span className="ui-row-name">{setLine(set)}</span>
+      <span className="ui-row-name">{setLine(set, unit)}</span>
       <span className="athlete-chevron" aria-hidden="true">{open ? '⌃' : '⌄'}</span>
     </button>
     {open && <RepBars speeds={set.reps_detail} zoneMin={zoneMin} />}

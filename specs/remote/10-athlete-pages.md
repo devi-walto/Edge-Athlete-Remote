@@ -2,8 +2,8 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06; rewritten 2026-11-11 after the athlete-account design was approved
-- Status: Phases 0–3 built 2026-11-11 (the Home route, the Home page, the session-ended page,
-  All sessions and a past session), awaiting review. No decisions
+- Status: Phases 0–4 built 2026-11-11 (the Home route, the Home page, the session-ended page,
+  All sessions and a past session, My Recent Progress), awaiting review. Phase 5 (Account) left. No decisions
   open. (Phase 6, the room display for athletes, moved to spec 19 on 2026-11-11)
 - Form item: Definition of Done #4 (remote athlete access)
 - Depends on: [03 Login links](03-athlete-login-links.md) (the sign-in pages),
@@ -406,24 +406,53 @@ the block banner on 2026-11-11).
 
 **Done when:**
 
-- [ ] The tiles and trends count only the athlete's own sets inside the range (false sets
+- [x] The tiles and trends count only the athlete's own sets inside the range (false sets
       left out) and match the daily reports for those days.
-- [ ] An athlete in two programs gets one row per movement covering both.
-- [ ] `trend` never exceeds 14 points: the smallest step on session → week → month →
+- [x] An athlete in two programs gets one row per movement covering both.
+- [x] `trend` never exceeds 14 points: the smallest step on session → week → month →
       quarter → year that fits; a period point is its best top set; partly covered periods
       are marked `partial`.
-- [ ] `max` equals today's `current_reference_max` for that movement, whatever the range;
+- [x] `max` equals today's `current_reference_max` for that movement, whatever the range;
       `source` decides EST. MAX or MAX; no max gives `null` and the page shows "--".
-- [ ] From after To returns `400`; a 20-month range returns 8 quarter points.
-- [ ] The PDF holds only the caller's sets in the range; another athlete's name appears
+- [x] From after To returns `400`; a 20-month range returns 8 quarter points.
+- [x] The PDF holds only the caller's sets in the range; another athlete's name appears
       nowhere in it.
-- [ ] *(Frontend test)* A preset fills From and To; editing a date clears the preset; the
+- [x] *(Frontend test)* A preset fills From and To; editing a date clears the preset; the
       label follows ("Last 30 days", or the two dates).
-- [ ] *(Frontend test)* Opening a movement closes any other; the ⓘ text opens in place.
-- [ ] *(Frontend test)* With kilograms chosen, every load on the page reads kg (converted from
+- [x] *(Frontend test)* Opening a movement closes any other; the ⓘ text opens in place.
+- [x] *(Frontend test)* With kilograms chosen, every load on the page reads kg (converted from
       pounds, nearest 0.5) and every speed still reads m/s.
-- [ ] *(Browser)* Home → My Recent Progress → 90d → open Back Squat → change From → back,
+- [x] *(Browser)* Home → My Recent Progress → 90d → open Back Squat → change From → back,
       on a 390-pixel-wide phone.
+
+**Phase 4 result (2026-11-11).** Server: `services/athlete_progress.py` (`progress_for`,
+`choose_step` for the ladder, `reports_in_range`) behind `GET /api/athlete/progress/` and
+`GET /api/athlete/progress/report/?unit=kg` (views `my_progress`, `my_progress_report`: the
+name `athlete_progress` was taken). The PDF is the daily report's layout, one athlete copy per
+day (`report_pdf.render_athlete_reports_pdf`; the renderer now takes a unit, the coach's PDF
+unchanged). Choices made where the spec was silent:
+- A period with no lifting has no bar (nothing to draw); a session's top set is its heaviest
+  set, measured sets first; a period's is the best of those.
+- Only ended sessions count, as in the reports; a quick session that wasn't on the calendar
+  adds its own prescription to the sets planned.
+- No range given means the last 30 days.
+
+Page: `athlete/Progress.jsx`, built only from shared pieces (spec 06 rule 13), several new and
+two folded in from `Dashboard.jsx`:
+- `ui/RangePicker` (the coach's History range now uses it too) and `ui/PillGroup` (the
+  coach's range presets and Athlete / Group switch now use it; one look for both).
+- `ui/UnitToggle` + `ui/Load` on `units.js`: LB | KG remembered on the device (kept in
+  memory too when storage is blocked); the past session, session ended and progress pages
+  all follow it. The rack screen's plate loader (spec 16/19) reuses it.
+- `ui/TrendLine`, `ui/Tiles` (with a `small` size), and `ui/BarChart` gained a dense mode
+  (more than 8 bars) so 14 fit a phone.
+- Tests: server 15 in `test_athlete_progress.py` (both suites 794, local skips 8); frontend 485.
+- Browser, test stack, 390 px, as a seeded athlete: Home → My Recent Progress → 90d (12 weekly
+  bars, the cut-off week lighter) → open Back Squat → KG (every load kg, speeds m/s) → From
+  changed (label shows the dates, 14 per-session bars) → back to Home. No sideways scroll.
+  The real PDF download (kg) holds only that athlete's days. Fixed on the way: the LB | KG
+  pills were squeezed into a column, dates under 12 bars ran together, and a change too
+  small to show read as an amber "−0.00".
 
 **Stop. Devin reviews.**
 

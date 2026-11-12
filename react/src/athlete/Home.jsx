@@ -3,7 +3,7 @@
 // Why this file exists: before it, signing in landed on a page telling the athlete to go
 // find the session link their coach sent. Home answers what they open the app for, from
 // their own groups only (spec 10, Phase 1; boards F_Ath_H1, H1b, H1c):
-//   - a greeting with their groups;
+//   - a greeting with their groups, and My Recent Progress (Phase 4);
 //   - the one focus card: the session that's live now with Join session inside it, or the
 //     next one coming up, or "nothing scheduled yet";
 //   - My sensor;
@@ -18,6 +18,7 @@ import FocusCard from '../ui/FocusCard.jsx'
 import SectionLabel from '../ui/SectionLabel.jsx'
 import AthletePage, { HOME_PATH, toSignIn } from './AthletePage.jsx'
 import { HOME, dayLabel, getJson, timeLabel } from './athleteApi.js'
+import { PROGRESS_PATH } from './Progress.jsx'
 import SensorRow from './SensorRow.jsx'
 import SessionRow, { SESSIONS_PATH, SetsCount } from './SessionRow.jsx'
 
@@ -76,6 +77,7 @@ export default function Home() {
         <span className="athlete-greeting-label">Signed in</span>
         <h1>Hi {home.athlete.first_name}</h1>
         <span className="athlete-greeting-groups">{home.athlete.groups.join(' · ')}</span>
+        <Button kind="quiet-lime" className="athlete-progress-link" onClick={() => navigate(PROGRESS_PATH)}>My Recent Progress ›</Button>
       </section>
       <Banner live={home.live} comingUp={home.coming_up} />
       <SensorRow />

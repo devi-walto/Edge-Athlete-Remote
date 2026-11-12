@@ -84,11 +84,6 @@
 .athlete-sets { color: var(--muted); font-size: 12px; font-weight: 800; white-space: nowrap; }
 .athlete-sets.is-short { color: var(--amber); }
 .athlete-empty { color: var(--muted); font-size: 13px; margin: 0; }
-.athlete-tiles { display: grid; gap: 8px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.athlete-tiles > div { background: var(--panel); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; }
-.athlete-tiles span { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-.athlete-tiles b { font-size: 24px; font-weight: 850; font-variant-numeric: tabular-nums; }
-.athlete-tiles b.is-quiet { color: var(--muted); font-size: 14px; font-weight: 700; padding-top: 6px; }
 
 /* ── All sessions and a past session (spec 10, Phase 3; boards F_Ath_L1, L2) ── */
 /* A session row is a QuietRow drawn as a button: the whole row opens the session. */
@@ -97,8 +92,6 @@
 .athlete-session-row:focus-visible, .athlete-set.is-pressable:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
 .athlete-chevron { color: var(--muted); font-size: 18px; padding: 0 6px; }
 .athlete-view-all { align-self: flex-end; margin-top: 4px; }
-.athlete-tiles b small { color: var(--muted); font-size: 16px; font-weight: 750; }
-.athlete-tiles b.is-short { color: var(--amber); }
 .athlete-movement { display: flex; flex-direction: column; }
 /* A set row: plain when typed in, pressable (and opens its reps) when measured. */
 .athlete-set { box-sizing: border-box; color: inherit; font: inherit; justify-content: space-between; min-height: 48px; text-align: left; width: 100%; }
@@ -108,3 +101,21 @@
 .athlete-set-wrap.is-open .athlete-set { border-color: var(--lime); }
 .athlete-reps { background: var(--panel); border: 1px solid var(--line); border-top: 0; display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; }
 .athlete-rep-drop { color: var(--muted); font-size: 12px; }
+
+/* ── My Recent Progress (spec 10, Phase 4; boards F_Ath_P1, P2) ── */
+.athlete-progress-range { background: var(--panel); border: 1px solid var(--line); padding: 14px 16px; }
+.athlete-progress-item + .athlete-progress-item { margin-top: 6px; }
+.athlete-progress-row { color: inherit; cursor: pointer; font: inherit; text-align: left; width: 100%; }
+.athlete-progress-row:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+.athlete-progress-item.is-open .athlete-progress-row { border-color: var(--lime); }
+.athlete-progress-change { color: var(--mint); font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 800; white-space: nowrap; }
+.athlete-progress-change.is-down { color: var(--amber); }
+.athlete-progress-panel { background: var(--panel); border: 1px solid var(--line); border-top: 0; display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; }
+.athlete-progress-legend { align-items: flex-start; display: flex; gap: 10px; justify-content: space-between; }
+.athlete-progress-legend-text { color: var(--muted); display: flex; flex: 1; flex-direction: column; font-size: 11px; gap: 2px; line-height: 1.4; min-width: 0; }
+.athlete-progress-legend .ui-pills { flex: none; }
+.athlete-progress-note { color: var(--muted); font-size: 11px; }
+.athlete-progress-explain { color: var(--soft-ink); display: flex; flex-direction: column; font-size: 12px; gap: 4px; line-height: 1.45; margin: 0; }
+.athlete-info { background: transparent; border: 0; color: var(--muted); cursor: pointer; font: inherit; font-size: 13px; line-height: 1; min-height: 24px; padding: 0 4px; }
+.athlete-info:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+.athlete-progress-link { align-self: flex-start; margin: 4px 0 0 -10px; }

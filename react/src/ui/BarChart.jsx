@@ -52,7 +52,9 @@ export default function BarChart({ bars, size = 'normal', max, minPct, legend, s
   const height = (v) => `${top > 0 ? Math.min(100, Math.max(floor, ((v || 0) / top) * 100)) : floor}%`
   const scrolls = scroll ?? look.scroll
 
-  return <figure className={`ui-bars ui-bars--${size}${className ? ` ${className}` : ''}`}>
+  // Many bars on a narrow screen: tighter gaps, smaller words, labels may wrap ("Aug / 24").
+  const dense = bars.length > 8 ? ' is-dense' : ''
+  return <figure className={`ui-bars ui-bars--${size}${dense}${className ? ` ${className}` : ''}`}>
     {words && legend?.length > 0 && <figcaption className="ui-bars-legend">
       {legend.map((line) => <span key={line}>{line}</span>)}
     </figcaption>}

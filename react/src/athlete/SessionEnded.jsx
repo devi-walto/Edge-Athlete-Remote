@@ -9,7 +9,9 @@
 import { useEffect, useState } from 'react'
 import { navigate } from '../router.js'
 import Button from '../ui/Button.jsx'
+import { formatLoad, useUnit } from '../units.js'
 import QuietRow from '../ui/QuietRow.jsx'
+import Tiles from '../ui/Tiles.jsx'
 import SectionLabel from '../ui/SectionLabel.jsx'
 import { HOME_PATH } from './AthletePage.jsx'
 import { getJson } from './athleteApi.js'
@@ -22,23 +24,24 @@ export function speedLabel(v) {
 /** Sets, reps, average speed: three tiles. withPlanned (the past session page) shows sets as
  *  "7 / 9", amber when short of the plan. */
 export function DayTiles({ totals, withPlanned = false }) {
-  const short = withPlanned && totals.sets_planned > 0 && totals.sets_done < totals.sets_planned
-  return <div className="athlete-tiles">
-    <div><span>Sets</span><b className={short ? 'is-short' : ''}>{totals.sets_done}
-      {withPlanned && totals.sets_planned > 0 && <small> / {totals.sets_planned}</small>}</b></div>
-    <div><span>Reps</span><b>{totals.reps}</b></div>
-    <div><span>Avg m/s</span><b className={totals.avg_velocity == null ? 'is-quiet' : ''}>{speedLabel(totals.avg_velocity)}</b></div>
-  </div>
+  const planned = withPlanned && totals.sets_planned > 0 ? totals.sets_planned : null
+  return <Tiles className="athlete-tiles" items={[
+    { label: 'Sets', value: totals.sets_done, of: planned, short: planned != null && totals.sets_done < planned },
+    { label: 'Reps', value: totals.reps },
+    { label: 'Avg m/s', value: speedLabel(totals.avg_velocity), quiet: totals.avg_velocity == null },
+  ]} />
 }
 
-/** One movement: "3 sets · 225 lb" with Done, or "3 of 4 sets · 140 lb" with "3 of 4" in amber. */
+/** One movement: "3 sets · 225 lb" with Done, or "3 of 4 sets · 140 lb" with "3 of 4" in amber.
+ *  The load is in the phone's chosen unit. */
 export function MovementDone({ movement }) {
+  const unit = useUnit()
   const done = movement.sets.length
   const planned = movement.sets_planned
   const top = Math.max(0, ...movement.sets.map((s) => s.weight_lbs || 0))
   const full = !planned || done >= planned
   const count = full ? `${done} sets` : `${done} of ${planned} sets`
-  return <QuietRow name={movement.name} meta={top ? `${count} · ${top} lb` : count}
+  return <QuietRow name={movement.name} meta={top ? `${count} · ${formatLoad(top, unit)}` : count}
     badge={<span className={`athlete-sets${full ? '' : ' is-short'}`}>{full ? 'Done' : `${done} of ${planned}`}</span>} />
 }
 
