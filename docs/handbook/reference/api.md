@@ -445,5 +445,20 @@ An athlete's own sensor: a one-time code to add it, the sensor claiming itself w
 <!-- routes:sensors-online:end -->
 
 :::::
+
+
+## The athlete's pages
+
+An online athlete's own pages: Home, their past sessions, their progress (spec 10). Remote only; an athlete sees only their own numbers.
+
+:::::{dropdown} 1 route
+
+<!-- routes:the-athlete-s-pages:start -->
+| Route | Methods | Access | What it does | Handler |
+|---|---|---|---|---|
+| `/api/athlete/home/` | `GET` | remote only · athlete | Home for the signed-in athlete: what's coming up, what's live, their last five sessions | `home` |
+<!-- routes:the-athlete-s-pages:end -->
+
+:::::
 <!-- ROUTES SECTION END -->
 

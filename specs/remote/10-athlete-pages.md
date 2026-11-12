@@ -2,8 +2,8 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06; rewritten 2026-11-11 after the athlete-account design was approved
-- Status: Written — not started. No decisions open except the room-display button's board
-  (Phase 6)
+- Status: Phase 0 built 2026-11-11 (`GET /api/athlete/home/`), awaiting review. No decisions
+  open except the room-display button's board (Phase 6)
 - Form item: Definition of Done #4 (remote athlete access)
 - Depends on: [03 Login links](03-athlete-login-links.md) (the sign-in pages),
   [04 Session link](04-session-link-and-virtual-racks.md) (the join rule and the rack screen),
@@ -182,18 +182,25 @@ opening one was optional. It is now five rows, View all, and the past session pa
 
 **Done when:**
 
-- [ ] An athlete in one group sees that group's future days and nobody else's.
-- [ ] An athlete in two groups sees both groups' days; a date the two share is one entry.
-- [ ] A day whose session has ended is not listed; a day set up but not started is listed
+- [x] An athlete in one group sees that group's future days and nobody else's.
+- [x] An athlete in two groups sees both groups' days; a date the two share is one entry.
+- [x] A day whose session has ended is not listed; a day set up but not started is listed
       with its `session_id`.
-- [ ] `live` is set exactly when `join` would succeed for that athlete and that session,
+- [x] `live` is set exactly when `join` would succeed for that athlete and that session,
       including a Quick Training Session; `null` otherwise.
-- [ ] `recent` holds at most 5, newest first, leaves out a session the athlete was on but
+- [x] `recent` holds at most 5, newest first, leaves out a session the athlete was on but
       did not lift in, and its counts match the daily report.
-- [ ] The response contains no athlete name other than the caller's (a test searches the
+- [x] The response contains no athlete name other than the caller's (a test searches the
       whole body for every other athlete's name).
-- [ ] A coach gets `403`, no login gets `401`, a gym box returns `404`.
-- [ ] The route makes a fixed number of queries however many days there are.
+- [x] A coach gets `403`, no login gets `401`, a gym box returns `404`.
+- [x] The route makes a fixed number of queries however many days there are.
+
+**Phase 0 result (2026-11-11).** `services/athlete_home.py` (the rules), `athlete_pages.py`
+(the door), 13 tests in `test_athlete_home.py`. `sets_done` is the daily report's own count
+(real sets, coach adjustments left out); `sets_planned` comes from
+`plan_resolution.movements_for_athlete`, the function the rack screen uses, so it reflects the
+plan as it stands now (the report snapshot keeps no planned count). A recent session's date
+is the local date it started. Backend 764 tests pass as remote and as local.
 
 **Stop. Devin reviews.**
 

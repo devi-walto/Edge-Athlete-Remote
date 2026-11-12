@@ -15,6 +15,7 @@ from django.urls import path
 from . import views
 from . import athlete_logins
 from . import athlete_sensors
+from . import athlete_pages
 from . import remote_sessions
 from . import deployment
 from . import health
@@ -93,6 +94,8 @@ urlpatterns = [
     # or a coach can remove a sensor.
     path('athletes/<int:athlete_id>/sensors/<str:node_id>/', athlete_sensors.athlete_sensor,
          name='athlete_sensor'),
+    # Remote only: an athlete's own pages (spec 10; athlete_pages.py).
+    path('athlete/home/', athlete_pages.home, name='athlete_home'),
     path('athlete/sensor-code/', athlete_sensors.sensor_code, name='athlete_sensor_code'),
     path('athlete/sensors/', athlete_sensors.my_sensors, name='my_sensors'),
     path('athlete/sensors/<str:node_id>/', athlete_sensors.my_sensor, name='my_sensor'),
