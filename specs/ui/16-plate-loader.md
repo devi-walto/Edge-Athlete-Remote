@@ -2,7 +2,8 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-21
-- Status: Written — not started. Built with the UI redesign.
+- Status: Written — not started. **Built as part of [spec 19, the rack screen](19-rack-screen.md)**
+  (its Phases 3 and 4); this file keeps the plate loader's decisions and checklists
 - Form item: #11 (unified interface; internal)
 - Depends on: [06 Design rules](06-design-rules.md); [09 Analytics](09-analytics.md) adds
   the other per-movement setting kept in our catalog (mean or peak velocity)
