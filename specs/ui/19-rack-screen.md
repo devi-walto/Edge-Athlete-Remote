@@ -2,7 +2,8 @@
 
 - Owner: Devin Walton
 - Date: 2026-11-11
-- Status: Written — not started. Two decisions are still proposed (see "Still to confirm")
+- Status: Phase 0 built (2026-11-12), awaiting review. Two decisions are still proposed (see
+  "Still to confirm")
 - Form item: #11 (unified interface; internal)
 - Depends on: [06 Design rules](06-design-rules.md) (done). Nothing else: it can start any
   time, and alongside [10 The athlete's pages](../remote/10-athlete-pages.md), whose files it
@@ -114,10 +115,27 @@ Built to `F_Rack_NoSession` (spec 18's approved board), local and remote.
 
 **Done when:**
 
-- [ ] *(Frontend test)* With no session, the rack shows the waiting message and no
+- [x] *(Frontend test)* With no session, the rack shows the waiting message and no
       check-in list or NFC prompt; with a session, the list is back.
-- [ ] *(Browser)* Local and remote: a coach starts a session and the check-in list replaces
-      the message within 5 seconds, with no reload.
+- [x] *(Browser)* Local ~~and remote~~: a coach starts a session and the check-in list replaces
+      the message within 5 seconds, with no reload. (Remote has no gym rack tablet until
+      spec 18, and an athlete's own rack never shows this screen; the same code serves both.)
+
+**Phase 0 result (2026-11-12).** `rack/NoSession.jsx` to `F_Rack_NoSession`: the header reads
+"No session yet" (muted), and in place of the empty list "Rack 3 is ready · Waiting for
+today's session" with the board's line. The rack screen keeps asking for a session every
+5 seconds as before, so the check-in list replaces it by itself; the wristband reader rests
+while waiting. The sensor chip is the shared `ui/Badge`: "Sensor rack_3 is live" (mint
+dot) while the sensor pulses, "Sensor rack_3 not responding" (amber) after 15 seconds
+without one, "No sensor linked to this rack" when none is. It listens to the sensor's own
+pulse (`edgeathlete/node/<id>/pulse`, which browsers may already read), held by the rack
+screen the whole time, so coming back to this screen after a session never starts from a
+stale guess. The two not-live wordings are mine; the board drew only the live one. The
+corner switch on the board is Phase 5. Footer unchanged. An athlete's own rack is untouched.
+Tests: frontend 7 in `rack/noSession.test.jsx`. Browser, a throwaway local install at
+375 px with the simulated sensor on rack 1: waiting screen as on the board; session started
+→ the list in about 1 second; session ended with the sensor on → waiting with "is live"
+straight away; sensor switched off → "not responding".
 
 **Stop. Devin reviews.**
 

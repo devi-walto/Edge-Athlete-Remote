@@ -24,7 +24,7 @@ vi.mock('../api/client.js', () => ({
   // A server that has not answered yet.
   createSet: vi.fn(() => new Promise(() => {})),
 }))
-vi.mock('../mqtt/client.js', () => ({ subscribeNodeReps: vi.fn(() => () => {}) }))
+vi.mock('../mqtt/client.js', () => ({ subscribeNodeReps: vi.fn(() => () => {}), subscribeNodePulse: vi.fn(() => () => {}) }))
 vi.mock('./nfc.js', () => ({ pollLocalNfcTap: vi.fn(() => Promise.resolve(null)),
   handleNfcPollResult: vi.fn() }))
 vi.mock('../db/repBuffer.js', () => ({ addRep: vi.fn(), clearBuffer: vi.fn(() => Promise.resolve()),

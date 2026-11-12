@@ -63,6 +63,18 @@ export function subscribeNodeReps(nodeId, onRep) {
   return () => { c.removeListener('message', handler); c.unsubscribe(topic) }
 }
 
+// Subscribe to one sensor's pulse: the "I'm here" it sends every few seconds while
+// switched on. `onPulse` is called on each one (what's inside doesn't matter here).
+// The rack's waiting screen uses it to say whether its sensor is live.
+export function subscribeNodePulse(nodeId, onPulse) {
+  const c = getClient()
+  const topic = `edgeathlete/node/${nodeId}/pulse`
+  const handler = (t) => { if (t === topic) onPulse() }
+  c.on('message', handler)
+  whenReady(c, () => c.subscribe(topic, { qos: 0 }))
+  return () => { c.removeListener('message', handler); c.unsubscribe(topic) }
+}
+
 // Subscribe to Django's broadcasts for this rack (set_complete,
 // athlete_checkin). `onState` gets each parsed message. Returns an unsubscribe fn.
 export function subscribeRackState(rackNumber, onState) {

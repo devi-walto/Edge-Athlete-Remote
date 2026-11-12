@@ -27,6 +27,7 @@ import { subscribeNodeReps } from '../mqtt/client.js'
 import { addRep, clearBuffer, getBufferedReps } from '../db/repBuffer.js'
 import { velocityColor, VELOCITY_HEX } from './velocity.js'
 import Idle from './Idle.jsx'
+import NoSession, { useSensorLive } from './NoSession.jsx'
 import CheckInList from './CheckInList.jsx'
 import WeightPad from './WeightPad.jsx'
 import { controllerCommand } from './controller.js'
@@ -409,8 +410,15 @@ export default function RackScreen({ rackNumber, session: openingSession, node, 
   // wristband reader to poll. One fact from the rack's state decides it.
   const owned = Boolean(controller.snapshot?.owner_athlete)
   const showCheckInList = !owned && ((phase === 'idle' && !selectedAthlete) || phase === 'rest')
+  // No session running (spec 19 Phase 0): the rack says it's ready and waiting in place of
+  // an empty list. The roster poll below keeps running, so the list replaces it by itself;
+  // the wristband reader rests, since nobody can check in yet.
+  // (An athlete's own rack is handed its session without an id, so the label counts too.)
+  const hasSession = session?.session_id != null || Boolean(session?.label)
+  const waiting = !owned && phase === 'idle' && !selectedAthlete && !hasSession
+  const sensorLive = useSensorLive(owned ? null : node)
   useEffect(() => {
-    if (!showCheckInList || !controller.canControl) {
+    if (!showCheckInList || waiting || !controller.canControl) {
       setNfcStatus('')
       return
     }
@@ -450,7 +458,7 @@ export default function RackScreen({ rackNumber, session: openingSession, node, 
       cancelled = true
       clearTimeout(timer)
     }
-  }, [showCheckInList, controller.canControl, controller.runControlled, rackNumber, selectAthlete])
+  }, [showCheckInList, waiting, controller.canControl, controller.runControlled, rackNumber, selectAthlete])
   useEffect(() => {
     if (!showCheckInList) return
     refreshCheckIn()
@@ -628,8 +636,9 @@ export default function RackScreen({ rackNumber, session: openingSession, node, 
         </div>
         <div style={{ textAlign: 'center', marginTop: 14 }}>
           <div style={{ ...LABEL, fontSize: 9, color: T.lime, marginBottom: 4 }}>Session</div>
-          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-.035em' }}>
-            {session?.label || 'No active session'}
+          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-.035em',
+            color: hasSession ? T.ink : T.muted }}>
+            {hasSession ? session.label : 'No session yet'}
           </div>
         </div>
       </div>
@@ -641,14 +650,15 @@ export default function RackScreen({ rackNumber, session: openingSession, node, 
           {setStartError}
         </div>
       )}
-      {showCheckInList && nfcStatus && (
+      {showCheckInList && !waiting && nfcStatus && (
         <div aria-live="polite" style={{ margin: '14px 24px 0', padding: '10px 14px', borderRadius: 10,
           border: `1px solid ${T.line}`, background: T.panel, color: T.muted, fontSize: 13,
           textAlign: 'center' }}>
           {nfcStatus}
         </div>
       )}
-      {phase === 'idle' && (
+      {waiting && <NoSession rackNumber={rackNumber} node={node} live={sensorLive} />}
+      {phase === 'idle' && !waiting && (
         <Idle
           roster={roster}
           hotList={hotList}

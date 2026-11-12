@@ -32,7 +32,7 @@ vi.mock('../api/client.js', () => ({
   checkInAthlete: vi.fn(), consumeNfcTap: vi.fn(), createSet: vi.fn(), completeSet: vi.fn(),
   signInHeaders: vi.fn(() => Promise.resolve({ Authorization: 'Bearer t' })),
 }))
-vi.mock('../mqtt/client.js', () => ({ subscribeNodeReps: vi.fn(() => () => {}) }))
+vi.mock('../mqtt/client.js', () => ({ subscribeNodeReps: vi.fn(() => () => {}), subscribeNodePulse: vi.fn(() => () => {}) }))
 vi.mock('../rack/nfc.js', () => ({ pollLocalNfcTap: vi.fn(() => Promise.resolve(null)),
   handleNfcPollResult: vi.fn() }))
 vi.mock('../db/repBuffer.js', () => ({ addRep: vi.fn(), clearBuffer: vi.fn(),
