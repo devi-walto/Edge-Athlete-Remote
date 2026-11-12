@@ -56,6 +56,7 @@ athlete login could exist.
 | Administrator | active, has a coach profile, and Django's staff flag is on |
 | Coach | active and has a coach profile |
 | Athlete | active and attached to an athlete record (`Athlete.user`) |
+| Common | active and attached to the school's common login (`CommonLogin.user`): the one login every rack tablet and TV online shares (spec 18). Refused everywhere except signing in and "who am I" until spec 18 Phase 1 opens the rack routes to it |
 | None | anything else: **refused everywhere, including at sign-in** |
 
 Every permission class asks that one function. `IsCoach` kept its name on purpose: 43
@@ -63,8 +64,8 @@ routes already used it, and its meaning became the one the name always claimed. 
 and "who am I" report the role, so a screen knows who it is talking to before it asks
 for anything.
 
-- **Refused by default.** A login attached to nothing, or to both a coach profile and
-  an athlete record, gets nothing. That is the safe answer to a half-made account, and
+- **Refused by default.** A login attached to nothing, or to more than one of a coach
+  profile, an athlete record and the common login, gets nothing. That is the safe answer to a half-made account, and
   to any new kind of login nobody has planned for yet.
 - **Archiving an athlete switches their login off**, and bringing them back switches it
   on. The rule lives on the athlete record's own save step, not in the archive route, so
@@ -410,11 +411,16 @@ Two routes for all three kinds of sheet.
 
 Sign-in, first-run setup, coach accounts, and athletes using a login link.
 
-:::::{dropdown} 10 routes
+:::::{dropdown} 15 routes
 
 <!-- routes:signing-in-and-accounts:start -->
 | Route | Methods | Access | What it does | Handler |
 |---|---|---|---|---|
+| `/api/common-login/` | `GET` | remote only · 🔒 coach | The card: set up or not, its username, and the devices signed in with it | `common_login` |
+| `/api/common-login/set-up/` | `POST` | remote only · 🔒 administrator | Make the common login: a username and a password, typed by an administrator | `common_login_set_up` |
+| `/api/common-login/password/` | `POST` | remote only · 🔒 administrator | A new password, typed by an administrator | `common_login_password` |
+| `/api/common-login/show/` | `POST` | remote only · 🔒 coach | Show: the password, for a coach about to sign a tablet in | `common_login_show` |
+| `/api/common-login/devices/<int:device_pk>/sign-out/` | `POST` | remote only · 🔒 coach | Sign one device out (a lost or stuck tablet) | `common_device_sign_out` |
 | `/api/auth/setup/` | `GET,POST` | open | First-run enrollment | `SetupView` |
 | `/api/auth/me/` | `GET` | signed in | "Who am I": any signed-in login may ask, whatever its role | `CoachSessionView` |
 | `/api/auth/password/` | `POST` | signed in | Let a signed-in coach replace their own password | `PasswordChangeView` |
@@ -465,22 +471,5 @@ An online athlete's own pages: Home, their past sessions, their progress (spec 1
 
 :::::
 
-## Unsorted
-
-Not filed into a group yet. Add a prefix to `GROUPS` in `docs/refresh-routes.py`.
-
-:::::{dropdown} 5 routes
-
-<!-- routes:unsorted:start -->
-| Route | Methods | Access | What it does | Handler |
-|---|---|---|---|---|
-| `/api/common-login/` | `GET` | remote only · 🔒 coach | The card: set up or not, its username, and the devices signed in with it | `common_login` |
-| `/api/common-login/set-up/` | `POST` | remote only · 🔒 administrator | Make the common login: a username and a password, typed by an administrator | `common_login_set_up` |
-| `/api/common-login/password/` | `POST` | remote only · 🔒 administrator | A new password, typed by an administrator | `common_login_password` |
-| `/api/common-login/show/` | `POST` | remote only · 🔒 coach | Show: the password, for a coach about to sign a tablet in | `common_login_show` |
-| `/api/common-login/devices/<int:device_pk>/sign-out/` | `POST` | remote only · 🔒 coach | Sign one device out (a lost or stuck tablet) | `common_device_sign_out` |
-<!-- routes:unsorted:end -->
-
-:::::
 <!-- ROUTES SECTION END -->
 

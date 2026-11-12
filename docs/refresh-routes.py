@@ -66,8 +66,9 @@ SECTION_END = "<!-- ROUTES SECTION END -->"
 # under "Unsorted" — but it belongs in a real group.
 GROUPS = [
     ("Signing in and accounts",
-     "Sign-in, first-run setup, coach accounts, and athletes using a login link.",
-     ("auth/", "coaches/")),
+     "Sign-in, first-run setup, coach accounts, athletes using a login link, and the "
+     "school's common login for rack tablets and TVs online (spec 18).",
+     ("auth/", "coaches/", "common-login/")),
     ("System",
      "Health, and the settings an operator changes before a real gym uses the box.",
      ("health/", "system/")),
