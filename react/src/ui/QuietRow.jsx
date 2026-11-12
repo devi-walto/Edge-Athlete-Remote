@@ -6,9 +6,11 @@
 // this piece.
 import './ui.css'
 
-/** name, meta (the grey line under it), badge (e.g. a Badge or RiskTag), actions (quiet Buttons). */
-export default function QuietRow({ name, meta, badge, actions, as: Tag = 'div', className = '', ...rest }) {
+/** lead (a small mark before the name, e.g. a status dot), name, meta (the grey line under
+ *  it), badge (e.g. a Badge or RiskTag), actions (quiet Buttons). */
+export default function QuietRow({ lead, name, meta, badge, actions, as: Tag = 'div', className = '', ...rest }) {
   return <Tag className={`ui-row${className ? ` ${className}` : ''}`} {...rest}>
+    {lead && <span className="ui-row-lead" aria-hidden="true">{lead}</span>}
     <span className="ui-row-text">
       <b className="ui-row-name">{name}</b>
       {meta && <span className="ui-row-meta">{meta}</span>}

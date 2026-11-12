@@ -12,6 +12,7 @@
 //   /dashboard       → base-station wall display
 //   /login-link      → an athlete opening their login link (#link after it)
 //   /athlete         → athlete sign in
+//   /athlete/home    → the athlete's Home (spec 10); /athlete/account, /athlete/sensors
 //   /session/:id     → the session link: an online athlete's own rack (athlete/SessionPage)
 //
 // localStorage still remembers this device's identity (its role, its generated
@@ -33,6 +34,9 @@ import SessionPage, { sessionIdFromPath } from './athlete/SessionPage.jsx'
 import Dashboard from './Dashboard.jsx'
 import AthleteSignIn from './athlete/AthleteSignIn.jsx'
 import LoginLinkPage from './athlete/LoginLinkPage.jsx'
+import AthleteHome from './athlete/Home.jsx'
+import Account from './athlete/Account.jsx'
+import ManageSensors from './athlete/ManageSensors.jsx'
 import WifiChangeOverlay from './WifiChangeOverlay.jsx'
 import { getActiveSession } from './api/client.js'
 import { subscribeRackCommand } from './mqtt/client.js'
@@ -276,6 +280,10 @@ function route(pathname) {
   // signing in after that.
   if (pathname === '/login-link') return <LoginLinkPage />
   if (pathname === '/athlete') return <AthleteSignIn />
+  // The athlete's own pages once signed in (spec 10).
+  if (pathname === '/athlete/home') return <AthleteHome />
+  if (pathname === '/athlete/account') return <Account />
+  if (pathname === '/athlete/sensors') return <ManageSensors />
   // The session link a coach shares: the athlete's own rack (spec 04).
   const sessionId = sessionIdFromPath(pathname)
   if (sessionId != null) return <SessionPage key={sessionId} sessionId={sessionId} />

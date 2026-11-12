@@ -27,6 +27,7 @@ if (typeof globalThis.localStorage?.clear !== 'function') {
 }
 
 const { default: AthleteSignIn } = await import('./AthleteSignIn.jsx')
+const { default: ManageSensors } = await import('./ManageSensors.jsx')
 const { schoolPart, sensorStatus } = await import('./MySensor.jsx')
 const { setCoachToken, setSignedInRole } = await import('../coach/api.js')
 
@@ -69,8 +70,8 @@ afterEach(() => {
   deployment = 'remote'
 })
 
-async function show() {
-  await act(async () => { root.render(<AthleteSignIn />) })
+async function show(page = <ManageSensors />) {
+  await act(async () => { root.render(page) })
   await act(async () => {})
   await act(async () => {})
 }
@@ -153,10 +154,11 @@ describe('removing a sensor', () => {
 })
 
 describe('a local install', () => {
-  it('never shows My sensor', async () => {
+  it('sign-in never shows My sensor', async () => {
     deployment = 'local'
-    await show()
-    expect(container.textContent).toContain("You're signed in")
+    localStorage.clear()
+    await show(<AthleteSignIn />)
+    expect(container.textContent).toContain('Athlete sign in')
     expect(container.textContent).not.toContain('My sensor')
     expect(calls).not.toContain('GET /api/athlete/sensors/')
   })

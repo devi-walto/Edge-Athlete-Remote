@@ -2,7 +2,7 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06; rewritten 2026-11-11 after the athlete-account design was approved
-- Status: Phase 0 built 2026-11-11 (`GET /api/athlete/home/`), awaiting review. No decisions
+- Status: Phases 0–1 built 2026-11-11 (the Home route and the Home page), awaiting review. No decisions
   open. (Phase 6, the room display for athletes, moved to spec 19 on 2026-11-11)
 - Form item: Definition of Done #4 (remote athlete access)
 - Depends on: [03 Login links](03-athlete-login-links.md) (the sign-in pages),
@@ -207,9 +207,9 @@ is the local date it started. Backend 764 tests pass as remote and as local.
 
 ## Phase 1 — Home, and the top bar
 
-Route `/athlete/home`. New files `react/src/athlete/Home.jsx` and
-`react/src/athlete/TopBar.jsx`, each opening with a plain-language comment on why it
-exists. Boards `F_Ath_H1`, `H1b`, `H1c`.
+Route `/athlete/home`. New file `react/src/athlete/Home.jsx`, opening with a plain-language
+comment on why it exists; the top bar is the shared `ui/TopBar.jsx` from spec 06 Phase 3.
+Boards `F_Ath_H1`, `H1b`, `H1c`.
 
 - **Top bar (every athlete page):** the picture goes Home; the name opens a menu with
   **Account** and **Sign out**. On a drill-down page a back link sits under the bar.
@@ -233,17 +233,26 @@ exists. Boards `F_Ath_H1`, `H1b`, `H1c`.
 
 **Done when:**
 
-- [ ] *(Frontend test)* Each banner form renders from the matching response; only the
+- [x] *(Frontend test)* Each banner form renders from the matching response; only the
       live form has a lime button.
-- [ ] *(Frontend test)* The picture always routes Home and the name opens the menu, on
+- [x] *(Frontend test)* The picture always routes Home and the name opens the menu, on
       Home and on a drill-down page; the menu holds exactly Account and Sign out.
-- [ ] *(Frontend test)* A short day ("6 of 8 sets") shows amber; a full one does not.
+- [x] *(Frontend test)* A short day ("6 of 8 sets") shows amber; a full one does not.
 - [ ] *(Browser)* With Home open, the coach starts the session: within 15 seconds the
       banner shows "Live now" and **Join session**, with no reload.
 - [ ] *(Browser)* **Join session** lands on the athlete's Ready screen.
-- [ ] *(Browser)* On a 390-pixel-wide phone nothing scrolls sideways and every button is
+- [x] *(Browser)* On a 390-pixel-wide phone nothing scrolls sideways and every button is
       at least 44 pixels tall.
 - [ ] *(Browser)* Sign out returns to `/athlete` and the Back button does not show Home.
+
+**Phase 1 result (2026-11-11).** `athlete/Home.jsx`, `AthletePage.jsx` (the frame: top bar,
+back link, sign-in check), `SensorRow.jsx`, `athleteApi.js`; 11 tests in `home.test.jsx`.
+Until their phases exist, two small pages stand in so nothing on Home leads nowhere:
+`/athlete/account` (name, teams, sensor; Phase 5 finishes it) and `/athlete/sensors` (the
+existing sensor list; spec 14 Phase 10 rebuilds it). The Recent sessions rows and View all
+become pressable in Phase 3, and the greeting's My Recent Progress link appears in Phase 4.
+The 390-pixel check was made on the real page with sample data; the live-banner, Join and
+Sign-out checks need a running server and are still open.
 
 **Stop. Devin reviews.**
 

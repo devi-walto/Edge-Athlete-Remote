@@ -166,7 +166,7 @@ describe('athlete sign in', () => {
     await type('Username', 'riley')
     await type('Password', 'pw')
     await submit()
-    expect(container.querySelector('h1').textContent).toBe("You're signed in")
+    expect(navigate).toHaveBeenCalledWith('/athlete/home', { replace: true })
   })
 
   it('turns a coach login away, and keeps nothing', async () => {
@@ -179,14 +179,20 @@ describe('athlete sign in', () => {
     expect(getCoachToken()).toBeNull()
   })
 
-  it('a phone that is still signed in goes straight to the signed-in page', async () => {
+  it('a phone that is still signed in goes straight to Home', async () => {
     setCoachToken(token(3600))
     setSignedInRole('athlete')
     await show(<AthleteSignIn />)
-    expect(container.querySelector('h1').textContent).toBe("You're signed in")
-    await act(async () => { button('Sign out').click() })
-    expect(container.querySelector('h1').textContent).toBe('Athlete sign in')
-    expect(getCoachToken()).toBeNull()
+    expect(navigate).toHaveBeenCalledWith('/athlete/home', { replace: true })
+  })
+
+  it('goes back to the page it was opening when sign-in was needed', async () => {
+    sessionStorage.setItem('athlete_after_sign_in', '/session/41')
+    setCoachToken(token(3600))
+    setSignedInRole('athlete')
+    await show(<AthleteSignIn />)
+    expect(navigate).toHaveBeenCalledWith('/session/41', { replace: true })
+    expect(sessionStorage.getItem('athlete_after_sign_in')).toBeNull()
   })
 })
 

@@ -5,16 +5,15 @@
 // Built to the Final designs board F_Ath_R2 (spec 03, Phase 4). There is no
 // "forgot password" flow on purpose: the coach sends a new login link instead.
 //
-// Once signed in, this page says so and points at the session link, until the
-// athlete's own home page exists (spec 10). Online it also holds "My sensor", where
-// the athlete adds their own sensor (spec 14, MySensor.jsx).
+// Once signed in, the athlete goes on to their Home (spec 10), or back to the page they
+// were opening when sign-in was needed.
 
 import { useEffect, useState } from 'react'
 import { Mark } from '../coach/SignIn.jsx'
-import useDeployment, { useInstallationName } from '../useDeployment.js'
+import { useInstallationName } from '../useDeployment.js'
 import { navigate } from '../router.js'
-import { RETURN_KEY, athleteSignIn, athleteSignOut, freshAthleteToken } from './athleteAuth.js'
-import { AddSensorPage, MySensorSection } from './MySensor.jsx'
+import { RETURN_KEY, athleteSignIn, freshAthleteToken } from './athleteAuth.js'
+import { HOME_PATH } from './AthletePage.jsx'
 import '../coach/account.css'
 import './athlete.css'
 
@@ -33,8 +32,6 @@ export default function AthleteSignIn() {
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [addingSensor, setAddingSensor] = useState(false)
-  const online = useDeployment() === 'remote'
 
   useEffect(() => {
     let cancelled = false
@@ -42,14 +39,13 @@ export default function AthleteSignIn() {
     return () => { cancelled = true }
   }, [])
 
-  // Signed in, and they came here from a session link: straight back to it.
+  // Signed in: straight back to the page they were opening (a session link, or one of
+  // their pages), else to Home. Replace, so Back doesn't return to the sign-in form.
   useEffect(() => {
     if (!signedIn) return
-    const back = sessionStorage.getItem(RETURN_KEY)
-    if (back) {
-      sessionStorage.removeItem(RETURN_KEY)
-      navigate(back, { replace: true })
-    }
+    let back = null
+    try { back = sessionStorage.getItem(RETURN_KEY); sessionStorage.removeItem(RETURN_KEY) } catch { /* no storage */ }
+    navigate(back || HOME_PATH, { replace: true })
   }, [signedIn])
 
   async function submit(event) {
@@ -65,22 +61,8 @@ export default function AthleteSignIn() {
     else setError(result.message)
   }
 
-  if (signedIn === null) return <main className="acct-screen" />
-
-  if (signedIn && addingSensor) return <AddSensorPage onDone={() => setAddingSensor(false)} />
-
-  if (signedIn) {
-    return <main className="acct-screen athlete-screen">
-      <section className="acct-card">
-        <AthleteBrand />
-        <h1>You're signed in</h1>
-        <p className="acct-note athlete-lead">Open the session link your coach sent to join today's training.</p>
-        {online && <MySensorSection onAdd={() => setAddingSensor(true)} />}
-        <button type="button" className="acct-solid"
-          onClick={() => { athleteSignOut(); setSignedIn(false) }}>Sign out</button>
-      </section>
-    </main>
-  }
+  // Checking, or already signed in and on the way to Home.
+  if (signedIn !== false) return <main className="acct-screen" />
 
   return <main className="acct-screen athlete-screen">
     <form className="acct-card" onSubmit={submit}>

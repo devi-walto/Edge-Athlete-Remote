@@ -66,3 +66,21 @@
 .athlete-dialog h2 { font-size: 20px; font-weight: 850; margin: 0; overflow-wrap: anywhere; }
 .athlete-dialog p { color: var(--soft-ink); font-size: 14px; line-height: 1.5; margin: 0; }
 .athlete-danger { background: var(--danger-fill); border: 0; border-radius: 6px; color: var(--ink); cursor: pointer; font: inherit; font-size: 19px; font-weight: 800; min-height: 52px; }
+
+/* ── The athlete's own pages (spec 10): the frame, Home's greeting and banner ── */
+.athlete-app { background: var(--bg); color: var(--ink); font-family: var(--font-sans); min-height: 100vh; }
+.athlete-app-bar { align-items: center; border-bottom: 1px solid var(--line); box-sizing: border-box; display: flex; height: 60px; padding: 0 10px; }
+.athlete-app-body { box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; margin: 0 auto; max-width: 560px; padding: 14px 16px 32px; }
+.athlete-page-title { font-size: 24px; font-weight: 850; letter-spacing: -.02em; margin: 4px 0 0; }
+.athlete-greeting { background: var(--hero-bg); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 5px; padding: 16px 18px; }
+.athlete-greeting-label { color: var(--lime); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.athlete-greeting h1 { font-size: 22px; font-weight: 850; letter-spacing: -.02em; line-height: 1.1; margin: 0; }
+.athlete-greeting-groups { color: var(--muted); font-size: 13px; line-height: 1.4; }
+.athlete-live { align-items: center; color: var(--lime); display: inline-flex; gap: 7px; }
+.athlete-live-dot { background: var(--lime); border-radius: 50%; height: 8px; width: 8px; }
+.athlete-banner-hint { color: var(--muted); font-size: 12px; padding-top: 4px; }
+.athlete-banner .ui-focus-actions { display: block; }
+.athlete-join { font-size: 17px; min-height: 56px; width: 100%; }
+.athlete-sets { color: var(--muted); font-size: 12px; font-weight: 800; white-space: nowrap; }
+.athlete-sets.is-short { color: var(--amber); }
+.athlete-empty { color: var(--muted); font-size: 13px; margin: 0; }

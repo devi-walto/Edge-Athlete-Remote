@@ -108,9 +108,15 @@ describe('FocusCard, QuietRow, SectionLabel, Hero', () => {
     expect(host.querySelector('.ui-focus-actions button')).not.toBeNull()
   })
 
+  it('shows a detail line under the title, and a mark before the name of a row', () => {
+    render(<><FocusCard title="Day 2" detail="Varsity · Deadlift" /><QuietRow lead={<i data-dot />} name="ea-3f9c" /></>)
+    expect(host.querySelector('.ui-focus-detail').textContent).toBe('Varsity · Deadlift')
+    expect(host.querySelector('.ui-row-lead [data-dot]')).not.toBeNull()
+  })
+
   it('leaves out the parts a focus card or row is not given', () => {
     render(<><FocusCard title="Roster" /><QuietRow name="Jordan" /></>)
-    expect(host.querySelector('.ui-focus-label, .ui-focus-actions, .ui-row-meta, .ui-row-badge, .ui-row-actions')).toBeNull()
+    expect(host.querySelector('.ui-focus-label, .ui-focus-detail, .ui-focus-actions, .ui-row-lead, .ui-row-meta, .ui-row-badge, .ui-row-actions')).toBeNull()
   })
 
   it('draws a row with its name, detail, badge and actions', () => {
