@@ -5,11 +5,13 @@
 // in the top bar always goes Home; the athlete's name opens their menu (Account, Sign out);
 // a drill-down page (Account, Manage sensors, later All sessions and My Recent Progress)
 // has one back link under the bar. It also checks the phone is still signed in: if not,
-// it goes to sign-in and comes back here afterwards.
-import { useEffect } from 'react'
+// it goes to sign-in and comes back here afterwards. And it knows the athlete's name, so a
+// page never has to fetch it just for the top bar.
+import { useEffect, useState } from 'react'
 import { navigate } from '../router.js'
 import BackLink from '../ui/BackLink.jsx'
 import TopBar from '../ui/TopBar.jsx'
+import { HOME, getJson } from './athleteApi.js'
 import { RETURN_KEY, athleteSignOut, freshAthleteToken } from './athleteAuth.js'
 import '../coach/account.css'
 import './athlete.css'
@@ -24,13 +26,36 @@ export function toSignIn(here) {
   navigate('/athlete', { replace: true })
 }
 
+// The signed-in athlete's name, remembered for this tab so every page's top bar can show it
+// without asking the server again. Cleared on sign out (someone else may sign in next).
+const NAME_KEY = 'athlete_name'
+const remembered = () => { try { return sessionStorage.getItem(NAME_KEY) } catch { return null } }
+
 export function signOut() {
+  try { sessionStorage.removeItem(NAME_KEY) } catch { /* nothing remembered */ }
   athleteSignOut()
   navigate('/athlete', { replace: true })   // replace: Back must not show the old page
 }
 
-/** name: who is signed in; back: { label, to } on a drill-down page; here: this page's path. */
+/** name: who is signed in, when the page already has it (Home, Account); otherwise the frame
+ *  finds it: remembered for this tab, or asked of the server once. back: { label, to } on a
+ *  drill-down page; here: this page's path. */
 export default function AthletePage({ name, back, here, children }) {
+  const [known, setKnown] = useState(remembered)
+  useEffect(() => {
+    if (!name) return
+    setKnown(name)
+    try { sessionStorage.setItem(NAME_KEY, name) } catch { /* shown, just not remembered */ }
+  }, [name])
+  useEffect(() => {
+    if (name || known) return undefined
+    let cancelled = false
+    getJson(HOME).then(({ status, body }) => {
+      if (!cancelled && status === 200 && body.athlete?.name) setKnown(body.athlete.name)
+    })
+    return () => { cancelled = true }
+  }, [name, known])
+
   useEffect(() => {
     let cancelled = false
     freshAthleteToken().then((token) => { if (!cancelled && !token) toSignIn(here) })
@@ -39,7 +64,7 @@ export default function AthletePage({ name, back, here, children }) {
 
   return <main className="athlete-app">
     <header className="athlete-app-bar">
-      <TopBar name={name || '…'} onHome={() => navigate(HOME_PATH)} menuItems={[
+      <TopBar name={name || known || '…'} onHome={() => navigate(HOME_PATH)} menuItems={[
         { label: 'Account', hint: 'Your name, teams and sensor', onSelect: () => navigate(ACCOUNT_PATH) },
         { label: 'Sign out', hint: 'This phone only', onSelect: signOut },
       ]} />

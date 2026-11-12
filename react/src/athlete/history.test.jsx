@@ -174,6 +174,31 @@ describe('a past session', () => {
   })
 })
 
+describe('the top bar shows who is signed in on every history page', () => {
+  const topName = () => host.querySelector('.ui-topbar-name').textContent
+
+  it.each([['All sessions', <Sessions key="s" />], ['a past session', <PastSession key="p" sessionId={50} />]])(
+    'on %s: the name, found by the page frame', async (_, page) => {
+      await show(page)
+      expect(topName()).toContain('Chris Vale')
+      expect(topName()).not.toContain('…')
+    })
+
+  it('remembered for the tab: no extra trip to the server once a page has shown it', async () => {
+    sessionStorage.setItem('athlete_name', 'Chris Vale')
+    await show(<Sessions />)
+    expect(topName()).toContain('Chris Vale')
+    expect(calls).not.toContain('/api/athlete/home/')
+  })
+
+  it('signing out forgets it', async () => {
+    const { signOut } = await import('./AthletePage.jsx')
+    sessionStorage.setItem('athlete_name', 'Chris Vale')
+    signOut()
+    expect(sessionStorage.getItem('athlete_name')).toBeNull()
+  })
+})
+
 describe('Home leads into history', () => {
   it('a recent row opens that session with Home as its way back; View all opens the list', async () => {
     await show(<Home />)

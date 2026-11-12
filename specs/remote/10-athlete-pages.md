@@ -2,8 +2,8 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06; rewritten 2026-11-11 after the athlete-account design was approved
-- Status: Phases 0–2 built 2026-11-11 (the Home route, the Home page, the session-ended page),
-  awaiting review. No decisions
+- Status: Phases 0–3 built 2026-11-11 (the Home route, the Home page, the session-ended page,
+  All sessions and a past session), awaiting review. No decisions
   open. (Phase 6, the room display for athletes, moved to spec 19 on 2026-11-11)
 - Form item: Definition of Done #4 (remote athlete access)
 - Depends on: [03 Login links](03-athlete-login-links.md) (the sign-in pages),
@@ -312,20 +312,39 @@ screens.
 
 **Done when:**
 
-- [ ] The routes return only the caller's sets; athlete A asking for a session only
+- [x] The routes return only the caller's sets; athlete A asking for a session only
       athlete B lifted in gets `404`.
-- [ ] Paging returns every session exactly once, newest first, with no gaps.
-- [ ] The totals and per-rep speeds match the athlete's rows in that session's daily
+- [x] Paging returns every session exactly once, newest first, with no gaps.
+- [x] The totals and per-rep speeds match the athlete's rows in that session's daily
       report.
-- [ ] *(Frontend test)* A typed-in set shows "not measured", not 0.00, and has no reps to
+- [x] *(Frontend test)* A typed-in set shows "not measured", not 0.00, and has no reps to
       open.
-- [ ] *(Frontend test)* The past session's back link names All sessions when opened from
+- [x] *(Frontend test)* The past session's back link names All sessions when opened from
       there, and Home when opened from Recent sessions.
-- [ ] *(Browser)* Home → View all → scroll → a session → open a set → back → back, on a
+- [x] *(Browser)* Home → View all → scroll → a session → open a set → back → back, on a
       390-pixel-wide phone.
 - [x] ~~The coach's Analytics screens and `Dashboard.jsx` are unchanged.~~ Changed by Devin's
       call (2026-11-11): the coach's two rep charts in `Dashboard.jsx` now use the shared
       `ui/BarChart` (spec 06 rule 13), looking as before; nothing else there changed.
+
+**Phase 3 result (2026-11-11).** Server: `GET /api/athlete/sessions/?before=` in
+`services/athlete_home.py` (`sessions_page`, cursor = last row's ended time + id, so a session
+ending mid-scroll can't shift pages; a made-up cursor is `400`), and each movement in the
+session route now carries `zone_min` for the rep colours. Home's Recent and All sessions
+share one query, so they always agree; a session where every set was marked false is no
+longer listed (there was nothing to open). Pages: `athlete/Sessions.jsx` (by month, loads as
+you scroll, a button where the browser can't), `PastSession.jsx`, and `SessionRow.jsx` (the
+row Home and All sessions share). The back link comes from `?from=sessions`. Beyond the spec:
+- **`ui/BarChart`**, the one bar chart (spec 06 rule 13, Devin's call): the past session's rep
+  bars, and the coach's live rep chart (size `large`) and history sparkline (`spark`) in
+  `Dashboard.jsx` moved onto it, looking as before; a guard test fails on a hand-drawn chart.
+- The page frame (`AthletePage.jsx`) finds the athlete's name itself (remembered for the tab,
+  cleared on sign out), so every page's top bar shows it; Manage sensors' own fetch went.
+- Tests: server 28 in `test_athlete_home.py` (both suites 779, local skips 8); frontend 469.
+- Browser, on a test stack built from this branch at 390 px as a seeded athlete with 26 past
+  sessions: Home → View all → scroll (26 rows over two pages, four months) → a session →
+  open a set (bars, drop line; typed-in sets read "not measured") → back (All sessions) →
+  back (Home); from Home the back link says Home; no sideways scroll.
 
 **Stop. Devin reviews.**
 
