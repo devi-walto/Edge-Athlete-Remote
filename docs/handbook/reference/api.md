@@ -221,7 +221,7 @@ the outage you built it for.
 
 Rack screens, and the sensors on them.
 
-:::::{dropdown} 22 routes
+:::::{dropdown} 24 routes
 
 <!-- routes:the-room:start -->
 | Route | Methods | Access | What it does | Handler |
@@ -236,6 +236,8 @@ Rack screens, and the sensors on them.
 | `/api/ble/verifications/` | `POST` | 🔒 coach | — | `ble_verifications` |
 | `/api/racks/<int:rack_number>/ble-selection/` | `PUT` | 🔒 coach | — | `rack_ble_selection` |
 | `/api/racks/<int:rack_number>/sensor-health/` | `GET` | local: open · online: coach, or the rack's own athlete | — | `rack_sensor_health` |
+| `/api/racks/mine/` | `GET,POST` | local: open · online: refused; tablets: its own rack setup | GET: this device's rack, or none yet with the name it would be given | `my_rack` |
+| `/api/racks/<int:rack_number>/name/` | `PATCH` | local: open · online: coach; tablets: own racks | Rename a rack { name }: a coach from Room Layout, or the rack's own tablet | `rack_name` |
 | `/api/racks/<int:rack_number>/state/` | `GET,PATCH` | local: open · online: coach, or the rack's own athlete; tablets: own racks | Read the authoritative rack mirror or apply one fenced state transition | `rack_state` |
 | `/api/racks/<int:rack_number>/controller/acquire/` | `POST` | local: open · online: coach, or the rack's own athlete; tablets: own racks | Claim or renew ownership after validating the physical rack identity | `rack_controller_acquire` |
 | `/api/racks/<int:rack_number>/controller/heartbeat/` | `POST` | local: open · online: coach, or the rack's own athlete; tablets: own racks | Extend the current lease using server time; heartbeats are not visible events | `rack_controller_heartbeat` |

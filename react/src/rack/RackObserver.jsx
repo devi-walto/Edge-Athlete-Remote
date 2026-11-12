@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { T } from '../theme.js'
+import { rackLabel } from '../rackName.js'
 
 const REST_SECONDS = 120
 const COUNTDOWN_SECONDS = 3
@@ -19,7 +20,7 @@ export function snapshotTiming(snapshot, now = Date.now()) {
 export function formatSnapshot(snapshot, now = Date.now()) {
   const timing = snapshotTiming(snapshot, now)
   return {
-    rack: snapshot?.rack_number ?? '—',
+    rack: snapshot ? rackLabel(snapshot.rack_label, snapshot.rack_number) : 'Rack —',
     athlete: snapshot?.selected_athlete?.name || 'No athlete selected',
     exercise: snapshot?.selected_exercise?.name || 'No exercise selected',
     phase: snapshot?.phase || 'idle',
@@ -52,7 +53,7 @@ export default function RackObserver({ snapshot, reason, canRecover = false, onR
     <div style={{ minHeight: '100vh', background: T.bg, color: T.ink, fontFamily: T.sans }}>
       <header style={{ padding: '18px 24px', borderBottom: `1px solid ${T.line}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <strong style={{ fontSize: 18 }}>Rack {view.rack}</strong>
+          <strong style={{ fontSize: 18 }}>{view.rack}</strong>
           <span style={{ color: T.amber, fontSize: 11, fontWeight: 900, letterSpacing: '.12em', textTransform: 'uppercase' }}>
             Read-only observer
           </span>

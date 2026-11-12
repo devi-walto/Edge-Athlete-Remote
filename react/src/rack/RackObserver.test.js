@@ -21,7 +21,7 @@ const snapshot = {
 describe('rack observer snapshot', () => {
   it('formats every authoritative live field without controller identity', () => {
     expect(formatSnapshot(snapshot, Date.parse(snapshot.server_time))).toMatchObject({
-      rack: 4,
+      rack: 'Rack 4',   // printed through rackLabel (spec 18): no label from this older snapshot
       athlete: 'Jordan',
       exercise: 'Back Squat',
       phase: 'active',

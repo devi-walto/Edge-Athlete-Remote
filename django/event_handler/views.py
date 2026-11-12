@@ -58,6 +58,7 @@ from .permissions import (
     ONLINE_COACH_OR_SAME_ATHLETE, ONLINE_REFUSE, IsCoach, open_on_local,
     refuse_while_password_change_due)
 from .roles import role_of
+from .services import rack_names
 from . import athlete_logins
 from .services.rack_checkin import record_check_in
 from .services.virtual_racks import end_open_sets_on_rack
@@ -141,6 +142,9 @@ def _runtime_snapshot(runtime, now=None, *, recovery_required=False):
             {"id": runtime.owner_athlete_id, "name": runtime.owner_athlete.name}
             if runtime.owner_athlete_id else None
         ),
+        # The rack's name and what to print (spec 18): added, nothing renamed.
+        "rack_name": rack_names.names_by_rack([runtime.rack_number]).get(runtime.rack_number),
+        "rack_label": rack_names.label_for(runtime.rack_number),
         "current_set": runtime.current_set_id,
         "rep_count": runtime.rep_count,
         "latest_mean_velocity": runtime.latest_mean_velocity,

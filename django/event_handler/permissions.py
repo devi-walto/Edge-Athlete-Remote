@@ -127,6 +127,7 @@ ONLINE_REFUSE = 'refuse'                        # nobody: there is no shared roo
 # route, on top of the rule above. None (the default): refused.
 COMMON_OWN_RACK = 'own_rack'   # only for a rack its own device made
 COMMON_READ = 'read'           # read only (GET); the route itself decides what's in it
+COMMON_DEVICE = 'device'       # any request from a signed-in common-login device (its own rack setup)
 
 
 def _asks_about_own_athlete(request, view):
@@ -248,9 +249,13 @@ class OpenOnLocal(BasePermission):
         from .deployment import is_hosted  # read at request time, so tests can switch it
         if not is_hosted():
             return True
+        role = _role(request)
+        # The common login's own rule comes first: a route refused to everyone else
+        # online (a tablet making its own rack) may still be open to it (spec 18).
+        if role == COMMON and self.common_rule == COMMON_DEVICE:
+            return _common_device(request) is not None
         if self.online_rule == ONLINE_REFUSE:
             raise PermissionDenied('This is not available on a hosted installation.')
-        role = _role(request)
         if role in COACH_ROLES:
             refuse_while_password_change_due(request.user)
             return True
@@ -271,12 +276,13 @@ class OpenOnLocal(BasePermission):
 
 def open_on_local(online_rule, common=None):
     """A permission class for one route: open on a gym box, `online_rule` when hosted,
-    and `common` (COMMON_OWN_RACK, COMMON_READ, or None: refused) for the common login."""
+    and `common` (COMMON_OWN_RACK, COMMON_READ, COMMON_DEVICE, or None: refused) for the
+    common login."""
     allowed = (ONLINE_COACH, ONLINE_ANY_ROLE, ONLINE_COACH_OR_SAME_ATHLETE,
                ONLINE_COACH_OR_RACK_OWNER, ONLINE_REFUSE)
     if online_rule not in allowed:
         raise ValueError(f'unknown online rule {online_rule!r}')
-    if common not in (None, COMMON_OWN_RACK, COMMON_READ):
+    if common not in (None, COMMON_OWN_RACK, COMMON_READ, COMMON_DEVICE):
         raise ValueError(f'unknown common-login rule {common!r}')
     name = f'OpenOnLocal_{online_rule}' + (f'_common_{common}' if common else '')
     return type(name, (OpenOnLocal,), {'online_rule': online_rule, 'common_rule': common})

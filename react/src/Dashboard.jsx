@@ -68,6 +68,7 @@ import { scheduleUrl, scheduleWindow, slotState } from "./schedule.js";
 import BarChart, { TONES } from "./ui/BarChart.jsx";
 import PillGroup from "./ui/PillGroup.jsx";
 import RangePicker from "./ui/RangePicker.jsx";
+import { rackLabel } from "./rackName.js";
 
 // The sub-tabs each state has (STATE_TABS) and their row live in coach/ContextTabs.jsx.
 
@@ -158,7 +159,7 @@ function WallRackTile({ rack }) {
   return (
     <article className={`wall-rack-tile ${rack.status_color}`}>
       <header>
-        <span>Rack {rack.rack_number}</span>
+        <span>{rackLabel(rack.label, rack.rack_number)}</span>
         <b>{rack.status}</b>
       </header>
       {workoutSet ? (
@@ -356,7 +357,7 @@ function CoachRackButton({ rack, selected, onSelect }) {
   return (
     <button className={`coach-rack-row ${selected ? "selected" : ""}`} aria-pressed={selected} onClick={onSelect}>
       <i className={rack.status_color} />
-      <span><b>Rack {rack.rack_number}</b><small>{view.athleteName} · {view.movementName}</small></span>
+      <span><b>{rackLabel(rack.label, rack.rack_number)}</b><small>{view.athleteName} · {view.movementName}</small></span>
       <strong>{velocity(view.metrics.mean)}</strong>
     </button>
   );
@@ -562,7 +563,7 @@ function RepComparison({ workoutSet }) {
 function HistorySetCard({ workoutSet, expanded, onToggle }) {
   return <article className={`history-set-card ${expanded ? "expanded" : ""}`}>
     <div className="history-set-summary">
-      <div className="history-set-main"><span>{timeLabel(workoutSet.ended_at)} · Rack {workoutSet.rack_number ?? "--"}</span><h4>{workoutSet.exercise} · Set {workoutSet.set_number}</h4><p>{workoutSet.weight_lbs ?? "--"} lbs</p></div>
+      <div className="history-set-main"><span>{timeLabel(workoutSet.ended_at)} · {workoutSet.rack_number == null ? "Rack --" : rackLabel(workoutSet.rack_label, workoutSet.rack_number)}</span><h4>{workoutSet.exercise} · Set {workoutSet.set_number}</h4><p>{workoutSet.weight_lbs ?? "--"} lbs</p></div>
       <div className="history-set-metrics"><div><span>Avg</span><strong>{velocity(workoutSet.avg_velocity)}</strong></div><div><span>Peak</span><strong>{velocity(workoutSet.peak_velocity)}</strong></div><div><span>Reps</span><strong>{workoutSet.reps_completed}</strong></div><div><span>First→last</span><strong>{workoutSet.measured.first_to_last_change_percent === null ? "--" : `${signed(workoutSet.measured.first_to_last_change_percent, 1)}%`}</strong></div></div>
       <BarChart size="spark" className="history-rep-spark" max={1 / 0.9} label="Speed of each rep" bars={workoutSet.reps.map((rep) => ({ value: rep.mean_velocity, label: `Rep ${rep.rep_number}: ${velocity(rep.mean_velocity)} m/s` }))} />
       <button className="history-set-action" onClick={onToggle} aria-expanded={expanded} aria-controls={`history-set-${workoutSet.id}`}>{expanded ? "Close comparison" : "Compare reps"}<b aria-hidden="true">{expanded ? "−" : "+"}</b></button>
@@ -688,7 +689,7 @@ function RackSelectionControls({ rack }) {
   const view = coachRackView(rack);
   const latest = rack.latest_set;
   return <section className="coach-panel coach-rack-observation">
-    <header><div><span>Rack observation</span><h3>{view.athleteName}</h3></div><b>Rack {rack.rack_number}</b></header>
+    <header><div><span>Rack observation</span><h3>{view.athleteName}</h3></div><b>{rackLabel(rack.label, rack.rack_number)}</b></header>
     <div className="coach-observation-grid">
       <div><span>Movement</span><strong>{view.movementName}</strong></div>
       <div><span>Load</span><strong>{latest?.weight_lbs != null ? `${latest.weight_lbs} lbs` : "--"}</strong></div>
@@ -802,7 +803,7 @@ function CoachView({ monitor, accessToken, onLogout, coachState, me }) {
   if(!roomState&&requestState==="loading")return <main className="monitor coach-monitor"><StatePanel title="Loading coach workspace" body="Reconciling saved room state." /></main>;
   if(!roomState)return <main className="monitor coach-monitor"><StatePanel title="Coach view unavailable" body={lastError||"The base station could not be reached."} action={refresh} /></main>;
   const selectedRack=roomState.racks.find(r=>r.rack_number===selectedRackNumber)||roomState.racks[0],workoutSet=selectedRack?.latest_set||null,liveMetrics=rackMetrics(selectedRack);
-  const room=<section className="coach-workspace"><aside className="coach-rack-list"><div className="coach-section-label"><span>Room</span><b>{roomState.racks.length} racks</b></div>{roomState.racks.map(r=><CoachRackButton rack={r} selected={r.rack_number===selectedRack?.rack_number} onSelect={()=>{setSelectedRackNumber(r.rack_number);const athleteId=r.athlete?.id;if(athleteId)chooseAthlete(athleteId);}} key={r.rack_number}/>)}</aside><div className="coach-detail-workspace">{!selectedRack?null:<><RackSelectionControls rack={selectedRack}/>{!workoutSet?null:<><section className="coach-set-hero"><div><span>Rack {selectedRack.rack_number} · Set {workoutSet.set_number}</span><h2>{selectedRack.athlete?.name||"Unknown athlete"}</h2><p>{workoutSet.exercise} · {workoutSet.weight_lbs??"--"} lbs</p></div><div className="coach-hero-metric"><strong>{velocity(liveMetrics.mean)}</strong><span>{liveMetrics.isLive?"m/s latest mean":"m/s average"}</span></div><dl><div><dt>{liveMetrics.isLive?"Latest peak":"Peak"}</dt><dd>{velocity(liveMetrics.peak)} m/s</dd></div><div><dt>Reps</dt><dd>{liveMetrics.reps}</dd></div><div><dt>Target</dt><dd>{workoutSet.target_zone?`${velocity(workoutSet.target_zone.min)}-${velocity(workoutSet.target_zone.max)}`:"Not set"}</dd></div></dl></section><div className="coach-panel-grid"><RepChart workoutSet={workoutSet}/><MeasuredInsights workoutSet={workoutSet}/></div></>}<CoachHardware rack={selectedRack} nodes={nodes} token={accessToken} onLinked={()=>{refresh();setNodesTick(n=>n+1);}}/>{/* SESSION's only athlete-scoped control, and it needs no picker: the
+  const room=<section className="coach-workspace"><aside className="coach-rack-list"><div className="coach-section-label"><span>Room</span><b>{roomState.racks.length} racks</b></div>{roomState.racks.map(r=><CoachRackButton rack={r} selected={r.rack_number===selectedRack?.rack_number} onSelect={()=>{setSelectedRackNumber(r.rack_number);const athleteId=r.athlete?.id;if(athleteId)chooseAthlete(athleteId);}} key={r.rack_number}/>)}</aside><div className="coach-detail-workspace">{!selectedRack?null:<><RackSelectionControls rack={selectedRack}/>{!workoutSet?null:<><section className="coach-set-hero"><div><span>{rackLabel(selectedRack.label, selectedRack.rack_number)} · Set {workoutSet.set_number}</span><h2>{selectedRack.athlete?.name||"Unknown athlete"}</h2><p>{workoutSet.exercise} · {workoutSet.weight_lbs??"--"} lbs</p></div><div className="coach-hero-metric"><strong>{velocity(liveMetrics.mean)}</strong><span>{liveMetrics.isLive?"m/s latest mean":"m/s average"}</span></div><dl><div><dt>{liveMetrics.isLive?"Latest peak":"Peak"}</dt><dd>{velocity(liveMetrics.peak)} m/s</dd></div><div><dt>Reps</dt><dd>{liveMetrics.reps}</dd></div><div><dt>Target</dt><dd>{workoutSet.target_zone?`${velocity(workoutSet.target_zone.min)}-${velocity(workoutSet.target_zone.max)}`:"Not set"}</dd></div></dl></section><div className="coach-panel-grid"><RepChart workoutSet={workoutSet}/><MeasuredInsights workoutSet={workoutSet}/></div></>}<CoachHardware rack={selectedRack} nodes={nodes} token={accessToken} onLinked={()=>{refresh();setNodesTick(n=>n+1);}}/>{/* SESSION's only athlete-scoped control, and it needs no picker: the
           rack rail on the left already IS the picker, and it picks the way a
           coach thinks mid-floor — "whoever is on that rack". */}
       <QuickNote athlete={selectedRack.athlete} rackNumber={selectedRack.rack_number} accessToken={accessToken} onLogout={onLogout}/></>}</div></section>;

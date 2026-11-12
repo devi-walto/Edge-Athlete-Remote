@@ -122,7 +122,7 @@ ONLINE_RULES = {
     "ONLINE_COACH_OR_RACK_OWNER": "coach, or the rack's own athlete",
     "ONLINE_REFUSE": "refused",
 }
-COMMON_RULES = {"COMMON_OWN_RACK": "own racks", "COMMON_READ": "read"}
+COMMON_RULES = {"COMMON_OWN_RACK": "own racks", "COMMON_READ": "read", "COMMON_DEVICE": "its own rack setup"}
 
 
 def access_label(perm):

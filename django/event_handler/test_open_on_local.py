@@ -76,8 +76,9 @@ class Walk(APITestCase):
 
 
 class TheListTests(Walk):
-    def test_there_are_exactly_21(self):
-        self.assertEqual(len(OPEN_ON_LOCAL), 21, sorted(r['name'] for r in OPEN_ON_LOCAL))
+    def test_there_are_exactly_23(self):
+        # 21, then spec 18 Phase 2: a tablet makes its own rack, and renaming a rack.
+        self.assertEqual(len(OPEN_ON_LOCAL), 23, sorted(r['name'] for r in OPEN_ON_LOCAL))
 
     def test_every_route_has_a_known_online_rule(self):
         known = {ONLINE_COACH, ONLINE_ANY_ROLE, ONLINE_COACH_OR_SAME_ATHLETE,
@@ -137,14 +138,16 @@ class RemoteTests(Walk):
     def test_the_shared_room_routes_are_refused_to_everyone(self):
         refused = routes_with(ONLINE_REFUSE)
         self.assertEqual({r['name'] for r in refused},
-                         {'rack_register', 'rack_racknumber', 'rack_nfc_tap'})
+                         {'rack_register', 'rack_racknumber', 'rack_nfc_tap',
+                          'my_rack'})   # spec 18: only a common-login tablet sets its rack up online
         for user in (None, self.coach, self.athlete_login):
             self.for_each(refused, lambda m, url: self.assertEqual(self.status(user, m, url), 403))
 
     def test_an_athlete_is_refused_the_coach_routes(self):
         coach_only = routes_with(ONLINE_COACH)
         self.assertEqual({r['name'] for r in coach_only},
-                         {'athletes', 'nodes_list', 'node_register', 'room_state'})
+                         {'athletes', 'nodes_list', 'node_register', 'room_state',
+                          'rack_name'})   # spec 18: renaming a rack, from Room Layout
         self.for_each(coach_only, lambda m, url: self.assertEqual(
             self.status(self.athlete_login, m, url), 403))
 

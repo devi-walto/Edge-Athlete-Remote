@@ -115,6 +115,11 @@ class RackScreen(models.Model):
     device_id = models.CharField(max_length=255, unique=True)
     rack_number = models.IntegerField(null=True, blank=True)
     last_seen = models.DateTimeField(auto_now=True)
+    # The rack's name (spec 18, Phase 2): "Rack 3" by default, given when the tablet sets
+    # its rack up, changed from the tablet or Room Layout. Two racks may share one; the
+    # coach's screens then add the number ("Platform (4)", services/rack_names.py).
+    # Blank only on a tablet still waiting for a rack.
+    name = models.CharField(max_length=40, blank=True)
 
     class Meta:
         constraints = [

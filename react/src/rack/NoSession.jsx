@@ -19,6 +19,7 @@ import { useEffect, useState } from 'react'
 import { subscribeNodePulse } from '../mqtt/client.js'
 import { T } from '../theme.js'
 import Badge from '../ui/Badge.jsx'
+import { rackLabel } from '../rackName.js'
 
 // The sensor pulses every 5 seconds; missing three in a row means it isn't there.
 export const LIVE_WITHIN_MS = 15_000
@@ -40,13 +41,13 @@ export function useSensorLive(node) {
   return Boolean(nodeId) && now - lastPulse < LIVE_WITHIN_MS
 }
 
-/** live: from useSensorLive, held by the rack screen. */
-export default function NoSession({ rackNumber, node, live }) {
+/** live: from useSensorLive, held by the rack screen; rackName: what the rack is called. */
+export default function NoSession({ rackNumber, rackName, node, live }) {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
       justifyContent: 'center', gap: 16, padding: 28, textAlign: 'center' }}>
       <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '.14em', textTransform: 'uppercase',
-        color: T.lime }}>Rack {rackNumber} is ready</div>
+        color: T.lime }}>{rackName || rackLabel(null, rackNumber)} is ready</div>
       <h1 style={{ fontSize: 30, fontWeight: 850, letterSpacing: '-.035em', lineHeight: 1.1, margin: 0 }}>
         Waiting for<br />today&apos;s session
       </h1>

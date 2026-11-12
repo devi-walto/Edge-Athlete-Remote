@@ -28,6 +28,7 @@ from django.utils import timezone
 
 from ..models import (AthleteReferenceMax, DailyReport, MonitoringEvent,
                       RackCheckIn, Rep, TrainingSession, Set)
+from .rack_names import labels_by_rack
 from .virtual_racks import release_session_racks
 from .lifting_math import one_rep_max
 
@@ -57,6 +58,7 @@ def _snapshot(session):
     racks_by_athlete = {}
     for checkin in RackCheckIn.objects.filter(session=session):
         racks_by_athlete.setdefault(checkin.athlete_id, set()).add(checkin.rack_number)
+    rack_labels = labels_by_rack({n for numbers in racks_by_athlete.values() for n in numbers})
 
     sets_by_athlete = {}
     # Coach weight adjustments are left out of the permanent record: they are a
@@ -94,6 +96,9 @@ def _snapshot(session):
         "assigned_program": None,   # filled once group programs exist (planning phase)
         "final_progress": None,     # ditto
         "rack_participation": sorted(racks_by_athlete.get(a.id, [])),
+        # The same racks by what they were called that day (spec 18), frozen with the
+        # report so a later rename doesn't rewrite history.
+        "rack_labels": [rack_labels[n] for n in sorted(racks_by_athlete.get(a.id, []))],
         "sets": sets_by_athlete.get(a.id, []),
     } for a in athletes]
 

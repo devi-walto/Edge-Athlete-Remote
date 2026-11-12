@@ -386,14 +386,53 @@ Server 824 in each version (local skips 8).
 
 **Done when:**
 
-- [ ] A new tablet's first pick makes a rack with the name given; a second tablet makes
+- [x] A new tablet's first pick makes a rack with the name given; a second tablet makes
       a second rack.
-- [ ] Renaming changes the name everywhere and nothing else.
-- [ ] Two racks with one name both show their number in brackets on the coach's
+- [x] Renaming changes the name everywhere and nothing else.
+- [x] Two racks with one name both show their number in brackets on the coach's
       screens; a rack with a name of its own shows none.
-- [ ] A dead tablet's empty rack leaves the room view; its athletes' check-ins and sets
+- [x] A dead tablet's empty rack leaves the room view; its athletes' check-ins and sets
       are untouched.
-- [ ] Full suite passes in both modes.
+- [x] Full suite passes in both modes.
+
+**Phase 2 result (2026-11-13).**
+- **Data:** `RackScreen.name` (migration 0031 names every tablet already on a rack "Rack N",
+  so a set-up gym looks the same).
+- **Rules** (`services/rack_names.py`):
+  - the next free number skips anything a tablet, sensor or rack state ever used, below
+    the virtual racks;
+  - the suggested name is "Rack N" for the smallest N not taken;
+  - a label adds the number only when another rack shares the name.
+- **Routes** (`rack_setup.py`):
+  - `GET/POST /api/racks/mine/`: which rack am I, make it. In a gym, open with the
+    `X-Rack-Device-ID` header; online, only a common-login device (new common rule
+    `COMMON_DEVICE`, checked before the online refusal). One device, one rack: asking
+    again returns it.
+  - `PATCH /api/racks/<n>/name/`: a coach (Room Layout) or the rack's own tablet.
+- **The name everywhere a rack shows:**
+  - the server sends `name` and `label` in the room view, `rack_name` and `rack_label`
+    in the rack's state, and `rack_label` in analytics set rows;
+  - the frozen report keeps `rack_labels` beside `rack_participation`, and the PDF prints
+    them;
+  - screens print through one helper, `react/src/rackName.js` (`rackLabel`): rack
+    screen header, waiting screen, observer, TV tiles, coach room list and set hero,
+    history and report rows.
+  - A guard test fails if a screen prints "Rack N" from a bare number. The old setup
+    screens Phases 4–5 replace are listed in it by name.
+- **Dead tablets:** a rack whose tablet's lease ran out over 10 minutes ago, with no
+  sensor and nobody checked in, leaves the room view; nothing is deleted.
+  - Room Layout's own list is rebuilt in Phase 4 and uses the same rule.
+
+Tests:
+- 15 in `test_rack_setup.py`: gym and online setup, numbers skipping used ones, names,
+  renaming everywhere and nothing else, shared-name labels, the dead-rack rule, the
+  migration.
+- The route walk's lists gained the two routes.
+- Frontend: 3 new, 1 updated.
+
+Server 840 in each version (local skips 8), frontend 505, build passes.
+
+**Stop. Devin reviews.**
 
 ## Phase 3 — School sensors and pairing
 

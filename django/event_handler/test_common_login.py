@@ -254,11 +254,13 @@ OPEN_TO_COMMON = OPEN_EVERYWHERE | {'token_obtain_pair', 'token_refresh', 'senso
 # Phase 1: read only, whatever the address (an athlete's day needs a real athlete, and
 # the walk's stand-in isn't one, so it is refused there and tested below).
 COMMON_READS = {'sessions_active', 'session_status', 'room_state'}
+# Phase 2: its own rack setup (which rack am I, make it), any method.
+COMMON_DEVICE_ROUTES = {'my_rack'}
 # Phase 1: only for a rack its own device made. The walk's stand-in rack (999999) isn't
 # one, so the walk sees them refused too; the tests below use a real one.
 COMMON_OWN_RACK = {'rack_state', 'rack_controller_acquire', 'rack_controller_heartbeat',
                    'rack_controller_release', 'rack_checkin', 'rack_checkins',
-                   'set_create', 'set_complete'}
+                   'set_create', 'set_complete', 'rack_name'}
 
 
 @override_settings(EA_DEPLOYMENT='remote')
@@ -306,7 +308,7 @@ class TheRouteWalkTests(TabletTestCase):
             for method in route['methods']:
                 with self.subTest(route=route['name'], method=method.upper()):
                     response = self.call(method, route['url'])
-                    if route['name'] in COMMON_READS and method == 'get':
+                    if route['name'] in COMMON_DEVICE_ROUTES or (route['name'] in COMMON_READS and method == 'get'):
                         self.assertFalse(self.refused(response), response.status_code)
                     else:
                         self.assertTrue(self.refused(response), response.status_code)

@@ -141,7 +141,7 @@ def _athlete_story(entry, styles, unit="lb"):
     story = [
         _paragraph(athlete.get("name") or "Athlete unavailable", styles["heading"]),
         _paragraph(
-            "Rack participation: " + (", ".join(map(str, entry.get("rack_participation", []))) or "None recorded"),
+            "Racks: " + (", ".join(map(str, entry.get("rack_labels") or entry.get("rack_participation", []))) or "None recorded"),
             styles["body"],
         ),
     ]

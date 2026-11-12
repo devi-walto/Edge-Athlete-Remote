@@ -34,6 +34,7 @@ import { controllerCommand } from './controller.js'
 import { T, seeThrough } from '../theme.js'
 import { useRackAgentStatus } from './rackAgent.js'
 import { handleNfcPollResult, pollLocalNfcTap } from './nfc.js'
+import { rackLabel } from '../rackName.js'
 
 const REST_SECONDS = 120 // default rest between sets (real behaviour lands in Step 5)
 
@@ -603,7 +604,7 @@ export default function RackScreen({ rackNumber, session: openingSession, node, 
       <div style={{ minHeight: '100vh', background: T.bg, color: T.ink, fontFamily: T.sans,
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div style={{ maxWidth: 440, textAlign: 'center' }}>
-          <div style={{ ...LABEL, color: T.amber, marginBottom: 12 }}>Rack {rackNumber} sensor unavailable</div>
+          <div style={{ ...LABEL, color: T.amber, marginBottom: 12 }}>{rackLabel(controller.snapshot?.rack_label, rackNumber)} sensor unavailable</div>
           <div style={{ fontSize: 28, fontWeight: 850, marginBottom: 10 }}>Controls are paused</div>
           <div style={{ color: T.muted }}>
             The local WT901 stream is {agent.health?.state || 'checking'}. Existing set data is preserved;
@@ -623,7 +624,7 @@ export default function RackScreen({ rackNumber, session: openingSession, node, 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ fontSize: 16, fontWeight: 850, letterSpacing: '-.02em' }}>
             {/* An online athlete's rack is named after them; its number means nothing to them. */}
-            {owned ? controller.snapshot.owner_athlete.name : `Rack ${rackNumber}`}
+            {owned ? controller.snapshot.owner_athlete.name : rackLabel(controller.snapshot?.rack_label, rackNumber)}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8,
             background: T.panel, border: `1px solid ${T.line}`, borderRadius: 999,
@@ -657,7 +658,7 @@ export default function RackScreen({ rackNumber, session: openingSession, node, 
           {nfcStatus}
         </div>
       )}
-      {waiting && <NoSession rackNumber={rackNumber} node={node} live={sensorLive} />}
+      {waiting && <NoSession rackNumber={rackNumber} rackName={rackLabel(controller.snapshot?.rack_label, rackNumber)} node={node} live={sensorLive} />}
       {phase === 'idle' && !waiting && (
         <Idle
           roster={roster}

@@ -501,6 +501,7 @@ A tablet PWA standing at a rack. Its device_id is generated in the browser on fi
 | `device_id` | text | **unique**, max 255 |
 | `rack_number` | whole number | optional |
 | `last_seen` | date + time | set on save |
+| `name` | text | max 40 |
 
 **Table rules**
 

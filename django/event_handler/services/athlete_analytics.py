@@ -31,6 +31,7 @@ and the history view groups by day, so one would render as an "Invalid Date" day
 
 from django.db.models import Count, Max, Sum
 
+from .rack_names import labels_by_rack
 from ..models import Athlete, Rep, Set
 
 # A tablet can render this much without stalling. The UI states both limits to
@@ -141,6 +142,8 @@ def athlete_analytics(athlete_id):
                       .order_by("-ended_at", "-id")[:SET_LIMIT])
     reps_by_set, reps_truncated = _reps_by_set([s.id for s in recent])
 
+    rack_labels = labels_by_rack({s.node.rack_number for s in recent
+                                  if s.node and s.node.rack_number is not None})
     sets = []
     for workout_set in recent:
         reps = reps_by_set.get(workout_set.id, [])
@@ -157,6 +160,8 @@ def athlete_analytics(athlete_id):
             # recorded is a property of the NODE that recorded it, and a node
             # gets reassigned between racks. Null when the node is gone.
             "rack_number": workout_set.node.rack_number if workout_set.node else None,
+            # What the rack is called now (spec 18); old reports keep the number alone.
+            "rack_label": rack_labels.get(workout_set.node.rack_number) if workout_set.node else None,
             # The history view groups sets into days and then into workouts, and
             # the session is what names each workout. Without it every day
             # renders as "Unlabeled workout".

@@ -16,6 +16,7 @@ from . import views
 from . import athlete_logins
 from . import athlete_sensors
 from . import common_login
+from . import rack_setup
 from . import athlete_pages
 from . import remote_sessions
 from . import deployment
@@ -56,6 +57,10 @@ urlpatterns = [
          name='rack_ble_selection'),
     path('racks/<int:rack_number>/sensor-health/', views.rack_sensor_health,
          name='rack_sensor_health'),
+    # A tablet makes its own rack and anyone allowed renames it (spec 18; rack_setup.py).
+    # Literal path, so it must stay above the catch-all racks/<device_id>/ below.
+    path('racks/mine/', rack_setup.my_rack, name='my_rack'),
+    path('racks/<int:rack_number>/name/', rack_setup.rack_name, name='rack_name'),
     path('racks/<int:rack_number>/state/', views.rack_state, name='rack_state'),
     path('racks/<int:rack_number>/controller/acquire/', views.rack_controller_acquire,
          name='rack_controller_acquire'),

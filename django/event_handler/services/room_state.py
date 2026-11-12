@@ -37,6 +37,8 @@ from django.db.models import Count, Max, Sum
 from django.db.models.functions import Lower
 from django.utils import timezone
 
+from event_handler.services.rack_names import labels_by_rack, names_by_rack
+
 from event_handler.models import (MonitoringEvent, Node, RackCheckIn,
                                   RackRuntime, RackScreen, Rep, TrainingSession, Set)
 from event_handler.services.plan_resolution import velocity_zones_by_athlete
@@ -44,6 +46,9 @@ from event_handler.services.plan_resolution import velocity_zones_by_athlete
 # Hard ceilings so one absurd gym (or a bad import) can never make this endpoint
 # return an unbounded payload to a tablet on a slow local network.
 MAX_DASHBOARD_RACKS = 32
+# A tablet silent this long (its controller lease ran out this long ago), on a rack with
+# no sensor and nobody checked in, has its rack leave the room (spec 18, Phase 2).
+ABANDONED_AFTER = timedelta(minutes=10)
 MAX_DASHBOARD_LEADERS = 20
 
 # A node that has not sent a pulse within this window reads as stale hardware.
@@ -97,10 +102,20 @@ def _rack_numbers(session, athlete_by_rack):
     identity now comes from the check-in log alone.)
     """
     numbers = set(athlete_by_rack)
-    numbers.update(Node.objects.exclude(rack_number=None)
-                   .values_list("rack_number", flat=True).distinct())
-    numbers.update(RackScreen.objects.exclude(rack_number=None)
-                   .values_list("rack_number", flat=True).distinct())
+    with_sensor = set(Node.objects.exclude(rack_number=None)
+                      .values_list("rack_number", flat=True).distinct())
+    numbers.update(with_sensor)
+    # A rack whose tablet has gone silent, with no sensor and nobody checked in, is a
+    # dead tablet's leftover (spec 18, Phase 2: a replacement tablet makes a new rack):
+    # it leaves the room. Silent = its controller lease ran out more than
+    # ABANDONED_AFTER ago, or it never had one. Nothing about it is deleted.
+    cutoff = timezone.now() - ABANDONED_AFTER
+    alive = set(RackRuntime.objects.filter(lease_expires_at__gte=cutoff)
+                .values_list("rack_number", flat=True))
+    for number in (RackScreen.objects.exclude(rack_number=None)
+                   .values_list("rack_number", flat=True).distinct()):
+        if number in alive or number in with_sensor or number in athlete_by_rack:
+            numbers.add(number)
     return sorted(numbers)
 
 
@@ -379,6 +394,8 @@ def room_state_snapshot(include_details):
 
     racks = []
     shown_sets = []
+    labels = labels_by_rack(rack_numbers)
+    names = names_by_rack(rack_numbers)
     for rack_number in rack_numbers:
         athlete = athlete_by_rack.get(rack_number)
         latest_set = latest_by_athlete.get(athlete.id) if athlete else None
@@ -389,6 +406,10 @@ def room_state_snapshot(include_details):
                                 include_details, nodes_by_rack, zones,
                                 runtimes_by_rack.get(rack_number),
                                 screens_by_rack.get(rack_number)))
+        # Its name (spec 18), and what to print: the name, with the number after one
+        # another rack shares. Added beside rack_number; nothing renamed.
+        racks[-1]["name"] = names.get(rack_number)
+        racks[-1]["label"] = labels[rack_number]
 
     exercise_id, movement = _selected_movement(shown_sets, include_details, zones)
     leaderboard, leaderboard_truncated = _leaderboard(session, exercise_id, include_details)
