@@ -494,10 +494,12 @@ login a gym doesn't need. Boards: the same as Phase 4 (`F_Rack_Setup`, `F_Rack_P
   sensor for now" skips it. Then the rack screen. Today's `/rack/setup` (waiting for a
   coach to give it a number) and the sensor step that follows it (`RackNodeSetup.jsx`,
   "The base station could not confirm this rack setup") are replaced by it.
-- **The first screen on a fresh device** (proposed, Devin to confirm): straight to Set up
-  this rack, with a small "This is the coach's computer" link to the coach app. The room
-  display is reached from a rack's corner switch, so today's three-way picker (Rack Tablet,
-  Base Station Display, Coach Admin) goes. A device already set up keeps its job.
+- **The first screen on a fresh device** (Devin, 2026-11-12: decided): straight to Set up
+  this rack, since most new devices in a gym are rack tablets, with a small link at the
+  bottom, **"This is a Coach Tablet"**, to the coach app (its sign-in, then Planning). The
+  room display is reached from a rack's corner switch, so today's three-way picker (Rack
+  Tablet, Base Station Display, Coach Admin) goes. A device already set up keeps its job
+  and skips this.
 - **Room Layout, local** (`F_RoomLayout_Local`): rename racks and sensors, link a sensor
   with the countdown on both screens, Clear and Remove. Typing a node ID, giving a tablet a
   slot number and Release go, with the routes behind them.
@@ -516,8 +518,9 @@ login a gym doesn't need. Boards: the same as Phase 4 (`F_Rack_Setup`, `F_Rack_P
       sensor links are kept.
 - [ ] *(Backend test)* The retired slot routes are gone; the route walk still finds every
       remaining local route open.
-- [ ] *(Frontend test)* A fresh device lands on Set up this rack; a set-up one goes
-      straight to its rack screen.
+- [ ] *(Frontend test)* A fresh device lands on Set up this rack; "This is a Coach Tablet"
+      goes to the coach app and is remembered; a set-up rack goes straight to its rack
+      screen.
 - [ ] *(Browser)* A fresh local install with the simulator: open a tablet, Set up this rack,
       pair the simulated sensor with one rep, check an athlete in, finish a set; then
       rename the rack from Room Layout and see the new name on the tablet.
