@@ -234,15 +234,26 @@ devices and signing one out (Phase 0).
 - `role_of()` answers **common** for it. A login attached to it and to anything else is
   refused, like the existing two-attachment case.
 - **An administrator sets it up and changes its password directly** (Devin, 2026-11-12):
-  a username and a password typed in Room Layout's Common login strip, no login link.
-  The same rules as any password here (length, not a common one). Only administrators;
-  a plain coach sees the strip (the username, how many devices are signed in) and can
-  sign out one device, a lost or stuck tablet, but can't make the login or change its
-  password. Boards on the canvas's Proposed page (2026-11-12, the pieces
-  `F_RoomLayout_Remote` didn't draw): `F_CommonLogin_Setup` (an administrator makes it),
-  `F_CommonLogin_Change` (changes the password; every device signed out) and
-  `F_CommonLogin_CoachView` (a plain coach, set up or not). They need approval before
-  Phase 4 builds them.
+  a username and a password typed in, no login link. The same rules as any password here
+  (length, not a common one).
+- **Where it lives: the first card in Room Layout's Rack screens** (Devin, 2026-11-12), a
+  card of its own kind before the racks (so the first page shows it and five racks). It
+  shows the username, the password hidden behind **Show**, and the tablets and TVs signed
+  in with it, in a list that scrolls inside the card, each with **Sign out**. Every coach
+  sees all of that (a coach is the one who signs a tablet in). Administrators also get
+  **Change password**, or **Set up the common login** when there is none, which opens a
+  form inside the card, and the card grows to fit. A plain coach with none set up reads
+  "ask an administrator". This replaces the strip `F_RoomLayout_Remote` drew above the
+  racks; the TV's row from that strip is in the card's list. Boards on the canvas's
+  Proposed page: `F_CommonLogin_CoachView`, `F_CommonLogin_Admin`, `F_CommonLogin_Change`,
+  `F_CommonLogin_Setup` (proposed 2026-11-12); once approved they go to Final designs and
+  `F_RoomLayout_Remote` is redrawn with the card.
+- **Show needs the password kept readable** (a normal password is stored scrambled one
+  way, and can't be shown again). This one is also kept encrypted with the server's key,
+  read only by a coach's request to show it, never in any list, and replaced on every
+  change. Acceptable for this login alone: it is a staff password meant to be shared (the
+  risk is accepted below), and anyone who could read the server's key could already do
+  far more.
 - **A new password signs out every device signed in with the old one, for every kind of
   login** (Devin, 2026-10-27), not just the common one. Passwords are set in three places
   today (a coach's own change in `coach_auth.py`, a coach's reset in `coach_accounts.py`,
@@ -259,7 +270,10 @@ devices and signing one out (Phase 0).
       an athlete and the common login alike; the device that changed it stays signed in.
 - [ ] After signing out one device, the others still can renew.
 - [ ] An administrator makes the common login and changes its password; a plain coach
-      gets 403 for both but can sign out one device; there is never a second one.
+      gets 403 for both but can show the password and sign out one device; an athlete or
+      the common login itself can't show it; there is never a second one.
+- [ ] The password is never in a list or any other answer than Show's, and Show gives the
+      new one right after a change.
 - [ ] *(Unit test)* The route walk gains a common column: every route that isn't opened
       to it in Phase 1 refuses it.
 - [ ] Full suite passes in both modes.
