@@ -117,7 +117,7 @@ their own phone.
 - **The local install moves to the same flow** (Devin, 2026-11-12), in this spec, not
   later: a rack claims its own number and name, and pairs its own sensor; nobody assigns
   a tablet to a slot. Phase 5.
-- **No rack slots for particular workouts** (proposed, Devin to confirm). The numbered
+- **No rack slots for particular workouts** (Devin, 2026-11-12: decided). The numbered
   slot was partly meant for racks set up for certain work. That fact belongs to the
   equipment, not to the tablet: the sensor on the bar, platform or mat is what the rack
   can measure, and it already carries it (`Node.mount_type`, and the merge canon's
@@ -373,10 +373,14 @@ is one shared piece before the screens below use it (spec 06 rule 13).
 - **Folded in now** (the two dialogs already drawn by hand): the athlete's Remove sensor
   confirm (`athlete/MySensor.jsx`) and the coach's login link dialog
   (`coach/LoginLinkDialog.jsx`), each looking as it does today.
-- **Known, left for the coach specs or the audit spec:** 13 browser pop-ups
-  (`window.confirm`) on coach screens (Workouts, Planning, Coaches, Notes, the coach
-  tablet, archiving an athlete, cancelling a login link). They aren't drawn copies, but
-  each should become a `ui/Dialog` when its screen is rebuilt.
+- **The browser's own pop-ups go too** (Devin, 2026-11-12: fold them in here). 13 places
+  ask with the browser's plain OK / Cancel box (`window.confirm`): Workouts (delete a
+  workout, remove a movement), Planning (take an athlete out of every group), Coaches
+  (reset a password, and one more), Notes (discard a draft, leave with unsaved changes,
+  three), the coach tablet (three), archiving an athlete, cancelling a login link. Each
+  becomes a `ui/Dialog` with the same words, red-outlined where it removes something. A
+  small `askToConfirm()` helper opens one and answers yes or no, so each call site stays
+  one line.
 - Spec 06 rule 13's list of shared pieces gains Dialog, Field and Notice.
 
 **Done when:**
@@ -387,7 +391,9 @@ is one shared piece before the screens below use it (spec 06 rule 13).
 - [ ] *(Frontend test)* Field: the label, hint and error are read with the box; the error
       replaces the hint.
 - [ ] *(Frontend test, guard)* A `role="dialog"` or `aria-modal` written anywhere outside
-      `react/src/ui/` fails the suite.
+      `react/src/ui/`, or any `window.confirm`, fails the suite.
+- [ ] Each of the 13 former pop-ups asks with the same words in a Dialog; Cancel changes
+      nothing (their screens' existing tests updated to answer the Dialog).
 - [ ] The Remove sensor confirm and the login link dialog look as before (their existing
       tests pass unchanged) and are built on Dialog.
 - [ ] Frontend suite and build pass.
@@ -425,6 +431,12 @@ PR #14).
 **Done when:**
 
 - [ ] Each screen matches its approved board; every dialog in it is `ui/Dialog`.
+- [ ] *(Browser)* **Room Layout's whole Rack screens section is on screen when the page
+      opens on a landscape tablet** (Devin, 2026-11-12), with no scrolling: checked at
+      1180 × 740 (a 10th-generation iPad sideways, the browser's bars taken off) and at
+      1024 × 690 (the smallest iPad sideways). The boards as drawn are about 70 px too tall
+      for that (the "Set up the room" block takes ~170 px), so Phase 4 starts with a
+      tightened Room Layout board for approval.
 - [ ] *(Browser)* A fresh tablet: sign in, keep or change the suggested name, pair a
       sensor, check an athlete in, finish a set.
 - [ ] *(Browser)* With no session running, a rack shows the waiting message (local and
