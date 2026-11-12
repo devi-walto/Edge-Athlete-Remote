@@ -7,18 +7,21 @@
 //   - the one focus card: the session that's live now with Join session inside it, or the
 //     next one coming up, or "nothing scheduled yet";
 //   - My sensor;
-//   - their last five sessions, sets done against sets planned (amber when short).
+//   - their last five sessions, sets done against sets planned (amber when short); each
+//     opens that session, and View all sessions lists every one (Phase 3).
 // It asks the server again every 15 seconds while it's on screen, so the card turns live
 // by itself when the coach starts the day, and stops asking while the tab is hidden.
 import { useCallback, useEffect, useState } from 'react'
 import { navigate } from '../router.js'
 import Button from '../ui/Button.jsx'
 import FocusCard from '../ui/FocusCard.jsx'
-import QuietRow from '../ui/QuietRow.jsx'
 import SectionLabel from '../ui/SectionLabel.jsx'
 import AthletePage, { HOME_PATH, toSignIn } from './AthletePage.jsx'
 import { HOME, dayLabel, getJson, timeLabel } from './athleteApi.js'
 import SensorRow from './SensorRow.jsx'
+import SessionRow, { SESSIONS_PATH, SetsCount } from './SessionRow.jsx'
+
+export { SetsCount }
 
 export const REFRESH_MS = 15000
 
@@ -44,12 +47,6 @@ export function Banner({ live, comingUp }) {
       <span className="athlete-banner-hint">A Join button appears here when your coach starts it.
         {then && ` Then: ${dayLabel(then.date)} · ${then.title}`}</span>
     </>} />
-}
-
-/** "9 / 9 sets", amber when short of the plan. */
-export function SetsCount({ done, planned }) {
-  if (!planned) return <span className="athlete-sets">{done} sets</span>
-  return <span className={`athlete-sets${done < planned ? ' is-short' : ''}`}>{done} / {planned} sets</span>
 }
 
 export default function Home() {
@@ -86,8 +83,10 @@ export default function Home() {
         <SectionLabel as="h2"><span id="recent-label">Recent sessions</span></SectionLabel>
         {home.recent.length === 0
           ? <p className="athlete-empty">Your sessions will show here after you lift.</p>
-          : home.recent.map((s) => <QuietRow key={s.session_id} name={`${dayLabel(s.date)} · ${s.title}`}
-              badge={<SetsCount done={s.sets_done} planned={s.sets_planned} />} />)}
+          : <>
+            {home.recent.map((s) => <SessionRow key={s.session_id} session={s} />)}
+            <Button kind="quiet" className="athlete-view-all" onClick={() => navigate(SESSIONS_PATH)}>View all sessions ›</Button>
+          </>}
       </section>
     </>}
   </AthletePage>

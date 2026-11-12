@@ -10,14 +10,16 @@ athlete opens the app with, from their own groups only:
              programs that share one session on the same date are one entry.
   live       the session that's running right now AND that they may join, decided by
              the same may_join() the Join button uses, so the two can never disagree.
-  recent     their last five ended sessions they actually lifted in, newest first, with
-             sets done (false sets and coach adjustments left out, the same count the
+  recent     their last five ended sessions they actually lifted in (a session where
+             every set was marked false doesn't count), newest first, with sets done (false sets and coach adjustments left out, the same count the
              daily report keeps) against the sets their plan prescribed that day.
 
 Nothing here names another athlete, or a group the athlete isn't in. Loads aren't sent:
 the rack screen works those out.
 """
-from django.db.models import Count, Max, Q
+from datetime import datetime
+
+from django.db.models import Count, Q
 from django.utils import timezone
 
 from ..models import ScheduledSession, Set, TrainingSession
@@ -26,6 +28,7 @@ from .session_join import may_join
 
 COMING_UP_LIMIT = 10
 RECENT_LIMIT = 5
+PAGE_SIZE = 20
 
 
 def _first_name(name):
@@ -77,24 +80,65 @@ def _live(athlete, group_names):
     return None
 
 
-def _recent(athlete):
-    lifted = (Set.objects
-              .filter(athlete=athlete, is_coach_adjustment=False, session__ended_at__isnull=False)
-              .values('session')
-              .annotate(done=Count('id', filter=Q(is_false_set=False)), ended=Max('session__ended_at'))
-              .order_by('-ended', '-session')[:RECENT_LIMIT])
+def _lifted(athlete):
+    """The ended sessions this athlete lifted in, newest first: one row per session with the
+    sets done (false sets and coach adjustments left out, the daily report's count). A session
+    where every set was marked false isn't listed: there's nothing to open in it."""
+    return (Set.objects
+            .filter(athlete=athlete, is_coach_adjustment=False, is_false_set=False,
+                    session__ended_at__isnull=False)
+            .values('session', 'session__ended_at')
+            .annotate(done=Count('id'))
+            .order_by('-session__ended_at', '-session'))
+
+
+def _rows(athlete, lifted):
+    """Session rows as Home and All sessions show them: date, title, sets done of planned."""
     rows = list(lifted)
     sessions = TrainingSession.objects.in_bulk([r['session'] for r in rows])
-    recent = []
+    out = []
     for row in rows:
         session = sessions[row['session']]
         planned = sum(m['planned_sets'] or 0 for m in movements_for_athlete(athlete, session))
         when = session.started_at or session.ended_at
-        recent.append({'session_id': session.pk,
-                       'date': timezone.localdate(when).isoformat(),
-                       'title': session.label,
-                       'sets_done': row['done'], 'sets_planned': planned})
-    return recent
+        out.append({'session_id': session.pk,
+                    'date': timezone.localdate(when).isoformat(),
+                    'title': session.label,
+                    'sets_done': row['done'], 'sets_planned': planned})
+    return out
+
+
+def _recent(athlete):
+    return _rows(athlete, _lifted(athlete)[:RECENT_LIMIT])
+
+
+class BadCursor(ValueError):
+    """The ?before= value isn't one this server handed out."""
+
+
+def _cursor(row):
+    return f"{row['session__ended_at'].isoformat()}_{row['session']}"
+
+
+def sessions_page(athlete, before=None):
+    """One page of All sessions (spec 10, Phase 3): the athlete's ended sessions they lifted
+    in, newest first, PAGE_SIZE at a time, and the cursor for the next page (None at the end).
+
+    The cursor is the last row's (ended time, session id), so a session ending while the
+    athlete scrolls can't shift the pages: every session appears exactly once, no gaps.
+    """
+    lifted = _lifted(athlete)
+    if before:
+        try:
+            ended, pk = before.rsplit('_', 1)
+            ended, pk = datetime.fromisoformat(ended), int(pk)
+        except ValueError as exc:
+            raise BadCursor(before) from exc
+        lifted = lifted.filter(Q(session__ended_at__lt=ended) | Q(session__ended_at=ended, session__lt=pk))
+    rows = list(lifted[:PAGE_SIZE + 1])
+    more = len(rows) > PAGE_SIZE
+    rows = rows[:PAGE_SIZE]
+    return {'sessions': _rows(athlete, rows), 'next': _cursor(rows[-1]) if more else None}
 
 
 def home_for(athlete):
@@ -117,6 +161,8 @@ def session_for(athlete, session_id):
     same answer as a session that doesn't exist, so it can't be used to find sessions.
 
     Sets done leave out false sets and coach adjustments, the daily report's own count. Each
+    movement carries its target speed's lower edge (zone_min), so the page colours each rep
+    by the rack screen's rule. Each
     movement also carries the sets its plan asked for, and a movement planned but not lifted
     is listed with no sets, so "2 of 3" and "0 of 3" both show.
     """
@@ -130,12 +176,14 @@ def session_for(athlete, session_id):
         return None
     plan = movements_for_athlete(athlete, session)
     planned = {m['exercise_id']: m['planned_sets'] or 0 for m in plan}
+    zone = {m['exercise_id']: m.get('velocity_zone_min') for m in plan}
 
     by_exercise, order = {}, []
     for a_set in sets:
         if a_set.exercise_id not in by_exercise:
             by_exercise[a_set.exercise_id] = {'name': a_set.exercise.name,
-                                              'sets_planned': planned.get(a_set.exercise_id, 0), 'sets': []}
+                                              'sets_planned': planned.get(a_set.exercise_id, 0),
+                                              'zone_min': zone.get(a_set.exercise_id), 'sets': []}
             order.append(a_set.exercise_id)
         by_exercise[a_set.exercise_id]['sets'].append({
             'set_number': a_set.set_number, 'weight_lbs': a_set.weight_lbs,
@@ -145,7 +193,8 @@ def session_for(athlete, session_id):
     for movement in plan:
         if movement['exercise_id'] not in by_exercise:
             by_exercise[movement['exercise_id']] = {'name': movement['name'],
-                                                    'sets_planned': movement['planned_sets'] or 0, 'sets': []}
+                                                    'sets_planned': movement['planned_sets'] or 0,
+                                                    'zone_min': movement.get('velocity_zone_min'), 'sets': []}
             order.append(movement['exercise_id'])
 
     speeds = [s.avg_velocity for s in sets if s.avg_velocity is not None]

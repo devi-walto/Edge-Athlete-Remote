@@ -89,3 +89,26 @@
 .athlete-tiles span { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .athlete-tiles b { font-size: 24px; font-weight: 850; font-variant-numeric: tabular-nums; }
 .athlete-tiles b.is-quiet { color: var(--muted); font-size: 14px; font-weight: 700; padding-top: 6px; }
+
+/* ── All sessions and a past session (spec 10, Phase 3; boards F_Ath_L1, L2) ── */
+/* A session row is a QuietRow drawn as a button: the whole row opens the session. */
+.athlete-session-row { color: inherit; cursor: pointer; font: inherit; text-align: left; width: 100%; }
+.athlete-session-row:hover { border-color: var(--button-edge); }
+.athlete-session-row:focus-visible, .athlete-set.is-pressable:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+.athlete-chevron { color: var(--muted); font-size: 18px; padding: 0 6px; }
+.athlete-view-all { align-self: flex-end; margin-top: 4px; }
+.athlete-tiles b small { color: var(--muted); font-size: 16px; font-weight: 750; }
+.athlete-tiles b.is-short { color: var(--amber); }
+.athlete-movement { display: flex; flex-direction: column; }
+/* A set row: plain when typed in, pressable (and opens its reps) when measured. */
+.athlete-set { box-sizing: border-box; color: inherit; font: inherit; justify-content: space-between; min-height: 48px; text-align: left; width: 100%; }
+.athlete-set .ui-row-name { font-variant-numeric: tabular-nums; }
+.athlete-set.is-pressable { cursor: pointer; }
+.athlete-set-wrap + .athlete-set-wrap, .athlete-set-wrap + .athlete-set, .athlete-set + .athlete-set-wrap { margin-top: 6px; }
+.athlete-set-wrap.is-open .athlete-set { border-color: var(--lime); }
+.athlete-reps { background: var(--panel); border: 1px solid var(--line); border-top: 0; display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; }
+.athlete-rep-bars { align-items: flex-end; display: flex; gap: 6px; height: 120px; }
+.athlete-rep { align-items: center; display: flex; flex: 1; flex-direction: column; gap: 4px; height: 100%; justify-content: flex-end; min-width: 0; }
+.athlete-rep-speed { color: var(--soft-ink); font-size: 11px; font-variant-numeric: tabular-nums; font-weight: 700; }
+.athlete-rep-bar { border-radius: 3px 3px 0 0; max-width: 34px; width: 100%; }
+.athlete-rep-drop { color: var(--muted); font-size: 12px; }

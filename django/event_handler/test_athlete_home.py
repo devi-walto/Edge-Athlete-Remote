@@ -1,4 +1,4 @@
-"""Tests for an athlete's Home route (spec 10, Phase 0).
+"""Tests for an athlete's Home, All sessions and past session routes (spec 10, Phases 0–3).
 
 WHY THESE EXIST: Home is the first thing an online athlete sees. It must list only
 their own groups' days, say a session is live exactly when the Join button would let
@@ -286,6 +286,21 @@ class SessionDetailTests(APITestCase):
         self.assertEqual(totals['sets_planned'], 9)
         self.assertAlmostEqual(totals['avg_velocity'], (.62 + .60) / 2)
 
+    def test_each_reps_speed_matches_the_daily_report(self):
+        from .services.session_completion import _snapshot
+        theirs = next(b for b in _snapshot(self.session)['athletes'] if b['athlete']['id'] == self.riley.pk)
+        report = {s['set_number']: [r['mean_velocity'] for r in s['reps']] for s in theirs['sets'] if not s['is_false_set']}
+        mine = {s['set_number']: s['reps_detail'] for m in self.get(self.riley).data['movements'] for s in m['sets']}
+        self.assertEqual(mine, report)
+        self.assertEqual(mine[3], [])                                             # typed in: no reps to open
+
+    def test_each_movement_carries_its_target_speed_for_the_rep_colours(self):
+        TrainingProgramExercise.objects.filter(training_program_workout=self.workout, exercise__name='Back Squat') \
+            .update(velocity_zone_min=.55)
+        movements = {m['name']: m for m in self.get(self.riley).data['movements']}
+        self.assertEqual(movements['Back Squat']['zone_min'], .55)
+        self.assertIn('zone_min', movements['Power Clean'])                       # planned, not lifted, still has the key
+
     def test_a_session_they_did_not_lift_in_is_404_like_one_that_does_not_exist(self):
         self.assertEqual(self.get(self.jordan).status_code, 404)                 # on it, never lifted
         self.assertEqual(self.get(self.riley, '/api/athlete/sessions/999999/').status_code, 404)
@@ -308,3 +323,98 @@ class SessionDetailTests(APITestCase):
     @override_settings(EA_DEPLOYMENT='local')
     def test_a_gym_box_has_no_such_page(self):
         self.assertEqual(self.get(self.riley).status_code, 404)
+
+
+@override_settings(EA_DEPLOYMENT='remote')
+class SessionListTests(APITestCase):
+    """GET /api/athlete/sessions/ (spec 10, Phase 3): All sessions, 20 at a time."""
+
+    URL = '/api/athlete/sessions/'
+
+    def setUp(self):
+        self.varsity = TrainingGroup.objects.create(name='Varsity')
+        self.riley = athlete('Riley Brooks', 'riley', self.varsity)
+        self.jordan = athlete('Jordan Lee', 'jordan', self.varsity)
+        self.plan, self.workout = program(self.varsity)
+        self.squat = Exercise.objects.get(name='Back Squat')
+        self.base = timezone.now() - datetime.timedelta(days=100)
+
+    def session(self, label, hours, person=None, sets=1, **flags):
+        start = self.base + datetime.timedelta(hours=hours)
+        session = TrainingSession.objects.create(label=label, started_at=start, ended_at=start + datetime.timedelta(minutes=50))
+        SessionParticipation.objects.create(session=session, training_program=self.plan, training_program_workout=self.workout)
+        for n in range(sets):
+            Set.objects.create(session=session, athlete=person or self.riley, exercise=self.squat, set_number=n + 1,
+                               ended_at=session.ended_at, **flags)
+        return session
+
+    def pages(self, person):
+        self.client.force_authenticate(person.user)
+        seen, cursor, count = [], None, 0
+        while True:
+            reply = self.client.get(self.URL, {'before': cursor} if cursor else {})
+            self.assertEqual(reply.status_code, 200, reply.data)
+            count += 1
+            self.assertLessEqual(len(reply.data['sessions']), 20)
+            seen += reply.data['sessions']
+            cursor = reply.data['next']
+            if not cursor:
+                return seen, count
+
+    def test_every_session_exactly_once_newest_first_with_no_gaps(self):
+        made = [self.session(f'Day {i}', i * 24) for i in range(45)]
+        # Three that ended at the very same moment: the id breaks the tie, none is lost.
+        tie = [self.session(f'Tie {i}', 45 * 24) for i in range(3)]
+        seen, count = self.pages(self.riley)
+        self.assertEqual(count, 3)                                               # 20 + 20 + 8
+        self.assertEqual([r['session_id'] for r in seen],
+                         [s.pk for s in sorted(made + tie, key=lambda s: (s.ended_at, s.pk), reverse=True)])
+        self.assertEqual(seen[0]['sets_planned'], 6)
+
+    def test_a_session_ending_mid_scroll_does_not_shift_the_pages(self):
+        made = [self.session(f'Day {i}', i * 24) for i in range(25)]
+        self.client.force_authenticate(self.riley.user)
+        first = self.client.get(self.URL).data
+        self.session('Newer', 999 * 24)                                          # ends while they scroll
+        second = self.client.get(self.URL, {'before': first['next']}).data
+        ids = [r['session_id'] for r in first['sessions'] + second['sessions']]
+        self.assertEqual(sorted(ids), sorted(s.pk for s in made))
+
+    def test_only_sessions_they_lifted_in(self):
+        mine = self.session('Mine', 1)
+        theirs = self.session('Theirs', 2, person=self.jordan)
+        self.session('All false', 3, is_false_set=True)
+        self.session('Coach dial only', 4, is_coach_adjustment=True)
+        running = TrainingSession.objects.create(label='Running', started_at=timezone.now())
+        Set.objects.create(session=running, athlete=self.riley, exercise=self.squat, set_number=1)
+        seen, _ = self.pages(self.riley)
+        self.assertEqual([r['session_id'] for r in seen], [mine.pk])
+        self.client.force_authenticate(self.riley.user)
+        self.assertEqual(self.client.get(f'/api/athlete/sessions/{theirs.pk}/').status_code, 404)
+
+    def test_home_and_all_sessions_agree(self):
+        for i in range(7):
+            self.session(f'Day {i}', i * 24, sets=2)
+        self.session('All false', 8 * 24, is_false_set=True)
+        self.client.force_authenticate(self.riley.user)
+        recent = self.client.get(URL).data['recent']
+        seen, _ = self.pages(self.riley)
+        self.assertEqual(recent, seen[:5])
+
+    def test_a_made_up_cursor_is_refused(self):
+        self.client.force_authenticate(self.riley.user)
+        for bad in ('nonsense', '2026-01-01_x', '_5'):
+            self.assertEqual(self.client.get(self.URL, {'before': bad}).status_code, 400, bad)
+
+    def test_doors(self):
+        coach = User.objects.create_user('coach2', password='x-Unique-2026!')
+        CoachProfile.objects.get_or_create(user=coach)
+        self.client.force_authenticate(coach)
+        self.assertEqual(self.client.get(self.URL).status_code, 403)
+        self.client.force_authenticate(None)
+        self.assertEqual(self.client.get(self.URL).status_code, 401)
+
+    @override_settings(EA_DEPLOYMENT='local')
+    def test_a_gym_box_has_no_such_page(self):
+        self.client.force_authenticate(self.riley.user)
+        self.assertEqual(self.client.get(self.URL).status_code, 404)

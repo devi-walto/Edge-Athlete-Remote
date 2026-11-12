@@ -19,10 +19,13 @@ export function speedLabel(v) {
   return v == null ? 'not measured' : v.toFixed(2)
 }
 
-/** Sets, reps, average speed: three tiles (also used by the past session page). */
-export function DayTiles({ totals }) {
+/** Sets, reps, average speed: three tiles. withPlanned (the past session page) shows sets as
+ *  "7 / 9", amber when short of the plan. */
+export function DayTiles({ totals, withPlanned = false }) {
+  const short = withPlanned && totals.sets_planned > 0 && totals.sets_done < totals.sets_planned
   return <div className="athlete-tiles">
-    <div><span>Sets</span><b>{totals.sets_done}</b></div>
+    <div><span>Sets</span><b className={short ? 'is-short' : ''}>{totals.sets_done}
+      {withPlanned && totals.sets_planned > 0 && <small> / {totals.sets_planned}</small>}</b></div>
     <div><span>Reps</span><b>{totals.reps}</b></div>
     <div><span>Avg m/s</span><b className={totals.avg_velocity == null ? 'is-quiet' : ''}>{speedLabel(totals.avg_velocity)}</b></div>
   </div>

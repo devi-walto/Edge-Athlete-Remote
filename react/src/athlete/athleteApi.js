@@ -8,6 +8,7 @@ import { signInHeaders } from '../api/client.js'
 
 export const HOME = '/api/athlete/home/'
 export const SENSORS = '/api/athlete/sensors/'
+export const SESSIONS = '/api/athlete/sessions/'
 
 export async function getJson(url, { fetchImpl = fetch } = {}) {
   try {
@@ -22,6 +23,12 @@ export async function getJson(url, { fetchImpl = fetch } = {}) {
 export function dayLabel(isoDate) {
   const [y, m, d] = String(isoDate).split('-').map(Number)
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+}
+
+/** "November 2026" from "2026-11-11": the month heading on All sessions. */
+export function monthLabel(isoDate) {
+  const [y, m] = String(isoDate).split('-').map(Number)
+  return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 }
 
 /** "6:02 PM" from a full timestamp. */
