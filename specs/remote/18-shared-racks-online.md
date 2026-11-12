@@ -503,6 +503,23 @@ login a gym doesn't need. Boards: the same as Phase 4 (`F_Rack_Setup`, `F_Rack_P
 - **Room Layout, local** (`F_RoomLayout_Local`): rename racks and sensors, link a sensor
   with the countdown on both screens, Clear and Remove. Typing a node ID, giving a tablet a
   slot number and Release go, with the routes behind them.
+- **Rack Wi-Fi** (Devin, 2026-11-12), so changing the base station's Wi-Fi password
+  isn't lost with today's Room Layout page (`coach/CoachTablet.jsx`, which has the
+  "still the default" banner, the change form and the new-password screen). Drawn exactly
+  like the common login: **a card two racks tall on the left of Rack screens' first page**,
+  local only (remote shows the common login there). It shows the network's name, whether
+  the password is still the default (amber, with a notice saying anyone nearby could join),
+  and how to add a device. Administrators get **Change Wi-Fi password**: the shared Dialog
+  with their own password (to confirm), the new one twice and the amber Notice ("every
+  device drops off in a few seconds, this one too … sensors need setting up again"); then
+  the new password to copy, kept on that tablet two hours as today. The server keeps
+  never handing out the password itself (only whether it's the default), so there is no
+  Show here; the network's name is passed in the way the default check is. Applying it is
+  unchanged (`wifi_config.py`, the host's apply step), and every rack tablet and TV still
+  shows the new password before the drop (`WifiChangeOverlay.jsx`). Changing it becomes
+  administrators only (any coach today), the same rule as the common login. Boards on
+  the canvas's Proposed page: `F_RackWifi_Coach`, `F_RackWifi_Admin`, `F_RackWifi_Change`,
+  `F_RackWifi_Done` (proposed 2026-11-12).
 - **The corner switch** (rack ↔ room display, asking first) on local tablets: what spec 19
   Phase 5 planned, built here once for both versions.
 - **A gym that's already set up keeps working after the update.** Each existing tablet
@@ -518,6 +535,10 @@ login a gym doesn't need. Boards: the same as Phase 4 (`F_Rack_Setup`, `F_Rack_P
       sensor links are kept.
 - [ ] *(Backend test)* The retired slot routes are gone; the route walk still finds every
       remaining local route open.
+- [ ] *(Backend test)* Changing the Wi-Fi password: an administrator can (with their own
+      password); a plain coach gets 403; the answer never contains a Wi-Fi password.
+- [ ] *(Frontend test)* The Rack Wi-Fi card: amber while the password is the default; the
+      dialog sends the change and then shows the new password to copy.
 - [ ] *(Frontend test)* A fresh device lands on Set up this rack; "This is a Coach Tablet"
       goes to the coach app and is remembered; a set-up rack goes straight to its rack
       screen.
