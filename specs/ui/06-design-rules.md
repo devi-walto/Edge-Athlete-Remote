@@ -220,6 +220,33 @@ Decided 2026-11-11 (Devin), for coach and athlete screens alike, on every page:
 - Today the coach's corner is one button (the picture and "Edge Athlete") that opens the
   account menu (`react/src/coach/AccountMenu.jsx`); it splits into the two targets above (Phase 3).
 
+### 13. One shared piece per kind of element
+
+Decided 2026-11-11 (Devin). Every kind of element (button, row, card, badge, chart,
+dialog, top bar, tile) is drawn by **one** shared piece in `react/src/ui/`, set up with
+options; nobody draws a second copy by hand. A different look in one place is a size or
+option on the same piece: the coach's big live rep chart is `BarChart size="large"`, not
+its own chart. Before building an element, look in `ui/`; if it's missing and will be used
+twice, build it there first. When a shared piece lands, a guard test fails if the
+hand-drawn version comes back.
+
+- **`ui/BarChart`** (spec 10, Phase 3) is the one bar chart: the coach's live rep chart
+  (`large`), the coach's history sparkline (`spark`), the athlete's past session rep bars
+  and My Recent Progress (`normal`), and the rack screen's set summary (spec 19). Options:
+  number above, text inside (written upward), label below, colour per bar, lighter bars,
+  legend lines, a fixed top, scroll or fit, height. `ui.test.jsx` fails on a bar height set
+  by hand anywhere outside `ui/`.
+- Also shared (spec 10, Phase 4): `ui/PillGroup` (one chosen pill: range presets, Athlete /
+  Group, LB | KG), `ui/RangePicker` (presets + From / To + label, coach History and athlete
+  progress), `ui/UnitToggle` and `ui/Load` (pounds or kilograms, one device setting in
+  `units.js`), `ui/TrendLine`, `ui/Tiles`.
+- **Wanted later (Devin, 2026-11-11), not built:** `ui/RangePicker`'s From and To boxes become
+  one inline calendar where both the start and the end are picked by tapping days, with the
+  days between highlighted. The presets stay. Being the shared piece, the change reaches the
+  coach's History and the athlete's My Recent Progress at once. Needs a board first.
+- Copies that already exist elsewhere are for a later audit spec; meanwhile, one found
+  while working in a file is folded in then.
+
 ## Tokens
 
 From `react/src/theme.js` and `App.css` — existing values, unchanged:

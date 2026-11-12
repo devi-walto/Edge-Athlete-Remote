@@ -2,8 +2,10 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06; rewritten 2026-11-11 after the athlete-account design was approved
-- Status: Written — not started. No decisions open. (Phase 6, the room display for athletes,
-  moved to spec 19 on 2026-11-11)
+- Status: all phases (0–5) built 2026-11-11 (the Home route, the Home page, the session-ended
+  page, All sessions and a past session, My Recent Progress, Account), awaiting review and
+  the PR. Left: the docs below, and the Phase 1–2 browser checks that need a live session. No decisions
+  open. (Phase 6, the room display for athletes, moved to spec 19 on 2026-11-11)
 - Form item: Definition of Done #4 (remote athlete access)
 - Depends on: [03 Login links](03-athlete-login-links.md) (the sign-in pages),
   [04 Session link](04-session-link-and-virtual-racks.md) (the join rule and the rack screen),
@@ -183,26 +185,33 @@ opening one was optional. It is now five rows, View all, and the past session pa
 
 **Done when:**
 
-- [ ] An athlete in one group sees that group's future days and nobody else's.
-- [ ] An athlete in two groups sees both groups' days; a date the two share is one entry.
-- [ ] A day whose session has ended is not listed; a day set up but not started is listed
+- [x] An athlete in one group sees that group's future days and nobody else's.
+- [x] An athlete in two groups sees both groups' days; a date the two share is one entry.
+- [x] A day whose session has ended is not listed; a day set up but not started is listed
       with its `session_id`.
-- [ ] `live` is set exactly when `join` would succeed for that athlete and that session,
+- [x] `live` is set exactly when `join` would succeed for that athlete and that session,
       including a Quick Training Session; `null` otherwise.
-- [ ] `recent` holds at most 5, newest first, leaves out a session the athlete was on but
+- [x] `recent` holds at most 5, newest first, leaves out a session the athlete was on but
       did not lift in, and its counts match the daily report.
-- [ ] The response contains no athlete name other than the caller's (a test searches the
+- [x] The response contains no athlete name other than the caller's (a test searches the
       whole body for every other athlete's name).
-- [ ] A coach gets `403`, no login gets `401`, a gym box returns `404`.
-- [ ] The route makes a fixed number of queries however many days there are.
+- [x] A coach gets `403`, no login gets `401`, a gym box returns `404`.
+- [x] The route makes a fixed number of queries however many days there are.
+
+**Phase 0 result (2026-11-11).** `services/athlete_home.py` (the rules), `athlete_pages.py`
+(the door), 13 tests in `test_athlete_home.py`. `sets_done` is the daily report's own count
+(real sets, coach adjustments left out); `sets_planned` comes from
+`plan_resolution.movements_for_athlete`, the function the rack screen uses, so it reflects the
+plan as it stands now (the report snapshot keeps no planned count). A recent session's date
+is the local date it started. Backend 764 tests pass as remote and as local.
 
 **Stop. Devin reviews.**
 
 ## Phase 1 — Home, and the top bar
 
-Route `/athlete/home`. New files `react/src/athlete/Home.jsx` and
-`react/src/athlete/TopBar.jsx`, each opening with a plain-language comment on why it
-exists. Boards `F_Ath_H1`, `H1b`, `H1c`.
+Route `/athlete/home`. New file `react/src/athlete/Home.jsx`, opening with a plain-language
+comment on why it exists; the top bar is the shared `ui/TopBar.jsx` from spec 06 Phase 3.
+Boards `F_Ath_H1`, `H1b`, `H1c`.
 
 - **Top bar (every athlete page):** the picture goes Home; the name opens a menu with
   **Account** and **Sign out**. On a drill-down page a back link sits under the bar.
@@ -226,17 +235,26 @@ exists. Boards `F_Ath_H1`, `H1b`, `H1c`.
 
 **Done when:**
 
-- [ ] *(Frontend test)* Each banner form renders from the matching response; only the
+- [x] *(Frontend test)* Each banner form renders from the matching response; only the
       live form has a lime button.
-- [ ] *(Frontend test)* The picture always routes Home and the name opens the menu, on
+- [x] *(Frontend test)* The picture always routes Home and the name opens the menu, on
       Home and on a drill-down page; the menu holds exactly Account and Sign out.
-- [ ] *(Frontend test)* A short day ("6 of 8 sets") shows amber; a full one does not.
+- [x] *(Frontend test)* A short day ("6 of 8 sets") shows amber; a full one does not.
 - [ ] *(Browser)* With Home open, the coach starts the session: within 15 seconds the
       banner shows "Live now" and **Join session**, with no reload.
 - [ ] *(Browser)* **Join session** lands on the athlete's Ready screen.
-- [ ] *(Browser)* On a 390-pixel-wide phone nothing scrolls sideways and every button is
+- [x] *(Browser)* On a 390-pixel-wide phone nothing scrolls sideways and every button is
       at least 44 pixels tall.
 - [ ] *(Browser)* Sign out returns to `/athlete` and the Back button does not show Home.
+
+**Phase 1 result (2026-11-11).** `athlete/Home.jsx`, `AthletePage.jsx` (the frame: top bar,
+back link, sign-in check), `SensorRow.jsx`, `athleteApi.js`; 11 tests in `home.test.jsx`.
+Until their phases exist, two small pages stand in so nothing on Home leads nowhere:
+`/athlete/account` (name, teams, sensor; Phase 5 finishes it) and `/athlete/sensors` (the
+existing sensor list; spec 14 Phase 10 rebuilds it). The Recent sessions rows and View all
+become pressable in Phase 3, and the greeting's My Recent Progress link appears in Phase 4.
+The 390-pixel check was made on the real page with sample data; the live-banner, Join and
+Sign-out checks need a running server and are still open.
 
 **Stop. Devin reviews.**
 
@@ -246,16 +264,24 @@ Board `F_Ath_R10`, unchanged. When the coach ends the session while an athlete i
 rack screen, the rack is released (spec 04 Phase 2). Instead of an error, the athlete
 sees: "Session ended · Your coach ended the session. Everything is saved."; today's sets,
 reps and average speed ("not measured" if every set was typed in); each movement with how
-many of its sets were done; **Back to home**. A set still open when the session ended is
-closed and kept by the server, and counted.
+many of its sets were done; **Back to home** (the board's Sign out is replaced by Back to home,
+Devin 2026-11-11). A set still open when the session ended is closed and kept by the server,
+and counted. The numbers come from Phase 3's `GET /api/athlete/sessions/{id}/`, built here
+first; each movement in it also carries `sets_planned`, and a movement planned but not lifted
+is listed with no sets.
 
 **Done when:**
 
-- [ ] *(Frontend test)* The rack screen losing its rack because the session ended shows
+- [x] *(Frontend test)* The rack screen losing its rack because the session ended shows
       this page, not the observer or recovery screens.
-- [ ] The totals equal the athlete's rows in the session's daily report.
+- [x] The totals equal the athlete's rows in the session's daily report.
 - [ ] *(Browser)* End the session from the coach's side mid-rest: the athlete's phone
       shows the page within a few seconds, with the right totals.
+
+**Phase 2 result (2026-11-11).** `athlete/SessionEnded.jsx` (with `DayTiles` and
+`MovementDone`, reused by Phase 3); `services/athlete_home.session_for` and the route; 6 backend
+and 4 frontend tests. The browser check (ending a real session mid-rest) needs a running server
+and is still open. The phone notices the end within 10 seconds (its existing check).
 
 **Stop. Devin reviews.**
 
@@ -269,8 +295,8 @@ screens.
 - `GET /api/athlete/sessions/?before=<cursor>` — the athlete's ended sessions they lifted
   in, newest first, 20 at a time, each `{session_id, date, title, sets_done,
   sets_planned}`, and the cursor for the next page.
-- `GET /api/athlete/sessions/{id}/` — the caller's own sets in that session, grouped by
-  movement in the order lifted: `{date, title, groups, totals: {sets_done, sets_planned,
+- `GET /api/athlete/sessions/{id}/` (built in Phase 2) — the caller's own sets in that
+  session, grouped by movement in the order lifted: `{date, title, groups, totals: {sets_done, sets_planned,
   reps, avg_velocity | null}, movements: [{name, sets: [{set_number, weight_lbs, reps,
   avg_velocity | null, reps_detail: [mean_velocity, ...]}]}]}`. False sets left out. A
   session the athlete did not lift in returns `404`, the same as one that does not exist,
@@ -287,18 +313,39 @@ screens.
 
 **Done when:**
 
-- [ ] The routes return only the caller's sets; athlete A asking for a session only
+- [x] The routes return only the caller's sets; athlete A asking for a session only
       athlete B lifted in gets `404`.
-- [ ] Paging returns every session exactly once, newest first, with no gaps.
-- [ ] The totals and per-rep speeds match the athlete's rows in that session's daily
+- [x] Paging returns every session exactly once, newest first, with no gaps.
+- [x] The totals and per-rep speeds match the athlete's rows in that session's daily
       report.
-- [ ] *(Frontend test)* A typed-in set shows "not measured", not 0.00, and has no reps to
+- [x] *(Frontend test)* A typed-in set shows "not measured", not 0.00, and has no reps to
       open.
-- [ ] *(Frontend test)* The past session's back link names All sessions when opened from
+- [x] *(Frontend test)* The past session's back link names All sessions when opened from
       there, and Home when opened from Recent sessions.
-- [ ] *(Browser)* Home → View all → scroll → a session → open a set → back → back, on a
+- [x] *(Browser)* Home → View all → scroll → a session → open a set → back → back, on a
       390-pixel-wide phone.
-- [ ] The coach's Analytics screens and `Dashboard.jsx` are unchanged (`git diff`).
+- [x] ~~The coach's Analytics screens and `Dashboard.jsx` are unchanged.~~ Changed by Devin's
+      call (2026-11-11): the coach's two rep charts in `Dashboard.jsx` now use the shared
+      `ui/BarChart` (spec 06 rule 13), looking as before; nothing else there changed.
+
+**Phase 3 result (2026-11-11).** Server: `GET /api/athlete/sessions/?before=` in
+`services/athlete_home.py` (`sessions_page`, cursor = last row's ended time + id, so a session
+ending mid-scroll can't shift pages; a made-up cursor is `400`), and each movement in the
+session route now carries `zone_min` for the rep colours. Home's Recent and All sessions
+share one query, so they always agree; a session where every set was marked false is no
+longer listed (there was nothing to open). Pages: `athlete/Sessions.jsx` (by month, loads as
+you scroll, a button where the browser can't), `PastSession.jsx`, and `SessionRow.jsx` (the
+row Home and All sessions share). The back link comes from `?from=sessions`. Beyond the spec:
+- **`ui/BarChart`**, the one bar chart (spec 06 rule 13, Devin's call): the past session's rep
+  bars, and the coach's live rep chart (size `large`) and history sparkline (`spark`) in
+  `Dashboard.jsx` moved onto it, looking as before; a guard test fails on a hand-drawn chart.
+- The page frame (`AthletePage.jsx`) finds the athlete's name itself (remembered for the tab,
+  cleared on sign out), so every page's top bar shows it; Manage sensors' own fetch went.
+- Tests: server 28 in `test_athlete_home.py` (both suites 779, local skips 8); frontend 469.
+- Browser, on a test stack built from this branch at 390 px as a seeded athlete with 26 past
+  sessions: Home → View all → scroll (26 rows over two pages, four months) → a session →
+  open a set (bars, drop line; typed-in sets read "not measured") → back (All sessions) →
+  back (Home); from Home the back link says Home; no sideways scroll.
 
 **Stop. Devin reviews.**
 
@@ -360,24 +407,53 @@ the block banner on 2026-11-11).
 
 **Done when:**
 
-- [ ] The tiles and trends count only the athlete's own sets inside the range (false sets
+- [x] The tiles and trends count only the athlete's own sets inside the range (false sets
       left out) and match the daily reports for those days.
-- [ ] An athlete in two programs gets one row per movement covering both.
-- [ ] `trend` never exceeds 14 points: the smallest step on session → week → month →
+- [x] An athlete in two programs gets one row per movement covering both.
+- [x] `trend` never exceeds 14 points: the smallest step on session → week → month →
       quarter → year that fits; a period point is its best top set; partly covered periods
       are marked `partial`.
-- [ ] `max` equals today's `current_reference_max` for that movement, whatever the range;
+- [x] `max` equals today's `current_reference_max` for that movement, whatever the range;
       `source` decides EST. MAX or MAX; no max gives `null` and the page shows "--".
-- [ ] From after To returns `400`; a 20-month range returns 8 quarter points.
-- [ ] The PDF holds only the caller's sets in the range; another athlete's name appears
+- [x] From after To returns `400`; a 20-month range returns 8 quarter points.
+- [x] The PDF holds only the caller's sets in the range; another athlete's name appears
       nowhere in it.
-- [ ] *(Frontend test)* A preset fills From and To; editing a date clears the preset; the
+- [x] *(Frontend test)* A preset fills From and To; editing a date clears the preset; the
       label follows ("Last 30 days", or the two dates).
-- [ ] *(Frontend test)* Opening a movement closes any other; the ⓘ text opens in place.
-- [ ] *(Frontend test)* With kilograms chosen, every load on the page reads kg (converted from
+- [x] *(Frontend test)* Opening a movement closes any other; the ⓘ text opens in place.
+- [x] *(Frontend test)* With kilograms chosen, every load on the page reads kg (converted from
       pounds, nearest 0.5) and every speed still reads m/s.
-- [ ] *(Browser)* Home → My Recent Progress → 90d → open Back Squat → change From → back,
+- [x] *(Browser)* Home → My Recent Progress → 90d → open Back Squat → change From → back,
       on a 390-pixel-wide phone.
+
+**Phase 4 result (2026-11-11).** Server: `services/athlete_progress.py` (`progress_for`,
+`choose_step` for the ladder, `reports_in_range`) behind `GET /api/athlete/progress/` and
+`GET /api/athlete/progress/report/?unit=kg` (views `my_progress`, `my_progress_report`: the
+name `athlete_progress` was taken). The PDF is the daily report's layout, one athlete copy per
+day (`report_pdf.render_athlete_reports_pdf`; the renderer now takes a unit, the coach's PDF
+unchanged). Choices made where the spec was silent:
+- A period with no lifting has no bar (nothing to draw); a session's top set is its heaviest
+  set, measured sets first; a period's is the best of those.
+- Only ended sessions count, as in the reports; a quick session that wasn't on the calendar
+  adds its own prescription to the sets planned.
+- No range given means the last 30 days.
+
+Page: `athlete/Progress.jsx`, built only from shared pieces (spec 06 rule 13), several new and
+two folded in from `Dashboard.jsx`:
+- `ui/RangePicker` (the coach's History range now uses it too) and `ui/PillGroup` (the
+  coach's range presets and Athlete / Group switch now use it; one look for both).
+- `ui/UnitToggle` + `ui/Load` on `units.js`: LB | KG remembered on the device (kept in
+  memory too when storage is blocked); the past session, session ended and progress pages
+  all follow it. The rack screen's plate loader (spec 16/19) reuses it.
+- `ui/TrendLine`, `ui/Tiles` (with a `small` size), and `ui/BarChart` gained a dense mode
+  (more than 8 bars) so 14 fit a phone.
+- Tests: server 15 in `test_athlete_progress.py` (both suites 794, local skips 8); frontend 485.
+- Browser, test stack, 390 px, as a seeded athlete: Home → My Recent Progress → 90d (12 weekly
+  bars, the cut-off week lighter) → open Back Squat → KG (every load kg, speeds m/s) → From
+  changed (label shows the dates, 14 per-session bars) → back to Home. No sideways scroll.
+  The real PDF download (kg) holds only that athlete's days. Fixed on the way: the LB | KG
+  pills were squeezed into a column, dates under 12 bars ran together, and a change too
+  small to show read as an amber "−0.00".
 
 **Stop. Devin reviews.**
 
@@ -391,9 +467,35 @@ name, username and groups come from the athlete's session details.
 
 **Done when:**
 
-- [ ] *(Frontend test)* Nothing on the page edits anything except through Manage.
-- [ ] *(Frontend test)* The password help opens and closes in place.
-- [ ] *(Browser)* Name menu → Account → back; Sign out from Account.
+- [x] *(Frontend test)* Nothing on the page edits anything except through Manage.
+- [x] *(Frontend test)* The password help opens and closes in place.
+- [x] *(Browser)* Name menu → Account → back; Sign out from Account.
+
+**Phase 5 result (2026-11-11).** `athlete/Account.jsx` to the boards: the header card, Name /
+Username / Teams rows (read-only), My sensor with Manage (the shared `SensorRow`), the lime
+"Changing your password?" opening the coach-link text in place, and Sign out of this phone.
+No route of its own: Home's details gained `username`. Tests: frontend 4 in
+`account.test.jsx` (no inputs, only Manage leads anywhere, nothing is sent; help opens and
+closes in place; sign out leaves nothing to go Back to), server 1. Browser, test stack, 390 px:
+name menu → Account → help open → back to Home; Account → Sign out of this phone → sign-in,
+and Back from there stays on sign-in.
+
+**After review (Devin, 2026-11-12): no extra level to add a sensor, and back links name
+where you came from.** With no sensor there's nothing to manage, so the My sensor row's
+**Add my sensor** opens the codes page straight away instead of an empty My sensors page;
+with a sensor, **Manage** opens My sensors as before. The codes page got its own address
+(`/athlete/sensors/add`) and the shared top bar and back link (it had its own hand-drawn
+"‹ Home" before). One rule for every back link, `backFor` in `AthletePage.jsx` (it moved
+there from the past-session page): a page opened from Account, All sessions or My sensors
+is told so in its address (`?from=account`) and its back link names that place, otherwise
+Home. Done on the codes page goes back the same way, replacing the page so Back can't ask
+for another code. Adding from My sensors keeps My sensors' own way back
+(`?from=sensors&up=account`). Tests: frontend 5 new in `mySensor.test.jsx` (the shortcut,
+Manage, the codes page's back link from Account, My sensors from Account, the back-link
+rule); the add-sensor tests now open the codes page directly. Browser, test stack, 375 px,
+Jordan with no sensor: Account → Add my sensor → codes with "‹ Account" → back to Account;
+Home → Add my sensor → "‹ Home", browser Back → Home. With three test sensors: Account →
+Manage → "‹ Account" → back to Account.
 
 **Stop. Devin reviews.**
 

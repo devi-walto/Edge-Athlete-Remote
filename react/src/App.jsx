@@ -12,6 +12,10 @@
 //   /dashboard       → base-station wall display
 //   /login-link      → an athlete opening their login link (#link after it)
 //   /athlete         → athlete sign in
+//   /athlete/home    → the athlete's Home (spec 10); /athlete/account, /athlete/sensors
+//                      (and /add, the codes for a new sensor),
+//                      /athlete/sessions (all of them), /athlete/sessions/:id (one),
+//                      /athlete/progress (My Recent Progress)
 //   /session/:id     → the session link: an online athlete's own rack (athlete/SessionPage)
 //
 // localStorage still remembers this device's identity (its role, its generated
@@ -33,6 +37,13 @@ import SessionPage, { sessionIdFromPath } from './athlete/SessionPage.jsx'
 import Dashboard from './Dashboard.jsx'
 import AthleteSignIn from './athlete/AthleteSignIn.jsx'
 import LoginLinkPage from './athlete/LoginLinkPage.jsx'
+import AthleteHome from './athlete/Home.jsx'
+import Account from './athlete/Account.jsx'
+import ManageSensors from './athlete/ManageSensors.jsx'
+import { AddSensorPage } from './athlete/MySensor.jsx'
+import Sessions from './athlete/Sessions.jsx'
+import PastSession from './athlete/PastSession.jsx'
+import Progress from './athlete/Progress.jsx'
 import WifiChangeOverlay from './WifiChangeOverlay.jsx'
 import { getActiveSession } from './api/client.js'
 import { subscribeRackCommand } from './mqtt/client.js'
@@ -276,6 +287,15 @@ function route(pathname) {
   // signing in after that.
   if (pathname === '/login-link') return <LoginLinkPage />
   if (pathname === '/athlete') return <AthleteSignIn />
+  // The athlete's own pages once signed in (spec 10).
+  if (pathname === '/athlete/home') return <AthleteHome />
+  if (pathname === '/athlete/account') return <Account />
+  if (pathname === '/athlete/sensors') return <ManageSensors />
+  if (pathname === '/athlete/sensors/add') return <AddSensorPage />
+  if (pathname === '/athlete/sessions') return <Sessions />
+  if (pathname === '/athlete/progress') return <Progress />
+  const pastSession = pathname.match(/^\/athlete\/sessions\/(\d+)$/)
+  if (pastSession) return <PastSession sessionId={Number(pastSession[1])} />
   // The session link a coach shares: the athlete's own rack (spec 04).
   const sessionId = sessionIdFromPath(pathname)
   if (sessionId != null) return <SessionPage key={sessionId} sessionId={sessionId} />

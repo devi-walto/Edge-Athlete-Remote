@@ -69,6 +69,7 @@
 }
 .ui-focus-label { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .ui-focus-title { color: var(--ink); font-size: 24px; font-weight: 850; letter-spacing: -.02em; line-height: 1.15; margin: 0; }
+.ui-focus-detail { color: var(--soft-ink); display: flex; flex-direction: column; font-size: 13px; gap: 4px; line-height: 1.45; }
 .ui-focus-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; }
 
 /* ── QuietRow: one list row, its own solid block (rule 9) ── */
@@ -83,6 +84,7 @@
   padding: 6px 8px 6px 16px;
 }
 .ui-row + .ui-row { margin-top: 6px; }
+.ui-row-lead { display: flex; flex: none; }
 .ui-row-text { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
 .ui-row-name { color: var(--soft-ink); font-size: 14px; font-weight: 650; overflow-wrap: anywhere; }
 .ui-row-meta { color: var(--muted); font-size: 12px; }
@@ -276,3 +278,74 @@ button.ui-step-row:focus-visible { outline: 2px solid var(--lime); outline-offse
   padding: 0 4px;
 }
 .ui-backlink:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+
+/* ── BarChart: the one bar chart (rule 13), in three sizes ── */
+.ui-bars { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+:where(.ui-bars) { margin: 0; }   /* a figure's default margin off, but a screen's own margin still wins */
+.ui-bars-legend { color: var(--muted); display: flex; flex-direction: column; font-size: 11px; gap: 2px; line-height: 1.4; }
+.ui-bars-row { align-items: flex-end; display: flex; }
+.ui-bars-row.is-scroll { overflow-x: auto; }
+.ui-bar { align-items: center; display: flex; flex: 1; flex-direction: column; gap: 4px; height: 100%; justify-content: flex-end; min-width: 0; text-align: center; }
+.ui-bar-above { color: var(--soft-ink); font-size: 11px; font-variant-numeric: tabular-nums; font-weight: 700; line-height: 1.15; }
+.ui-bar-below { color: var(--muted); font-size: 10px; white-space: nowrap; }
+.ui-bar-track { align-items: flex-end; display: flex; flex: 1; justify-content: center; min-height: 0; width: 100%; }
+.ui-bar-fill { align-items: flex-end; display: flex; justify-content: center; overflow: hidden; width: 100%; }
+.ui-bar-fill.is-green { background: var(--mint); }
+.ui-bar-fill.is-yellow { background: var(--amber); }
+.ui-bar-fill.is-red { background: var(--coral); }
+.ui-bar-fill.is-grey { background: color-mix(in srgb, var(--muted) 73%, var(--panel)); }
+.ui-bar-fill.is-faded { opacity: .45; }
+/* Text inside a bar reads upward, dark on the colour: the load ("225 lb"). */
+.ui-bar-inside { color: var(--bg); font-size: 11px; font-weight: 800; padding: 6px 0; transform: rotate(180deg); white-space: nowrap; writing-mode: vertical-rl; }
+
+/* dense: more than 8 bars, so 14 still fit a phone */
+.ui-bars--normal.is-dense .ui-bars-row { gap: 3px; }
+.ui-bars--normal.is-dense .ui-bar-above { font-size: 9.5px; letter-spacing: -.02em; }
+.ui-bars--normal.is-dense .ui-bar-below { font-size: 9px; line-height: 1.15; white-space: normal; }
+.ui-bars--normal.is-dense .ui-bar-inside { font-size: 10px; }
+/* spark: a glance, no words */
+.ui-bars--spark .ui-bars-row { gap: 4px; height: 46px; }
+.ui-bars--spark .ui-bar { gap: 0; min-width: 4px; }
+/* normal: the athlete's pages and the rack screen */
+.ui-bars--normal .ui-bars-row { gap: 6px; height: 120px; }
+.ui-bars--normal .ui-bar-fill { border-radius: 3px 3px 0 0; max-width: 34px; }
+/* large: the coach's live view — taller, wider, on a dark track */
+.ui-bars--large .ui-bars-row { gap: 10px; height: 190px; }
+.ui-bars--large .ui-bar { display: grid; flex: 1 0 38px; gap: 5px; grid-template-rows: auto 1fr auto; }
+.ui-bars--large .ui-bar-track { background: var(--bg); height: 100%; }
+.ui-bars--large .ui-bar-above { color: var(--ink); font-size: 10px; }
+.ui-bars--large .ui-bar-below { font-size: 9px; }
+
+/* ── PillGroup: one chosen pill, lime (rule 13) ── */
+.ui-pills { background: var(--panel2); border: 1px solid var(--line); border-radius: 999px; display: inline-flex; gap: 2px; padding: 3px; }
+.ui-pills button { background: transparent; border: 0; border-radius: 999px; color: var(--muted); cursor: pointer; font: inherit; font-size: 11px; font-weight: 850; letter-spacing: .06em; min-height: 32px; padding: 0 12px; }
+.ui-pills button.is-on { background: var(--lime); color: var(--on-lime); }
+.ui-pills button:hover:not(.is-on) { color: var(--ink); }
+.ui-pills button:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+.ui-pills--quiet { background: var(--bg); }
+.ui-pills--quiet button.is-on { background: var(--soft-ink); color: var(--bg); }
+
+/* ── RangePicker: presets, From, To, and what's chosen ── */
+.ui-range { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; }
+.ui-range label { align-items: center; color: var(--muted); display: flex; font-size: 9px; font-weight: 900; gap: 7px; letter-spacing: .1em; text-transform: uppercase; }
+.ui-range input[type="date"] { background: var(--field); border: 1px solid var(--line); color: var(--ink); font: inherit; font-size: 12px; letter-spacing: normal; min-height: 36px; padding: 6px 8px; text-transform: none; }
+.ui-range input[type="date"]:focus-visible { border-color: var(--lime); outline: none; }
+.ui-range-label { color: var(--muted); font-size: 11px; }
+
+/* ── TrendLine: a glance at which way it goes, teal ── */
+.ui-trend { display: block; flex: none; }
+.ui-trend polyline { stroke: var(--mint); }
+.ui-trend circle { fill: var(--mint); }
+
+/* ── Tiles: big numbers under small labels ── */
+.ui-tiles { display: grid; gap: 8px; grid-template-columns: repeat(var(--tiles, 3), minmax(0, 1fr)); }
+.ui-tiles > div { background: var(--panel); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 12px 14px; }
+.ui-tile-label { align-items: center; color: var(--muted); display: flex; font-size: 10px; font-weight: 800; gap: 4px; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
+.ui-tiles b { font-size: 24px; font-variant-numeric: tabular-nums; font-weight: 850; overflow-wrap: anywhere; }
+.ui-tiles b small { color: var(--muted); font-size: 16px; font-weight: 750; }
+.ui-tiles b.is-short { color: var(--amber); }
+.ui-tiles b.is-lime { color: var(--lime); }
+.ui-tiles b.is-mint { color: var(--mint); }
+.ui-tiles b.is-quiet { color: var(--muted); font-size: 14px; font-weight: 700; padding-top: 6px; }
+.ui-tiles--small > div { padding: 10px 12px; }
+.ui-tiles--small b { font-size: 19px; overflow-wrap: normal; white-space: nowrap; }

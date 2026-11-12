@@ -445,5 +445,24 @@ An athlete's own sensor: a one-time code to add it, the sensor claiming itself w
 <!-- routes:sensors-online:end -->
 
 :::::
+
+
+## The athlete's pages
+
+An online athlete's own pages: Home, their past sessions, their progress (spec 10). Remote only; an athlete sees only their own numbers.
+
+:::::{dropdown} 5 routes
+
+<!-- routes:the-athlete-s-pages:start -->
+| Route | Methods | Access | What it does | Handler |
+|---|---|---|---|---|
+| `/api/athlete/home/` | `GET` | remote only · athlete | Home for the signed-in athlete: what's coming up, what's live, their last five sessions | `home` |
+| `/api/athlete/sessions/` | `GET` | remote only · athlete | The signed-in athlete's ended sessions, newest first, 20 at a time (?before= for the next page) | `athlete_sessions` |
+| `/api/athlete/progress/` | `GET` | remote only · athlete | My Recent Progress for the signed-in athlete: their own trends over ?from= to ?to= (whole days) | `my_progress` |
+| `/api/athlete/progress/report/` | `GET` | remote only · athlete | The signed-in athlete's own sets from ?from= to ?to= as a PDF, in the daily report's layout | `my_progress_report` |
+| `/api/athlete/sessions/<int:session_id>/` | `GET` | remote only · athlete | One session the signed-in athlete lifted in: their own sets by movement, with totals | `athlete_session` |
+<!-- routes:the-athlete-s-pages:end -->
+
+:::::
 <!-- ROUTES SECTION END -->
 

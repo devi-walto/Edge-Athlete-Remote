@@ -92,7 +92,7 @@ By v0.8.3 (2026-11-09) CI ran **1,114 tests** on every pull request: the backend
 | 03 | [Athlete login links](remote/03-athlete-login-links.md) | **Done** 2026-10-18 |
 | 04 | [Session link and virtual racks](remote/04-session-link-and-virtual-racks.md) | Built (Phases 0–3, 5). Phase 4 (coach's side) belongs to the UI redesign |
 | 14 | [Sensors online](remote/14-sensors-online.md) | Phases 0–9 **done**. Phase 10 (Manage sensors, live/standby, Swap) written 2026-11-11 |
-| 10 | [The athlete's pages](remote/10-athlete-pages.md) | Rewritten 2026-11-11 around the approved athlete-account boards; not started |
+| 10 | [The athlete's pages](remote/10-athlete-pages.md) | All phases built 2026-11-11 (Home, session ended, All sessions, a past session, My Recent Progress, Account); review + PR next |
 | 06 | [Design rules](ui/06-design-rules.md) | **Done** 2026-11-11: every colour in one token file (guarded in CI, app and sensor setup page), shared pieces in `react/src/ui/`, one-tab rows hidden, developer text out, top bar split |
 | 07 | [Planning](ui/07-planning.md) | Written; Add athlete panel and the first/last name split added 2026-11-08 |
 | 08 | [Session](ui/08-session.md) | Written |

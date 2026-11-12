@@ -20,7 +20,7 @@
   .athlete-assignment-fields { grid-template-columns:1fr 1fr; }
   .athlete-override-list fieldset { grid-template-columns:repeat(3,1fr); }
   .athlete-template-targets { grid-column:1/-1; }
-  .history-set-summary { grid-template-columns:minmax(180px,.8fr) minmax(300px,1.2fr) 120px; } .history-rep-spark { display:none; }
+  .history-set-summary { grid-template-columns:minmax(180px,.8fr) minmax(300px,1.2fr) 120px; } .history-set-summary .history-rep-spark { display:none; }
 
   .workout-builder-grid { grid-template-columns:1fr; }
   .workout-exercise-list fieldset { grid-template-columns:repeat(3,1fr); }

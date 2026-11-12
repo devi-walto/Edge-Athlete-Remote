@@ -10,6 +10,14 @@ import { createRoot } from 'react-dom/client'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import BarChart, { TONES } from './BarChart.jsx'
+import Load from './Load.jsx'
+import PillGroup from './PillGroup.jsx'
+import RangePicker from './RangePicker.jsx'
+import Tiles from './Tiles.jsx'
+import TrendLine from './TrendLine.jsx'
+import UnitToggle from './UnitToggle.jsx'
+import { formatLoad, toKg } from '../units.js'
 import Badge, { BADGE_KINDS } from './Badge.jsx'
 import Button, { BUTTON_KINDS } from './Button.jsx'
 import FocusCard from './FocusCard.jsx'
@@ -18,7 +26,7 @@ import QuietRow from './QuietRow.jsx'
 import RiskTag from './RiskTag.jsx'
 import SectionLabel from './SectionLabel.jsx'
 import Step, { StepLink } from './Step.jsx'
-import { REACT_ROOT, tokens } from '../styles/colorScan.js'
+import { REACT_ROOT, appFiles, tokens } from '../styles/colorScan.js'
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 let host, root
@@ -108,9 +116,15 @@ describe('FocusCard, QuietRow, SectionLabel, Hero', () => {
     expect(host.querySelector('.ui-focus-actions button')).not.toBeNull()
   })
 
+  it('shows a detail line under the title, and a mark before the name of a row', () => {
+    render(<><FocusCard title="Day 2" detail="Varsity · Deadlift" /><QuietRow lead={<i data-dot />} name="ea-3f9c" /></>)
+    expect(host.querySelector('.ui-focus-detail').textContent).toBe('Varsity · Deadlift')
+    expect(host.querySelector('.ui-row-lead [data-dot]')).not.toBeNull()
+  })
+
   it('leaves out the parts a focus card or row is not given', () => {
     render(<><FocusCard title="Roster" /><QuietRow name="Jordan" /></>)
-    expect(host.querySelector('.ui-focus-label, .ui-focus-actions, .ui-row-meta, .ui-row-badge, .ui-row-actions')).toBeNull()
+    expect(host.querySelector('.ui-focus-label, .ui-focus-detail, .ui-focus-actions, .ui-row-lead, .ui-row-meta, .ui-row-badge, .ui-row-actions')).toBeNull()
   })
 
   it('draws a row with its name, detail, badge and actions', () => {
@@ -166,6 +180,124 @@ describe('Step', () => {
     expect(host.querySelector('.ui-step-arrow')).not.toBeNull()
     act(() => host.querySelector('button').click())
     expect(onClick).toHaveBeenCalledOnce()
+  })
+})
+
+describe('BarChart', () => {
+  const bars = [
+    { value: 0.8, above: '0.80', inside: '225 lb', below: 'Nov 4', tone: 'green', label: 'Nov 4: 0.80 m/s' },
+    { value: 0.4, above: '0.40', inside: '235 lb', below: 'Nov 7', tone: 'yellow', faded: true },
+    { value: 0.01, above: '0.01', below: 'Nov 9', tone: 'red' },
+  ]
+  const fills = () => [...host.querySelectorAll('.ui-bar-fill')]
+
+  it('draws one bar per item, tallest = the top, a slow one still visible', () => {
+    render(<BarChart bars={bars} label="Speed" />)
+    expect(host.querySelector('[role="list"]').getAttribute('aria-label')).toBe('Speed')
+    expect(fills().map((f) => f.style.height)).toEqual(['100%', '50%', '12%'])
+    expect(fills().map((f) => f.dataset.tone)).toEqual(['green', 'yellow', 'red'])
+    expect(fills()[1].classList.contains('is-faded')).toBe(true)
+  })
+
+  it('shows the number above, the text inside and the label below, only when given', () => {
+    render(<BarChart bars={bars} />)
+    expect([...host.querySelectorAll('.ui-bar-above')].map((e) => e.textContent)).toEqual(['0.80', '0.40', '0.01'])
+    expect([...host.querySelectorAll('.ui-bar-inside')].map((e) => e.textContent)).toEqual(['225 lb', '235 lb'])
+    expect([...host.querySelectorAll('.ui-bar-below')].map((e) => e.textContent)).toEqual(['Nov 4', 'Nov 7', 'Nov 9'])
+    expect(host.querySelectorAll('[role="listitem"]')[0].getAttribute('aria-label')).toBe('Nov 4: 0.80 m/s')
+  })
+
+  it('legend lines go on top', () => {
+    render(<BarChart bars={bars} legend={['Each bar = 1 week', 'Speed above · load inside · when, below']} />)
+    expect([...host.querySelectorAll('.ui-bars-legend span')].map((e) => e.textContent))
+      .toEqual(['Each bar = 1 week', 'Speed above · load inside · when, below'])
+  })
+
+  it('a spark has no words at all, whatever it is given', () => {
+    render(<BarChart size="spark" bars={bars} legend={['x']} />)
+    expect(host.querySelector('.ui-bars--spark')).not.toBeNull()
+    expect(host.querySelectorAll('.ui-bar-above, .ui-bar-inside, .ui-bar-below, .ui-bars-legend')).toHaveLength(0)
+    expect(fills()).toHaveLength(3)
+  })
+
+  it('a fixed top: the coach chart never reads less than 1 m/s as full height', () => {
+    render(<BarChart size="large" max={1} bars={[{ value: 0.5 }, { value: 0.25 }]} />)
+    expect(fills().map((f) => f.style.height)).toEqual(['50%', '25%'])
+    expect(host.querySelector('.ui-bars-row').classList.contains('is-scroll')).toBe(true)   // large scrolls
+  })
+
+  it('normal fits the width; scrolling can be asked for', () => {
+    render(<BarChart bars={bars} />)
+    expect(host.querySelector('.ui-bars-row').classList.contains('is-scroll')).toBe(false)
+    render(<BarChart bars={bars} scroll />)
+    expect(host.querySelector('.ui-bars-row').classList.contains('is-scroll')).toBe(true)
+  })
+
+  it('every tone has a colour in ui.css, and an unknown size is refused', () => {
+    const css = readFileSync(join(REACT_ROOT, 'src/ui/ui.css'), 'utf8')
+    for (const tone of TONES) expect(css).toContain(`.ui-bar-fill.is-${tone}`)
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(() => render(<BarChart size="huge" bars={bars} />)).toThrow(/unknown size/)
+    quiet.mockRestore()
+  })
+
+  it('no hand-drawn bar charts are left anywhere in the app', () => {
+    // A bar chart drawn by hand sets each bar's height from a number: style={{ height: `${...}%` }}.
+    const offenders = appFiles().filter((file) => !file.startsWith('src/ui/'))
+      .filter((file) => /height:\s*`\$\{[^`]*%`/.test(readFileSync(join(REACT_ROOT, file), 'utf8')))
+    expect(offenders).toEqual([])
+  })
+})
+
+describe('PillGroup, RangePicker, TrendLine, Tiles, units', () => {
+  it('PillGroup: one lime pill, pressing another reports it', () => {
+    const chosen = vi.fn()
+    render(<PillGroup label="Scope" value="a" onChange={chosen} choices={[{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }]} />)
+    const pills = [...host.querySelectorAll('.ui-pills button')]
+    expect(pills.map((p) => p.getAttribute('aria-pressed'))).toEqual(['true', 'false'])
+    act(() => pills[1].click())
+    expect(chosen).toHaveBeenCalledWith('b')
+  })
+
+  it('RangePicker: a preset reports both dates; dates the wrong way round are swapped', () => {
+    const changed = vi.fn()
+    render(<RangePicker value={{ from: '2026-11-01', to: '2026-11-10' }} onChange={changed} />)
+    expect(host.querySelectorAll('.ui-pills button.is-on')).toHaveLength(0)
+    act(() => host.querySelectorAll('.ui-pills button')[0].click())
+    expect(changed.mock.calls[0][0].to).toBe(changed.mock.calls[0][0].to)
+    const [from] = host.querySelectorAll('input[type="date"]')
+    const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
+    act(() => { set.call(from, '2026-11-20'); from.dispatchEvent(new Event('input', { bubbles: true })) })
+    expect(changed).toHaveBeenLastCalledWith({ from: '2026-11-10', to: '2026-11-20' })
+  })
+
+  it('TrendLine: a line through the numbers, nulls skipped, one number a dot, none nothing', () => {
+    render(<TrendLine values={[0.5, null, 0.7]} label="t" />)
+    expect(host.querySelector('polyline').getAttribute('points').split(' ')).toHaveLength(2)
+    render(<TrendLine values={[0.5]} label="t" />)
+    expect(host.querySelector('circle')).not.toBeNull()
+    render(<TrendLine values={[null]} label="t" />)
+    expect(host.querySelector('svg')).toBeNull()
+  })
+
+  it('Tiles: label over number, "/ planned" quieter, amber when short', () => {
+    render(<Tiles items={[{ label: 'Sets', value: 7, of: 9, short: true }, { label: 'Avg m/s', value: 'not measured', quiet: true }]} />)
+    expect([...host.querySelectorAll('.ui-tiles b')].map((b) => b.textContent)).toEqual(['7 / 9', 'not measured'])
+    expect(host.querySelector('b.is-short')).not.toBeNull()
+    expect(host.querySelector('b.is-quiet')).not.toBeNull()
+  })
+
+  it('units: kilograms to the nearest half; every Load follows the toggle (even with no storage)', () => {
+    expect(toKg(225)).toBe(102)
+    expect(toKg(235)).toBe(106.5)
+    expect(formatLoad(null)).toBeNull()
+    render(<><UnitToggle /><span id="a"><Load lbs={225} /></span><span id="b"><Load lbs={null} /></span></>)
+    expect(host.querySelector('#a').textContent).toBe('225 lb')
+    expect(host.querySelector('#b').textContent).toBe('--')
+    act(() => [...host.querySelectorAll('.ui-pills button')].find((b) => b.textContent === 'KG').click())
+    expect(host.querySelector('#a').textContent).toBe('102 kg')
+    act(() => [...host.querySelectorAll('.ui-pills button')].find((b) => b.textContent === 'LB').click())
+    expect(host.querySelector('#a').textContent).toBe('225 lb')
   })
 })
 

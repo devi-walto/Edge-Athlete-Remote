@@ -6,11 +6,13 @@
 // around it kept quiet.
 import './ui.css'
 
-/** label: the small line above the title; title: the big line; children: its actions. */
-export default function FocusCard({ label, title, children, as: Tag = 'section', className = '', ...rest }) {
+/** label: the small line above the title; title: the big line; detail: lines under the
+ *  title; children: its actions. */
+export default function FocusCard({ label, title, detail, children, as: Tag = 'section', className = '', ...rest }) {
   return <Tag className={`ui-focus${className ? ` ${className}` : ''}`} {...rest}>
     {label && <span className="ui-focus-label">{label}</span>}
     <h2 className="ui-focus-title">{title}</h2>
+    {detail && <div className="ui-focus-detail">{detail}</div>}
     {children && <div className="ui-focus-actions">{children}</div>}
   </Tag>
 }

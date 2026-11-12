@@ -39,9 +39,6 @@
 .athlete-dot { background: var(--button-edge); border-radius: 50%; flex: none; height: 10px; width: 10px; }
 .athlete-dot.is-on { background: var(--lime); }
 .athlete-dot.is-waiting { background: var(--amber); }
-.athlete-bar.is-back { padding: 8px; }
-.athlete-back { font-size: 15px; }
-.athlete-title { font-size: 26px; font-weight: 850; letter-spacing: -.02em; margin: 2px 0 0; }
 .athlete-code-card { background: var(--focus-bg); border: 1px solid var(--lime); display: flex; flex-direction: column; gap: 6px; padding: 16px; }
 .athlete-code-row { align-items: center; display: flex; gap: 12px; justify-content: space-between; }
 .athlete-code { font-family: var(--font-mono); font-size: 36px; font-weight: 800; letter-spacing: .08em; line-height: 1.1; }
@@ -66,3 +63,64 @@
 .athlete-dialog h2 { font-size: 20px; font-weight: 850; margin: 0; overflow-wrap: anywhere; }
 .athlete-dialog p { color: var(--soft-ink); font-size: 14px; line-height: 1.5; margin: 0; }
 .athlete-danger { background: var(--danger-fill); border: 0; border-radius: 6px; color: var(--ink); cursor: pointer; font: inherit; font-size: 19px; font-weight: 800; min-height: 52px; }
+
+/* ── The athlete's own pages (spec 10): the frame, Home's greeting and banner ── */
+.athlete-app { background: var(--bg); color: var(--ink); font-family: var(--font-sans); min-height: 100vh; }
+.athlete-app-bar { align-items: center; border-bottom: 1px solid var(--line); box-sizing: border-box; display: flex; height: 60px; padding: 0 10px; }
+/* Add my sensor: its cards spaced like the page it used to have to itself. */
+.athlete-add-sensor { display: flex; flex-direction: column; gap: 16px; }
+.athlete-app-body { box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; margin: 0 auto; max-width: 560px; padding: 14px 16px 32px; }
+.athlete-page-title { font-size: 24px; font-weight: 850; letter-spacing: -.02em; margin: 4px 0 0; }
+.athlete-greeting { background: var(--hero-bg); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 5px; padding: 16px 18px; }
+.athlete-greeting-label { color: var(--lime); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.athlete-greeting h1 { font-size: 22px; font-weight: 850; letter-spacing: -.02em; line-height: 1.1; margin: 0; }
+.athlete-greeting-groups { color: var(--muted); font-size: 13px; line-height: 1.4; }
+.athlete-live { align-items: center; color: var(--lime); display: inline-flex; gap: 7px; }
+.athlete-live-dot { background: var(--lime); border-radius: 50%; height: 8px; width: 8px; }
+.athlete-banner-hint { color: var(--muted); font-size: 12px; padding-top: 4px; }
+.athlete-banner .ui-focus-actions { display: block; }
+.athlete-join { font-size: 17px; min-height: 56px; width: 100%; }
+.athlete-sets { color: var(--muted); font-size: 12px; font-weight: 800; white-space: nowrap; }
+.athlete-sets.is-short { color: var(--amber); }
+.athlete-empty { color: var(--muted); font-size: 13px; margin: 0; }
+
+/* ── All sessions and a past session (spec 10, Phase 3; boards F_Ath_L1, L2) ── */
+/* A session row is a QuietRow drawn as a button: the whole row opens the session. */
+.athlete-session-row { color: inherit; cursor: pointer; font: inherit; text-align: left; width: 100%; }
+.athlete-session-row:hover { border-color: var(--button-edge); }
+.athlete-session-row:focus-visible, .athlete-set.is-pressable:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+.athlete-chevron { color: var(--muted); font-size: 18px; padding: 0 6px; }
+.athlete-view-all { align-self: flex-end; margin-top: 4px; }
+.athlete-movement { display: flex; flex-direction: column; }
+/* A set row: plain when typed in, pressable (and opens its reps) when measured. */
+.athlete-set { box-sizing: border-box; color: inherit; font: inherit; justify-content: space-between; min-height: 48px; text-align: left; width: 100%; }
+.athlete-set .ui-row-name { font-variant-numeric: tabular-nums; }
+.athlete-set.is-pressable { cursor: pointer; }
+.athlete-set-wrap + .athlete-set-wrap, .athlete-set-wrap + .athlete-set, .athlete-set + .athlete-set-wrap { margin-top: 6px; }
+.athlete-set-wrap.is-open .athlete-set { border-color: var(--lime); }
+.athlete-reps { background: var(--panel); border: 1px solid var(--line); border-top: 0; display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; }
+.athlete-rep-drop { color: var(--muted); font-size: 12px; }
+
+/* ── My Recent Progress (spec 10, Phase 4; boards F_Ath_P1, P2) ── */
+.athlete-progress-range { background: var(--panel); border: 1px solid var(--line); padding: 14px 16px; }
+.athlete-progress-item + .athlete-progress-item { margin-top: 6px; }
+.athlete-progress-row { color: inherit; cursor: pointer; font: inherit; text-align: left; width: 100%; }
+.athlete-progress-row:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+.athlete-progress-item.is-open .athlete-progress-row { border-color: var(--lime); }
+.athlete-progress-change { color: var(--mint); font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 800; white-space: nowrap; }
+.athlete-progress-change.is-down { color: var(--amber); }
+.athlete-progress-panel { background: var(--panel); border: 1px solid var(--line); border-top: 0; display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; }
+.athlete-progress-legend { align-items: flex-start; display: flex; gap: 10px; justify-content: space-between; }
+.athlete-progress-legend-text { color: var(--muted); display: flex; flex: 1; flex-direction: column; font-size: 11px; gap: 2px; line-height: 1.4; min-width: 0; }
+.athlete-progress-legend .ui-pills { flex: none; }
+.athlete-progress-note { color: var(--muted); font-size: 11px; }
+.athlete-progress-explain { color: var(--soft-ink); font-size: 12px; line-height: 1.5; margin: 0; }
+.athlete-info { background: transparent; border: 0; color: var(--muted); cursor: pointer; font: inherit; font-size: 13px; line-height: 1; min-height: 24px; padding: 0 4px; }
+.athlete-info:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+.athlete-progress-link { align-self: flex-start; margin: 4px 0 0 -10px; }
+
+/* ── Account (spec 10, Phase 5; boards F_Ath_A1, A2) ── */
+.athlete-account-rows { display: flex; flex-direction: column; }
+.athlete-account-help { display: flex; flex-direction: column; gap: 6px; }
+.athlete-account-help > .ui-button { align-self: flex-start; font-size: 14px; margin-left: -10px; }
+.athlete-account-help-text { background: var(--panel); border: 1px solid var(--line); color: var(--soft-ink); font-size: 13px; line-height: 1.5; margin: 0; padding: 12px 14px; }

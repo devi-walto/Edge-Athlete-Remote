@@ -78,6 +78,9 @@ GROUPS = [
      "An athlete's own sensor: a one-time code to add it, the sensor claiming itself "
      "with it, and removing it (spec 14). Remote only.",
      ("athlete/sensor", "sensors/")),
+    ("The athlete's pages",
+     "An online athlete's own pages: Home, their past sessions, their progress (spec 10). Remote only; an athlete sees only their own numbers.",
+     ("athlete/",)),
     ("People",
      "Athletes, the groups they train in, and the staff who run those groups.",
      ("athletes/", "training-groups/")),

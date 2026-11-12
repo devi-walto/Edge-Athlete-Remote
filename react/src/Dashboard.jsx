@@ -63,8 +63,11 @@ import GroupsView from "./coach/GroupsView.jsx";
 import GroupHistory from "./coach/GroupHistory.jsx";
 import ContextTabs, { STATE_TABS } from "./coach/ContextTabs.jsx";
 import { pathForCoachState, rememberCoachState } from "./coach/coachState.js";
-import { DEFAULT_PRESET_DAYS, matchesPreset, normaliseRange, presetRange, RANGE_PRESETS, rangeContains, rangeLabel } from "./coach/historyRange.js";
+import { DEFAULT_PRESET_DAYS, presetRange, rangeContains, rangeLabel } from "./coach/historyRange.js";
 import { scheduleUrl, scheduleWindow, slotState } from "./schedule.js";
+import BarChart, { TONES } from "./ui/BarChart.jsx";
+import PillGroup from "./ui/PillGroup.jsx";
+import RangePicker from "./ui/RangePicker.jsx";
 
 // The sub-tabs each state has (STATE_TABS) and their row live in coach/ContextTabs.jsx.
 
@@ -366,15 +369,10 @@ function RepChart({ workoutSet }) {
     <section className="coach-panel coach-rep-panel">
       <header><div><span>Saved rep profile</span><h3>Mean velocity by rep</h3></div><b>m/s</b></header>
       {reps.length === 0 ? <p className="monitor-empty">No saved reps for this set.</p> : (
-        <div className="coach-rep-chart">
-          {reps.map((rep) => (
-            <div className="coach-rep-bar" key={rep.rep_number}>
-              <strong>{velocity(rep.mean_velocity)}</strong>
-              <div><i className={rep.velocity_color} style={{ height: `${Math.max(8, rep.mean_velocity / max * 100)}%` }} /></div>
-              <span>R{rep.rep_number}</span>
-            </div>
-          ))}
-        </div>
+        // The shared chart's large size (spec 06 rule 13); the top is at least 1 m/s.
+        <BarChart size="large" className="coach-rep-chart" max={max} label="Mean velocity by rep"
+          bars={reps.map((rep) => ({ value: rep.mean_velocity, above: velocity(rep.mean_velocity), below: `R${rep.rep_number}`,
+            tone: TONES.includes(rep.velocity_color) ? rep.velocity_color : "grey", label: `Rep ${rep.rep_number}: ${velocity(rep.mean_velocity)} m/s` }))} />
       )}
     </section>
   );
@@ -566,7 +564,7 @@ function HistorySetCard({ workoutSet, expanded, onToggle }) {
     <div className="history-set-summary">
       <div className="history-set-main"><span>{timeLabel(workoutSet.ended_at)} · Rack {workoutSet.rack_number ?? "--"}</span><h4>{workoutSet.exercise} · Set {workoutSet.set_number}</h4><p>{workoutSet.weight_lbs ?? "--"} lbs</p></div>
       <div className="history-set-metrics"><div><span>Avg</span><strong>{velocity(workoutSet.avg_velocity)}</strong></div><div><span>Peak</span><strong>{velocity(workoutSet.peak_velocity)}</strong></div><div><span>Reps</span><strong>{workoutSet.reps_completed}</strong></div><div><span>First→last</span><strong>{workoutSet.measured.first_to_last_change_percent === null ? "--" : `${signed(workoutSet.measured.first_to_last_change_percent, 1)}%`}</strong></div></div>
-      <div className="history-rep-spark">{workoutSet.reps.map((rep) => <i key={rep.rep_number} style={{ height:`${Math.max(10,Math.min(100,rep.mean_velocity*90))}%` }} />)}</div>
+      <BarChart size="spark" className="history-rep-spark" max={1 / 0.9} label="Speed of each rep" bars={workoutSet.reps.map((rep) => ({ value: rep.mean_velocity, label: `Rep ${rep.rep_number}: ${velocity(rep.mean_velocity)} m/s` }))} />
       <button className="history-set-action" onClick={onToggle} aria-expanded={expanded} aria-controls={`history-set-${workoutSet.id}`}>{expanded ? "Close comparison" : "Compare reps"}<b aria-hidden="true">{expanded ? "−" : "+"}</b></button>
     </div>
     {expanded && <RepComparison workoutSet={workoutSet} />}
@@ -859,12 +857,8 @@ function CoachView({ monitor, accessToken, onLogout, coachState, me }) {
       {coachState==="analytics"&&(ATHLETE_SCOPED_TABS.includes(activeTab))&&<div className="coach-analytics-bar">
         {/* On History the selector switches between an athlete and a group —
             same question, wider lens. The other sub-tabs are athlete-only. */}
-        {activeTab==="history"&&<div className="coach-scope-switch" role="group" aria-label="History scope">
-          <button type="button" className={historyScope==="athlete"?"is-on":""} aria-pressed={historyScope==="athlete"}
-            onClick={()=>setHistoryScope("athlete")}>Athlete</button>
-          <button type="button" className={historyScope==="group"?"is-on":""} aria-pressed={historyScope==="group"}
-            onClick={()=>setHistoryScope("group")}>Group</button>
-        </div>}
+        {activeTab==="history"&&<PillGroup label="History scope" value={historyScope} onChange={setHistoryScope}
+          choices={[{value:"athlete",label:"Athlete"},{value:"group",label:"Group"}]}/>}
         {activeTab==="history"&&historyScope==="group"
           ? <label>Group
               <select value={selectedGroupId||""} onChange={e=>setSelectedGroupId(Number(e.target.value))} aria-label="Selected group">
@@ -884,19 +878,7 @@ function CoachView({ monitor, accessToken, onLogout, coachState, me }) {
         {/* The range, beside the thing it scopes. Presets for the common
             answers, two date fields for everything else — a coach chasing one
             bad week needs to name that week, and no preset ever will. */}
-        {activeTab==="history"&&<div className="coach-range">
-          <div className="coach-range-presets" role="group" aria-label="Date range presets">
-            {RANGE_PRESETS.map(choice=><button key={choice.days} type="button"
-              className={matchesPreset(historyRange,choice.days)?"is-on":""}
-              aria-pressed={matchesPreset(historyRange,choice.days)}
-              onClick={()=>setHistoryRange(presetRange(choice.days))}>{choice.days}d</button>)}
-          </div>
-          <label>From<input type="date" value={historyRange.from} max={historyRange.to}
-            onChange={e=>setHistoryRange(current=>normaliseRange(e.target.value,current.to)||current)}/></label>
-          <label>To<input type="date" value={historyRange.to} min={historyRange.from}
-            onChange={e=>setHistoryRange(current=>normaliseRange(current.from,e.target.value)||current)}/></label>
-          <span className="coach-range-label">{rangeLabel(historyRange)}</span>
-        </div>}
+        {activeTab==="history"&&<RangePicker className="coach-range" value={historyRange} onChange={setHistoryRange}/>}
       </div>}
       {!dayMissing&&<ContextTabs tabs={stateTabs} active={activeTab} onChoose={chooseTab}/>}{/* ONE instance across two sub-tabs, not two. Design and Workout catalog
           need the same blocks, categories, groups and deployed programs; mounting
