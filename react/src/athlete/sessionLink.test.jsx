@@ -115,10 +115,18 @@ describe('the same rack screen on a gym rack', () => {
 })
 
 describe('opening the session link', () => {
-  function answer(status, body) {
+  // The athlete's own record of the day, as GET /api/athlete/sessions/7/ gives it.
+  const DAY = { session_id: 7, title: 'Thursday', groups: ['Varsity'],
+    totals: { sets_done: 9, sets_planned: 10, reps: 41, avg_velocity: 0.61 },
+    movements: [
+      { name: 'Back Squat', sets_planned: 3, sets: [1, 2, 3].map((n) => ({ set_number: n, weight_lbs: 225, reps: 5, avg_velocity: 0.6, reps_detail: [] })) },
+      { name: 'Power Clean', sets_planned: 4, sets: [1, 2, 3].map((n) => ({ set_number: n, weight_lbs: 140, reps: 3, avg_velocity: null, reps_detail: [] })) },
+    ] }
+  function answer(status, body, day = DAY) {
     globalThis.fetch = vi.fn((url) => Promise.resolve({
-      status: url.endsWith('/join/') ? status : 200,
-      json: () => Promise.resolve(url.endsWith('/join/') ? body : { athlete_name: 'Riley Brooks' }),
+      status: url.endsWith('/join/') ? status : url.startsWith('/api/athlete/sessions/') ? (day ? 200 : 404) : 200,
+      json: () => Promise.resolve(url.endsWith('/join/') ? body
+        : url.startsWith('/api/athlete/sessions/') ? (day || {}) : { athlete_name: 'Riley Brooks' }),
     }))
   }
 
@@ -153,11 +161,47 @@ describe('opening the session link', () => {
     expect([...container.querySelectorAll('button')].some((b) => b.textContent === 'Back')).toBe(true)
   })
 
-  it('ended: says everything is saved, and offers sign out', async () => {
+  it('ended: says everything is saved, shows what they did, and goes back to Home', async () => {
     answer(409, { code: 'ended', session: { id: 7, label: 'Thursday' } })
     await show(<SessionPage sessionId={7} />)
     expect(container.textContent).toContain('Your coach ended the session. Everything is saved.')
-    expect(container.textContent).toContain('Sign out')
+    const tiles = [...container.querySelectorAll('.athlete-tiles b')].map((b) => b.textContent)
+    expect(tiles).toEqual(['9', '41', '0.61'])
+    const rows = [...container.querySelectorAll('.ui-row')].map((r) => r.textContent)
+    expect(rows).toEqual(['Back Squat3 sets · 225 lbDone', 'Power Clean3 of 4 sets · 140 lb3 of 4'])
+    expect(container.querySelector('.athlete-sets.is-short').textContent).toBe('3 of 4')
+    await act(async () => { [...container.querySelectorAll('button')].find((b) => b.textContent === 'Back to home').click() })
+    expect(navigate).toHaveBeenCalledWith('/athlete/home')
+  })
+
+  it('ended with every set typed in: the speed reads not measured, not 0.00', async () => {
+    answer(409, { code: 'ended', session: { id: 7, label: 'Thursday' } },
+      { ...DAY, totals: { ...DAY.totals, avg_velocity: null } })
+    await show(<SessionPage sessionId={7} />)
+    expect(container.querySelectorAll('.athlete-tiles b')[2].textContent).toBe('not measured')
+  })
+
+  it('ended without lifting: the message and Back to home, no numbers', async () => {
+    answer(409, { code: 'ended', session: { id: 7, label: 'Thursday' } }, null)
+    await show(<SessionPage sessionId={7} />)
+    expect(container.textContent).toContain('Everything is saved.')
+    expect(container.querySelector('.athlete-tiles')).toBeNull()
+  })
+
+  it('the coach ending the session mid-lift shows this page, not the observer or recovery screens', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const { getSessionStatus } = await import('../api/client.js')
+    answer(200, { rack_number: 10003, sensor: null })
+    joined = controllerFor({ rack_number: 10003, phase: 'idle', owner_athlete: RILEY,
+      selected_athlete: RILEY, state_version: 1, current_set: null, rep_count: 0 })
+    await show(<SessionPage sessionId={7} />)
+    expect(container.textContent).not.toContain('Session ended')
+    vi.mocked(getSessionStatus).mockResolvedValue({ session_id: null, athletes: [] })
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_500) })
+    expect(container.textContent).toContain('Session ended')
+    expect(container.textContent).toContain('What you did')
+    expect(container.textContent).not.toMatch(/another tab|Take it back|Recover/i)
+    vi.mocked(getSessionStatus).mockResolvedValue({ session_id: 7, athletes: [] })
   })
 
   it('signed out: off to sign in, then back to this session', async () => {

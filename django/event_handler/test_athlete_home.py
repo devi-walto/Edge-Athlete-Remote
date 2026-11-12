@@ -16,7 +16,7 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
-from .models import (Athlete, CoachProfile, Exercise, ScheduledSession, SessionParticipation, Set,
+from .models import (Athlete, CoachProfile, Exercise, Rep, ScheduledSession, SessionParticipation, Set,
                      TrainingGroup, TrainingProgram, TrainingProgramExercise, TrainingProgramWorkout,
                      TrainingSession)
 from .services.session_join import JoinRefused, join
@@ -229,3 +229,82 @@ class HomeTests(APITestCase):
             return len(queries)
         count(1)                               # the first request does one-off lookups
         self.assertEqual(count(2), count(9))
+
+
+@override_settings(EA_DEPLOYMENT='remote')
+class SessionDetailTests(APITestCase):
+    """GET /api/athlete/sessions/<id>/ (spec 10, Phases 2 and 3): one session as the athlete lived it."""
+
+    def setUp(self):
+        self.varsity = TrainingGroup.objects.create(name='Varsity')
+        self.riley = athlete('Riley Brooks', 'riley', self.varsity)
+        self.jordan = athlete('Jordan Lee', 'jordan', self.varsity)
+        self.plan, self.workout = program(self.varsity, 'Day 1 — Lower', ('Back Squat', 'Bench Press', 'Power Clean'))
+        when = timezone.now() - datetime.timedelta(hours=2)
+        self.session = TrainingSession.objects.create(label='Thursday', started_at=when, ended_at=when + datetime.timedelta(hours=1))
+        SessionParticipation.objects.create(session=self.session, training_program=self.plan, training_program_workout=self.workout)
+        self.session.athletes.add(self.riley, self.jordan)
+        squat, bench = Exercise.objects.get(name='Back Squat'), Exercise.objects.get(name='Bench Press')
+        self.sets = []
+        for n, (exercise, weight, reps, speed) in enumerate([(squat, 225, 5, .62), (squat, 225, 5, .60), (bench, 165, 4, None)], 1):
+            a_set = Set.objects.create(session=self.session, athlete=self.riley, exercise=exercise, set_number=n,
+                                       weight_lbs=weight, reps_completed=reps, avg_velocity=speed,
+                                       started_at=when + datetime.timedelta(minutes=n), ended_at=when + datetime.timedelta(minutes=n, seconds=40))
+            if speed:
+                for r in range(1, reps + 1):
+                    Rep.objects.create(set=a_set, rep_number=r, timestamp=timezone.now(), mean_velocity=speed + .01 * (reps - r),
+                                       peak_velocity=1, duration_ms=800, velocity_color='green')
+            self.sets.append(a_set)
+        Set.objects.create(session=self.session, athlete=self.riley, exercise=squat, set_number=9, is_false_set=True)
+        Set.objects.create(session=self.session, athlete=self.riley, exercise=squat, set_number=10, is_coach_adjustment=True)
+        self.url = f'/api/athlete/sessions/{self.session.pk}/'
+
+    def get(self, person, url=None):
+        self.client.force_authenticate(person.user if person else None)
+        return self.client.get(url or self.url)
+
+    def test_their_sets_by_movement_in_the_order_lifted_with_planned_counts(self):
+        reply = self.get(self.riley)
+        self.assertEqual(reply.status_code, 200, reply.data)
+        movements = reply.data['movements']
+        self.assertEqual([m['name'] for m in movements], ['Back Squat', 'Bench Press', 'Power Clean'])
+        self.assertEqual([len(m['sets']) for m in movements], [2, 1, 0])          # planned, not lifted: 0 of 3
+        self.assertEqual([m['sets_planned'] for m in movements], [3, 3, 3])
+        squat = movements[0]['sets'][0]
+        self.assertEqual((squat['set_number'], squat['weight_lbs'], squat['reps']), (1, 225, 5))
+        self.assertEqual(len(squat['reps_detail']), 5)
+        self.assertIsNone(movements[1]['sets'][0]['avg_velocity'])               # typed in: not measured
+        self.assertEqual(reply.data['groups'], ['Varsity'])
+
+    def test_totals_match_the_daily_report(self):
+        from .services.session_completion import _snapshot
+        totals = self.get(self.riley).data['totals']
+        theirs = next(b for b in _snapshot(self.session)['athletes'] if b['athlete']['id'] == self.riley.pk)
+        real = [s for s in theirs['sets'] if not s['is_false_set']]
+        self.assertEqual(totals['sets_done'], len(real))
+        self.assertEqual(totals['reps'], sum(s['reps_completed'] or 0 for s in real))
+        self.assertEqual(totals['sets_planned'], 9)
+        self.assertAlmostEqual(totals['avg_velocity'], (.62 + .60) / 2)
+
+    def test_a_session_they_did_not_lift_in_is_404_like_one_that_does_not_exist(self):
+        self.assertEqual(self.get(self.jordan).status_code, 404)                 # on it, never lifted
+        self.assertEqual(self.get(self.riley, '/api/athlete/sessions/999999/').status_code, 404)
+
+    def test_only_their_own_sets_come_back(self):
+        Set.objects.create(session=self.session, athlete=self.jordan, exercise=Exercise.objects.get(name='Back Squat'),
+                           set_number=1, weight_lbs=315, reps_completed=3)
+        body = json.dumps(self.get(self.riley).data)
+        self.assertNotIn('315', body)
+        self.assertNotIn('Jordan', body)
+
+    def test_doors(self):
+        coach = User.objects.create_user('coach2', password='x-Unique-2026!')
+        CoachProfile.objects.get_or_create(user=coach)
+        self.client.force_authenticate(coach)
+        self.assertEqual(self.client.get(self.url).status_code, 403)
+        self.client.force_authenticate(None)
+        self.assertEqual(self.client.get(self.url).status_code, 401)
+
+    @override_settings(EA_DEPLOYMENT='local')
+    def test_a_gym_box_has_no_such_page(self):
+        self.assertEqual(self.get(self.riley).status_code, 404)

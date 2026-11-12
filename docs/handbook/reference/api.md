@@ -451,12 +451,13 @@ An athlete's own sensor: a one-time code to add it, the sensor claiming itself w
 
 An online athlete's own pages: Home, their past sessions, their progress (spec 10). Remote only; an athlete sees only their own numbers.
 
-:::::{dropdown} 1 route
+:::::{dropdown} 2 routes
 
 <!-- routes:the-athlete-s-pages:start -->
 | Route | Methods | Access | What it does | Handler |
 |---|---|---|---|---|
 | `/api/athlete/home/` | `GET` | remote only · athlete | Home for the signed-in athlete: what's coming up, what's live, their last five sessions | `home` |
+| `/api/athlete/sessions/<int:session_id>/` | `GET` | remote only · athlete | One session the signed-in athlete lifted in: their own sets by movement, with totals | `athlete_session` |
 <!-- routes:the-athlete-s-pages:end -->
 
 :::::

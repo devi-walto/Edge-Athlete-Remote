@@ -2,7 +2,8 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06; rewritten 2026-11-11 after the athlete-account design was approved
-- Status: Phases 0–1 built 2026-11-11 (the Home route and the Home page), awaiting review. No decisions
+- Status: Phases 0–2 built 2026-11-11 (the Home route, the Home page, the session-ended page),
+  awaiting review. No decisions
   open. (Phase 6, the room display for athletes, moved to spec 19 on 2026-11-11)
 - Form item: Definition of Done #4 (remote athlete access)
 - Depends on: [03 Login links](03-athlete-login-links.md) (the sign-in pages),
@@ -262,16 +263,24 @@ Board `F_Ath_R10`, unchanged. When the coach ends the session while an athlete i
 rack screen, the rack is released (spec 04 Phase 2). Instead of an error, the athlete
 sees: "Session ended · Your coach ended the session. Everything is saved."; today's sets,
 reps and average speed ("not measured" if every set was typed in); each movement with how
-many of its sets were done; **Back to home**. A set still open when the session ended is
-closed and kept by the server, and counted.
+many of its sets were done; **Back to home** (the board's Sign out is replaced by Back to home,
+Devin 2026-11-11). A set still open when the session ended is closed and kept by the server,
+and counted. The numbers come from Phase 3's `GET /api/athlete/sessions/{id}/`, built here
+first; each movement in it also carries `sets_planned`, and a movement planned but not lifted
+is listed with no sets.
 
 **Done when:**
 
-- [ ] *(Frontend test)* The rack screen losing its rack because the session ended shows
+- [x] *(Frontend test)* The rack screen losing its rack because the session ended shows
       this page, not the observer or recovery screens.
-- [ ] The totals equal the athlete's rows in the session's daily report.
+- [x] The totals equal the athlete's rows in the session's daily report.
 - [ ] *(Browser)* End the session from the coach's side mid-rest: the athlete's phone
       shows the page within a few seconds, with the right totals.
+
+**Phase 2 result (2026-11-11).** `athlete/SessionEnded.jsx` (with `DayTiles` and
+`MovementDone`, reused by Phase 3); `services/athlete_home.session_for` and the route; 6 backend
+and 4 frontend tests. The browser check (ending a real session mid-rest) needs a running server
+and is still open. The phone notices the end within 10 seconds (its existing check).
 
 **Stop. Devin reviews.**
 
@@ -285,8 +294,8 @@ screens.
 - `GET /api/athlete/sessions/?before=<cursor>` — the athlete's ended sessions they lifted
   in, newest first, 20 at a time, each `{session_id, date, title, sets_done,
   sets_planned}`, and the cursor for the next page.
-- `GET /api/athlete/sessions/{id}/` — the caller's own sets in that session, grouped by
-  movement in the order lifted: `{date, title, groups, totals: {sets_done, sets_planned,
+- `GET /api/athlete/sessions/{id}/` (built in Phase 2) — the caller's own sets in that
+  session, grouped by movement in the order lifted: `{date, title, groups, totals: {sets_done, sets_planned,
   reps, avg_velocity | null}, movements: [{name, sets: [{set_number, weight_lbs, reps,
   avg_velocity | null, reps_detail: [mean_velocity, ...]}]}]}`. False sets left out. A
   session the athlete did not lift in returns `404`, the same as one that does not exist,

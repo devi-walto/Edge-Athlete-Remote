@@ -27,6 +27,7 @@ import { getDeviceId } from '../device.js'
 import { navigate } from '../router.js'
 import { Centered } from '../ui.jsx'
 import { T } from '../theme.js'
+import SessionEnded from './SessionEnded.jsx'
 import { RETURN_KEY, athleteSignOut, freshAthleteToken } from './athleteAuth.js'
 import '../coach/account.css'
 import './athlete.css'
@@ -140,15 +141,7 @@ export default function SessionPage({ sessionId }) {
         <button type="button" className="acct-solid" onClick={() => navigate('/athlete')}>Back</button>
       </>}
 
-      {state.kind === 'ended' && <>
-        <section className="athlete-card">
-          <span>Session ended</span>
-          {label && <h2>{label}</h2>}
-          <p>Your coach ended the session. Everything is saved.</p>
-        </section>
-        <button type="button" className="acct-quiet athlete-signout"
-          onClick={() => { athleteSignOut(); navigate('/athlete') }}>Sign out</button>
-      </>}
+      {state.kind === 'ended' && <SessionEnded sessionId={sessionId} label={label} />}
 
       {state.kind === 'offline' && <Notice title="Can’t reach Edge Athlete">
         Check your connection. This page tries again by itself.

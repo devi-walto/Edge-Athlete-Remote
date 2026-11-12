@@ -6,16 +6,18 @@ address; the work itself is in services/athlete_home.py.
 WHY: an athlete signed in online needs a Home that says what's next, what's live and
 what they did lately, from their own groups only.
 
-  GET /api/athlete/home/   Home's data (Phase 0)
+  GET /api/athlete/home/              Home's data (Phase 0)
+  GET /api/athlete/sessions/<id>/     one session as the athlete lived it (Phases 2, 3)
 
 Signed in as an athlete, on a remote server. A coach is refused (403); a local install
 answers 404, because a gym has no athlete logins.
 """
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 
 from .permissions import IsAthlete, RemoteOnly
-from .services.athlete_home import home_for
+from .services.athlete_home import home_for, session_for
 
 
 @api_view(['GET'])
@@ -23,3 +25,13 @@ from .services.athlete_home import home_for
 def home(request):
     """Home for the signed-in athlete: what's coming up, what's live, their last five sessions"""
     return Response(home_for(request.user.athlete))
+
+
+@api_view(['GET'])
+@permission_classes([RemoteOnly, IsAthlete])
+def athlete_session(request, session_id):
+    """One session the signed-in athlete lifted in: their own sets by movement, with totals"""
+    found = session_for(request.user.athlete, session_id)
+    if found is None:
+        raise NotFound()
+    return Response(found)

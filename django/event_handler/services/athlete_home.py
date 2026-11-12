@@ -109,3 +109,57 @@ def home_for(athlete):
         'coming_up': _coming_up(athlete, group_ids, timezone.localdate()),
         'recent': _recent(athlete),
     }
+
+
+def session_for(athlete, session_id):
+    """One session, as this athlete lived it: their own sets grouped by movement in the order
+    they lifted, with totals (spec 10, Phases 2 and 3). None when they didn't lift in it, the
+    same answer as a session that doesn't exist, so it can't be used to find sessions.
+
+    Sets done leave out false sets and coach adjustments, the daily report's own count. Each
+    movement also carries the sets its plan asked for, and a movement planned but not lifted
+    is listed with no sets, so "2 of 3" and "0 of 3" both show.
+    """
+    session = TrainingSession.objects.filter(pk=session_id).first()
+    if session is None:
+        return None
+    sets = list(Set.objects.filter(session=session, athlete=athlete, is_coach_adjustment=False,
+                                   is_false_set=False)
+                .select_related('exercise').prefetch_related('reps').order_by('started_at', 'id'))
+    if not sets:
+        return None
+    plan = movements_for_athlete(athlete, session)
+    planned = {m['exercise_id']: m['planned_sets'] or 0 for m in plan}
+
+    by_exercise, order = {}, []
+    for a_set in sets:
+        if a_set.exercise_id not in by_exercise:
+            by_exercise[a_set.exercise_id] = {'name': a_set.exercise.name,
+                                              'sets_planned': planned.get(a_set.exercise_id, 0), 'sets': []}
+            order.append(a_set.exercise_id)
+        by_exercise[a_set.exercise_id]['sets'].append({
+            'set_number': a_set.set_number, 'weight_lbs': a_set.weight_lbs,
+            'reps': a_set.reps_completed or 0, 'avg_velocity': a_set.avg_velocity,
+            'reps_detail': [r.mean_velocity for r in sorted(a_set.reps.all(), key=lambda r: r.rep_number)],
+        })
+    for movement in plan:
+        if movement['exercise_id'] not in by_exercise:
+            by_exercise[movement['exercise_id']] = {'name': movement['name'],
+                                                    'sets_planned': movement['planned_sets'] or 0, 'sets': []}
+            order.append(movement['exercise_id'])
+
+    speeds = [s.avg_velocity for s in sets if s.avg_velocity is not None]
+    group_names = set(athlete.training_groups.values_list('name', flat=True))
+    taking_part = [p.training_program.training_group.name
+                   for p in session.participations.select_related('training_program__training_group')]
+    when = session.started_at or session.ended_at
+    return {
+        'session_id': session.pk,
+        'date': timezone.localdate(when).isoformat() if when else None,
+        'title': session.label,
+        'groups': [g for g in dict.fromkeys(taking_part) if g in group_names],
+        'totals': {'sets_done': len(sets), 'sets_planned': sum(planned.values()),
+                   'reps': sum(s.reps_completed or 0 for s in sets),
+                   'avg_velocity': (sum(speeds) / len(speeds)) if speeds else None},
+        'movements': [by_exercise[e] for e in order],
+    }

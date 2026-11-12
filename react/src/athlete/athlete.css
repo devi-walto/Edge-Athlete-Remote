@@ -84,3 +84,8 @@
 .athlete-sets { color: var(--muted); font-size: 12px; font-weight: 800; white-space: nowrap; }
 .athlete-sets.is-short { color: var(--amber); }
 .athlete-empty { color: var(--muted); font-size: 13px; margin: 0; }
+.athlete-tiles { display: grid; gap: 8px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.athlete-tiles > div { background: var(--panel); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; }
+.athlete-tiles span { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.athlete-tiles b { font-size: 24px; font-weight: 850; font-variant-numeric: tabular-nums; }
+.athlete-tiles b.is-quiet { color: var(--muted); font-size: 14px; font-weight: 700; padding-top: 6px; }
