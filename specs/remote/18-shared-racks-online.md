@@ -236,18 +236,19 @@ devices and signing one out (Phase 0).
 - **An administrator sets it up and changes its password directly** (Devin, 2026-11-12):
   a username and a password typed in, no login link. The same rules as any password here
   (length, not a common one).
-- **Where it lives: the first card in Room Layout's Rack screens** (Devin, 2026-11-12), a
-  card of its own kind before the racks (so the first page shows it and five racks). It
-  shows the username, the password hidden behind **Show**, and the tablets and TVs signed
-  in with it, in a list that scrolls inside the card, each with **Sign out**. Every coach
-  sees all of that (a coach is the one who signs a tablet in). Administrators also get
-  **Change password**, or **Set up the common login** when there is none, which opens a
-  form inside the card, and the card grows to fit. A plain coach with none set up reads
-  "ask an administrator". This replaces the strip `F_RoomLayout_Remote` drew above the
-  racks; the TV's row from that strip is in the card's list. Boards on the canvas's
-  Proposed page: `F_CommonLogin_CoachView`, `F_CommonLogin_Admin`, `F_CommonLogin_Change`,
-  `F_CommonLogin_Setup` (proposed 2026-11-12); once approved they go to Final designs and
-  `F_RoomLayout_Remote` is redrawn with the card.
+- **Where it lives: a card two racks tall on the left of Rack screens' first page**
+  (Devin, 2026-11-12), so the first page shows it and four racks; the pages after show six
+  racks. It shows the username, the password hidden behind **Show**, and the tablets and
+  TVs signed in with it, in a list that scrolls inside the card, each with **Sign out**.
+  Every coach sees all of that (a coach is the one who signs a tablet in). Administrators
+  also get **Change password**, or **Set up the common login** when there is none: each
+  opens a **dialog over the page** (like Clear a rack), not a form in the card. A plain
+  coach with none set up reads "ask an administrator". This replaces the strip
+  `F_RoomLayout_Remote` drew above the racks; the TV's row from that strip is in the card's
+  list. Boards on the canvas's Proposed page: `F_CommonLogin_CoachView`,
+  `F_CommonLogin_Admin`, `F_CommonLogin_Change`, `F_CommonLogin_Setup` (proposed
+  2026-11-12, v4); once approved they go to Final designs and `F_RoomLayout_Remote` is
+  redrawn with the card.
 - **Show needs the password kept readable** (a normal password is stored scrambled one
   way, and can't be shown again). This one is also kept encrypted with the server's key,
   read only by a coach's request to show it, never in any list, and replaced on every
