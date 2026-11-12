@@ -507,19 +507,27 @@ login a gym doesn't need. Boards: the same as Phase 4 (`F_Rack_Setup`, `F_Rack_P
   isn't lost with today's Room Layout page (`coach/CoachTablet.jsx`, which has the
   "still the default" banner, the change form and the new-password screen). Drawn exactly
   like the common login: **a card two racks tall on the left of Rack screens' first page**,
-  local only (remote shows the common login there). It shows the network's name, whether
-  the password is still the default (amber, with a notice saying anyone nearby could join),
-  and how to add a device. Administrators get **Change Wi-Fi password**: the shared Dialog
-  with their own password (to confirm), the new one twice and the amber Notice ("every
-  device drops off in a few seconds, this one too … sensors need setting up again"); then
-  the new password to copy, kept on that tablet two hours as today. The server keeps
-  never handing out the password itself (only whether it's the default), so there is no
-  Show here; the network's name is passed in the way the default check is. Applying it is
-  unchanged (`wifi_config.py`, the host's apply step), and every rack tablet and TV still
+  local only (remote shows the common login there). It shows the network's name, **the
+  password behind Show** like the common login (Devin, 2026-11-12: no "changed from the
+  default" flag; the amber Notice already says when it's still the default, and that
+  anyone nearby could join), and how to add a device. Administrators get **Change Wi-Fi
+  password**: the shared Dialog with their own password (to confirm), the new one twice
+  and the amber Notice ("every device drops off in a few seconds, this one too … sensors
+  need setting up again"); then the new password to copy, kept on that tablet two hours
+  as today.
+  - **Where Show reads it from.** The base station hands the password to the app when it
+    starts (`AP_PASSWORD`, already passed in for the default check), but a change is
+    applied by the host into its config file, so the app's copy stays the old one until
+    the next restart. So the app also keeps the password it last sent to be applied,
+    encrypted the same way as the common login's, and Show and the default check read that
+    first. That also fixes today's "still the default" warning hanging on after a change
+    until a restart. Show is for coaches only, never in any list.
+  - The network's name is passed in the same way. Applying a change is unchanged
+    (`wifi_config.py`, the host's `apply-wifi.sh`), and every rack tablet and TV still
   shows the new password before the drop (`WifiChangeOverlay.jsx`). Changing it becomes
   administrators only (any coach today), the same rule as the common login. Boards on
   the canvas's Proposed page: `F_RackWifi_Coach`, `F_RackWifi_Admin`, `F_RackWifi_Change`,
-  `F_RackWifi_Done` (proposed 2026-11-12).
+  `F_RackWifi_Done` (proposed 2026-11-12, v2).
 - **The corner switch** (rack ↔ room display, asking first) on local tablets: what spec 19
   Phase 5 planned, built here once for both versions.
 - **A gym that's already set up keeps working after the update.** Each existing tablet
@@ -536,9 +544,12 @@ login a gym doesn't need. Boards: the same as Phase 4 (`F_Rack_Setup`, `F_Rack_P
 - [ ] *(Backend test)* The retired slot routes are gone; the route walk still finds every
       remaining local route open.
 - [ ] *(Backend test)* Changing the Wi-Fi password: an administrator can (with their own
-      password); a plain coach gets 403; the answer never contains a Wi-Fi password.
-- [ ] *(Frontend test)* The Rack Wi-Fi card: amber while the password is the default; the
-      dialog sends the change and then shows the new password to copy.
+      password); a plain coach gets 403. Show gives a coach the password, the new one
+      right after a change (before any restart), and the default check turns off then too;
+      an athlete or a rack gets nothing.
+- [ ] *(Frontend test)* The Rack Wi-Fi card: the password hidden until Show; the amber
+      Notice only while it's the default; the dialog sends the change and then shows the
+      new password to copy.
 - [ ] *(Frontend test)* A fresh device lands on Set up this rack; "This is a Coach Tablet"
       goes to the coach app and is remembered; a set-up rack goes straight to its rack
       screen.
