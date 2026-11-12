@@ -98,7 +98,8 @@ By v0.8.3 (2026-11-09) CI ran **1,114 tests** on every pull request: the backend
 | 08 | [Session](ui/08-session.md) | Written |
 | 09 | [Analytics](ui/09-analytics.md) | Written |
 | 11 | [Mine first](ui/11-mine-first.md) | Written |
-| 16 | [The plate loader on the rack screen](ui/16-plate-loader.md) | Written; its lb/kg choice is shared with the athlete pages |
+| 16 | [The plate loader on the rack screen](ui/16-plate-loader.md) | Built as part of spec 19 (Phases 3–4); its lb/kg choice is shared with the athlete pages |
+| 19 | [The rack screen](ui/19-rack-screen.md) | Written 2026-11-11: every rack screen change in one place, both versions (waiting screen, only the planned reps count and each rep's feedback, the plate loader from spec 16, the corner switch, the room display for athletes). Can start any time |
 | 13 | [Registry of schools and operator's console](later/13-registry-and-console.md) | Written, later |
 | 15 | [Usage history and cloud cost](later/15-usage-and-cost.md) | Written, later (Phase 0, recording, can start any time) |
 | 17 | [Several sessions at once](later/17-concurrent-sessions.md) | Written, later |
@@ -124,8 +125,11 @@ rules:
 - **Coach:** specs 06 → 07 (starting with the name audit) → 08 → 09 → 11, with 16 and spec
   04's Phase 4 alongside; the top bar split (spec 06 rule 12) lands with 06.
 - **Athlete:** spec 10, and spec 14 Phase 10 with it.
-- **Decided, not specced yet:** reps past the prescription aren't saved and the screen says
-  so; the rack screen's Room display button (needs a board, spec 10 Phase 6).
+- **Rack screen (both versions):** spec 19, which gathers every rack screen change (spec 16's
+  plate loader, the rep counting moved from spec 09, the waiting screen and corner switch from
+  spec 18, the room display for athletes from spec 10). Depends only on spec 06, so it can run
+  alongside the athlete or coach work.
+- **Still needs a board:** the rack screen's Room display button (spec 19 Phase 6).
 - **Later in the track:** spec 18 (shared racks), spec 17 (several sessions at once).
 - **Known bugs:** the calendar's Move picker labels the slot's own date "Today"
   (`react/src/schedule.js`, `moveDateChoices`); `eactl seed --reset` fails once

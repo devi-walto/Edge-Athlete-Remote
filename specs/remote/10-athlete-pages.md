@@ -2,8 +2,8 @@
 
 - Owner: Devin Walton
 - Date: 2026-10-06; rewritten 2026-11-11 after the athlete-account design was approved
-- Status: Written — not started. No decisions open except the room-display button's board
-  (Phase 6)
+- Status: Written — not started. No decisions open. (Phase 6, the room display for athletes,
+  moved to spec 19 on 2026-11-11)
 - Form item: Definition of Done #4 (remote athlete access)
 - Depends on: [03 Login links](03-athlete-login-links.md) (the sign-in pages),
   [04 Session link](04-session-link-and-virtual-racks.md) (the join rule and the rack screen),
@@ -135,7 +135,8 @@ opening one was optional. It is now five rows, View all, and the past session pa
 - The six pages and their in-place states, and the top bar.
 - What the athlete sees when a session ends.
 - Pointing the sign-in pages at Home instead of the placeholder.
-- Letting an athlete open the room display, and its button on the rack screen.
+- (Letting an athlete open the room display, and its button on the rack screen: moved to
+  spec 19 Phase 6.)
 
 ## Non-goals
 
@@ -396,25 +397,11 @@ name, username and groups come from the athlete's session details.
 
 **Stop. Devin reviews.**
 
-## Phase 6 — The room display, for athletes
+## Phase 6 — moved to spec 19
 
-- **Server:** online, `/dashboard` and the routes behind it accept an athlete login,
-  read-only (no route that changes anything). A coach login still works as today.
-- **Button:** the athlete's rack screen shows **Room display** while their session is
-  live, opening the room display. It never appears on Home or in the menu.
-- **Before building:** the rack screen's button has no board yet. Draw it on the
-  Proposed page and get it approved first (spec 06's Final designs rule).
-
-**Done when:**
-
-- [ ] An athlete login can open the room display and cannot change anything through its
-      routes (each write route refuses an athlete with `403`).
-- [ ] *(Frontend test)* The Room display button shows on the rack screen only while the
-      session is live.
-- [ ] *(Browser)* An athlete opens the room display from the rack screen mid-session and
-      sees the same live data as the coach.
-
-**Stop. Devin reviews.**
+The room display for athletes (the server letting an athlete login read it, and the Room
+display button on their rack screen) is now [spec 19](../ui/19-rack-screen.md) Phase 6, with
+every other rack screen change. Its board is still to be drawn there.
 
 ---
 
