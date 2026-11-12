@@ -65,8 +65,7 @@
 .history-set-metrics { display:grid; grid-template-columns:repeat(4,1fr); }
 .history-set-metrics div { border-left:1px solid var(--line); display:grid; gap:3px; padding-left:10px; }
 .history-set-metrics span { color:var(--muted); font-size:10px; text-transform:uppercase; } .history-set-metrics strong { font-size:15px; }
-.history-rep-spark { align-items:end; display:flex; gap:4px; height:46px; }
-.history-rep-spark i { background:var(--mint); display:block; flex:1; min-width:4px; }
+/* .history-rep-spark is ui/BarChart, size spark (screen-sizes.css hides it on narrow screens). */
 .history-set-action { align-items:center; background:transparent; border:0; color:var(--lime); cursor:pointer; display:flex; font-size:10px; font-weight:850; justify-content:flex-end; min-height:44px; padding:0; text-transform:uppercase; }
 .history-set-action:focus-visible { outline:2px solid var(--lime); outline-offset:3px; }
 .history-set-action b { align-items:center; border:1px solid color-mix(in srgb, var(--lime) 16%, var(--line)); display:flex; font-size:17px; height:28px; justify-content:center; margin-left:10px; width:28px; }

@@ -117,10 +117,7 @@
 .coach-panel-grid { display:grid; gap:14px; grid-template-columns:1.1fr .9fr; margin-top:14px; }
 .coach-panel { background:var(--panel); border:1px solid var(--line); padding:18px; }
 .coach-panel>header { align-items:start; display:flex; justify-content:space-between; } .coach-panel header h3 { font-size:16px; margin:3px 0 0; } .coach-panel>header>b { color:var(--muted); font-size:10px; }
-.coach-rep-chart { align-items:end; display:flex; gap:10px; height:190px; margin-top:20px; overflow-x:auto; }
-.coach-rep-bar { display:grid; flex:1 0 38px; gap:5px; grid-template-rows:auto 1fr auto; height:100%; text-align:center; }
-.coach-rep-bar strong { font-size:10px; } .coach-rep-bar>div { align-items:end; background:var(--bg); display:flex; height:100%; } .coach-rep-bar i { background:color-mix(in srgb, var(--muted) 73%, var(--panel)); display:block; width:100%; }
-.coach-rep-bar i.green { background:var(--mint); } .coach-rep-bar i.yellow { background:var(--amber); } .coach-rep-bar i.red { background:var(--coral); } .coach-rep-bar span { color:var(--muted); font-size:9px; }
+.coach-rep-chart { margin-top:20px; }   /* the chart itself is ui/BarChart, size large */
 .coach-insight-grid { display:grid; gap:1px; grid-template-columns:1fr 1fr; margin-top:17px; }
 .coach-insight-grid>div { background:var(--field); display:grid; gap:3px; padding:14px; } .coach-insight-grid span { color:var(--muted); font-size:9px; text-transform:uppercase; }
 .coach-insight-grid strong { font-size:25px; letter-spacing:-.05em; } .coach-insight-grid strong.positive { color:var(--mint); } .coach-insight-grid strong.negative { color:var(--coral); } .coach-insight-grid small { color:var(--muted); font-size:9px; }

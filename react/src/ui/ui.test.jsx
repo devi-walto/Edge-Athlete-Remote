@@ -10,6 +10,7 @@ import { createRoot } from 'react-dom/client'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import BarChart, { TONES } from './BarChart.jsx'
 import Badge, { BADGE_KINDS } from './Badge.jsx'
 import Button, { BUTTON_KINDS } from './Button.jsx'
 import FocusCard from './FocusCard.jsx'
@@ -18,7 +19,7 @@ import QuietRow from './QuietRow.jsx'
 import RiskTag from './RiskTag.jsx'
 import SectionLabel from './SectionLabel.jsx'
 import Step, { StepLink } from './Step.jsx'
-import { REACT_ROOT, tokens } from '../styles/colorScan.js'
+import { REACT_ROOT, appFiles, tokens } from '../styles/colorScan.js'
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 let host, root
@@ -172,6 +173,72 @@ describe('Step', () => {
     expect(host.querySelector('.ui-step-arrow')).not.toBeNull()
     act(() => host.querySelector('button').click())
     expect(onClick).toHaveBeenCalledOnce()
+  })
+})
+
+describe('BarChart', () => {
+  const bars = [
+    { value: 0.8, above: '0.80', inside: '225 lb', below: 'Nov 4', tone: 'green', label: 'Nov 4: 0.80 m/s' },
+    { value: 0.4, above: '0.40', inside: '235 lb', below: 'Nov 7', tone: 'yellow', faded: true },
+    { value: 0.01, above: '0.01', below: 'Nov 9', tone: 'red' },
+  ]
+  const fills = () => [...host.querySelectorAll('.ui-bar-fill')]
+
+  it('draws one bar per item, tallest = the top, a slow one still visible', () => {
+    render(<BarChart bars={bars} label="Speed" />)
+    expect(host.querySelector('[role="list"]').getAttribute('aria-label')).toBe('Speed')
+    expect(fills().map((f) => f.style.height)).toEqual(['100%', '50%', '12%'])
+    expect(fills().map((f) => f.dataset.tone)).toEqual(['green', 'yellow', 'red'])
+    expect(fills()[1].classList.contains('is-faded')).toBe(true)
+  })
+
+  it('shows the number above, the text inside and the label below, only when given', () => {
+    render(<BarChart bars={bars} />)
+    expect([...host.querySelectorAll('.ui-bar-above')].map((e) => e.textContent)).toEqual(['0.80', '0.40', '0.01'])
+    expect([...host.querySelectorAll('.ui-bar-inside')].map((e) => e.textContent)).toEqual(['225 lb', '235 lb'])
+    expect([...host.querySelectorAll('.ui-bar-below')].map((e) => e.textContent)).toEqual(['Nov 4', 'Nov 7', 'Nov 9'])
+    expect(host.querySelectorAll('[role="listitem"]')[0].getAttribute('aria-label')).toBe('Nov 4: 0.80 m/s')
+  })
+
+  it('legend lines go on top', () => {
+    render(<BarChart bars={bars} legend={['Each bar = 1 week', 'Speed above · load inside · when, below']} />)
+    expect([...host.querySelectorAll('.ui-bars-legend span')].map((e) => e.textContent))
+      .toEqual(['Each bar = 1 week', 'Speed above · load inside · when, below'])
+  })
+
+  it('a spark has no words at all, whatever it is given', () => {
+    render(<BarChart size="spark" bars={bars} legend={['x']} />)
+    expect(host.querySelector('.ui-bars--spark')).not.toBeNull()
+    expect(host.querySelectorAll('.ui-bar-above, .ui-bar-inside, .ui-bar-below, .ui-bars-legend')).toHaveLength(0)
+    expect(fills()).toHaveLength(3)
+  })
+
+  it('a fixed top: the coach chart never reads less than 1 m/s as full height', () => {
+    render(<BarChart size="large" max={1} bars={[{ value: 0.5 }, { value: 0.25 }]} />)
+    expect(fills().map((f) => f.style.height)).toEqual(['50%', '25%'])
+    expect(host.querySelector('.ui-bars-row').classList.contains('is-scroll')).toBe(true)   // large scrolls
+  })
+
+  it('normal fits the width; scrolling can be asked for', () => {
+    render(<BarChart bars={bars} />)
+    expect(host.querySelector('.ui-bars-row').classList.contains('is-scroll')).toBe(false)
+    render(<BarChart bars={bars} scroll />)
+    expect(host.querySelector('.ui-bars-row').classList.contains('is-scroll')).toBe(true)
+  })
+
+  it('every tone has a colour in ui.css, and an unknown size is refused', () => {
+    const css = readFileSync(join(REACT_ROOT, 'src/ui/ui.css'), 'utf8')
+    for (const tone of TONES) expect(css).toContain(`.ui-bar-fill.is-${tone}`)
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(() => render(<BarChart size="huge" bars={bars} />)).toThrow(/unknown size/)
+    quiet.mockRestore()
+  })
+
+  it('no hand-drawn bar charts are left anywhere in the app', () => {
+    // A bar chart drawn by hand sets each bar's height from a number: style={{ height: `${...}%` }}.
+    const offenders = appFiles().filter((file) => !file.startsWith('src/ui/'))
+      .filter((file) => /height:\s*`\$\{[^`]*%`/.test(readFileSync(join(REACT_ROOT, file), 'utf8')))
+    expect(offenders).toEqual([])
   })
 })
 

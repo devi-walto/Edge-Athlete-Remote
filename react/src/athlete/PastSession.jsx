@@ -6,13 +6,14 @@
 // movement with a row per set: "Set 2 · 225 lb × 5 · 0.66 m/s".
 //
 // Pressing a measured set opens its reps right there: one bar per rep with its speed,
-// coloured by the same rule as the rack screen (rack/velocity.js: on target, fading in
+// drawn by the shared ui/BarChart, coloured by the same rule as the rack screen (rack/velocity.js: on target, fading in
 // amber, well under in red), and how much the speed dropped from first rep to last. A set
 // typed in by hand has no speeds: it reads "not measured" and has nothing to open.
 //
 // Its back link leads to wherever it was opened from: All sessions, or Home.
 import { useEffect, useState } from 'react'
-import { VELOCITY_HEX, velocityColor } from '../rack/velocity.js'
+import { velocityColor } from '../rack/velocity.js'
+import BarChart from '../ui/BarChart.jsx'
 import SectionLabel from '../ui/SectionLabel.jsx'
 import AthletePage, { HOME_PATH, toSignIn } from './AthletePage.jsx'
 import { SESSIONS, dayLabel, getJson } from './athleteApi.js'
@@ -33,18 +34,13 @@ export function setLine(s) {
   return `Set ${s.set_number} · ${load} · ${speed}`
 }
 
-/** One bar per rep, tallest = fastest, coloured by the rack screen's rule. */
+/** One bar per rep, tallest = fastest, coloured by the rack screen's rule, and the drop. */
 export function RepBars({ speeds, zoneMin }) {
-  const top = Math.max(...speeds)
   const drop = speeds.length > 1 && speeds[0] > 0 ? Math.round((1 - speeds.at(-1) / speeds[0]) * 100) : null
   return <div className="athlete-reps">
-    <div className="athlete-rep-bars" role="list" aria-label="Speed of each rep">
-      {speeds.map((v, i) => <div key={i} className="athlete-rep" role="listitem" aria-label={`Rep ${i + 1}: ${v.toFixed(2)} m/s`}>
-        <span className="athlete-rep-speed">{v.toFixed(2)}</span>
-        <span className="athlete-rep-bar" data-color={velocityColor(v, zoneMin)}
-          style={{ background: VELOCITY_HEX[velocityColor(v, zoneMin)], height: `${Math.max(12, (v / top) * 100)}%` }} />
-      </div>)}
-    </div>
+    <BarChart label="Speed of each rep" bars={speeds.map((v, i) => ({
+      value: v, above: v.toFixed(2), tone: velocityColor(v, zoneMin), label: `Rep ${i + 1}: ${v.toFixed(2)} m/s`,
+    }))} />
     {drop !== null && <span className="athlete-rep-drop">
       {drop > 0 ? `Speed dropped ${drop}% from first rep to last` : 'No drop from first rep to last'}
     </span>}

@@ -107,8 +107,4 @@
 .athlete-set-wrap + .athlete-set-wrap, .athlete-set-wrap + .athlete-set, .athlete-set + .athlete-set-wrap { margin-top: 6px; }
 .athlete-set-wrap.is-open .athlete-set { border-color: var(--lime); }
 .athlete-reps { background: var(--panel); border: 1px solid var(--line); border-top: 0; display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; }
-.athlete-rep-bars { align-items: flex-end; display: flex; gap: 6px; height: 120px; }
-.athlete-rep { align-items: center; display: flex; flex: 1; flex-direction: column; gap: 4px; height: 100%; justify-content: flex-end; min-width: 0; }
-.athlete-rep-speed { color: var(--soft-ink); font-size: 11px; font-variant-numeric: tabular-nums; font-weight: 700; }
-.athlete-rep-bar { border-radius: 3px 3px 0 0; max-width: 34px; width: 100%; }
 .athlete-rep-drop { color: var(--muted); font-size: 12px; }

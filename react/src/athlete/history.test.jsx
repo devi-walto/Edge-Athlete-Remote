@@ -139,17 +139,17 @@ describe('a past session', () => {
 
   it('pressing a measured set opens its reps in place, coloured like the rack screen', async () => {
     await show(<PastSession sessionId={50} />)
-    expect(host.querySelector('.athlete-rep')).toBeNull()
+    expect(host.querySelector('.athlete-reps')).toBeNull()
     await act(async () => { button('Set 1 · 225 lb × 5 · 0.60 m/s').click() })
-    const reps = [...host.querySelectorAll('.athlete-rep')]
+    const reps = [...host.querySelectorAll('.athlete-reps [role="listitem"]')]
     expect(reps.map((r) => r.getAttribute('aria-label'))).toEqual(
       ['Rep 1: 0.66 m/s', 'Rep 2: 0.63 m/s', 'Rep 3: 0.60 m/s', 'Rep 4: 0.55 m/s', 'Rep 5: 0.50 m/s'])
     // Zone starts at 0.55: on target, then fading (amber) below it.
-    expect([...host.querySelectorAll('.athlete-rep-bar')].map((b) => b.dataset.color))
+    expect([...host.querySelectorAll('.athlete-reps .ui-bar-fill')].map((b) => b.dataset.tone))
       .toEqual(['green', 'green', 'green', 'green', 'yellow'])
     expect(text()).toContain('Speed dropped 24% from first rep to last')
     await act(async () => { button('Set 1').click() })                // press again: closes
-    expect(host.querySelector('.athlete-rep')).toBeNull()
+    expect(host.querySelector('.athlete-reps')).toBeNull()
   })
 
   it('the back link names All sessions when opened from there, Home otherwise', async () => {

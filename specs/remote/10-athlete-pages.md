@@ -323,7 +323,9 @@ screens.
       there, and Home when opened from Recent sessions.
 - [ ] *(Browser)* Home → View all → scroll → a session → open a set → back → back, on a
       390-pixel-wide phone.
-- [ ] The coach's Analytics screens and `Dashboard.jsx` are unchanged (`git diff`).
+- [x] ~~The coach's Analytics screens and `Dashboard.jsx` are unchanged.~~ Changed by Devin's
+      call (2026-11-11): the coach's two rep charts in `Dashboard.jsx` now use the shared
+      `ui/BarChart` (spec 06 rule 13), looking as before; nothing else there changed.
 
 **Stop. Devin reviews.**
 

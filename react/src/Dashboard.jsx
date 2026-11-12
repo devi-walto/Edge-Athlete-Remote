@@ -65,6 +65,7 @@ import ContextTabs, { STATE_TABS } from "./coach/ContextTabs.jsx";
 import { pathForCoachState, rememberCoachState } from "./coach/coachState.js";
 import { DEFAULT_PRESET_DAYS, matchesPreset, normaliseRange, presetRange, RANGE_PRESETS, rangeContains, rangeLabel } from "./coach/historyRange.js";
 import { scheduleUrl, scheduleWindow, slotState } from "./schedule.js";
+import BarChart, { TONES } from "./ui/BarChart.jsx";
 
 // The sub-tabs each state has (STATE_TABS) and their row live in coach/ContextTabs.jsx.
 
@@ -366,15 +367,10 @@ function RepChart({ workoutSet }) {
     <section className="coach-panel coach-rep-panel">
       <header><div><span>Saved rep profile</span><h3>Mean velocity by rep</h3></div><b>m/s</b></header>
       {reps.length === 0 ? <p className="monitor-empty">No saved reps for this set.</p> : (
-        <div className="coach-rep-chart">
-          {reps.map((rep) => (
-            <div className="coach-rep-bar" key={rep.rep_number}>
-              <strong>{velocity(rep.mean_velocity)}</strong>
-              <div><i className={rep.velocity_color} style={{ height: `${Math.max(8, rep.mean_velocity / max * 100)}%` }} /></div>
-              <span>R{rep.rep_number}</span>
-            </div>
-          ))}
-        </div>
+        // The shared chart's large size (spec 06 rule 13); the top is at least 1 m/s.
+        <BarChart size="large" className="coach-rep-chart" max={max} label="Mean velocity by rep"
+          bars={reps.map((rep) => ({ value: rep.mean_velocity, above: velocity(rep.mean_velocity), below: `R${rep.rep_number}`,
+            tone: TONES.includes(rep.velocity_color) ? rep.velocity_color : "grey", label: `Rep ${rep.rep_number}: ${velocity(rep.mean_velocity)} m/s` }))} />
       )}
     </section>
   );
@@ -566,7 +562,7 @@ function HistorySetCard({ workoutSet, expanded, onToggle }) {
     <div className="history-set-summary">
       <div className="history-set-main"><span>{timeLabel(workoutSet.ended_at)} · Rack {workoutSet.rack_number ?? "--"}</span><h4>{workoutSet.exercise} · Set {workoutSet.set_number}</h4><p>{workoutSet.weight_lbs ?? "--"} lbs</p></div>
       <div className="history-set-metrics"><div><span>Avg</span><strong>{velocity(workoutSet.avg_velocity)}</strong></div><div><span>Peak</span><strong>{velocity(workoutSet.peak_velocity)}</strong></div><div><span>Reps</span><strong>{workoutSet.reps_completed}</strong></div><div><span>First→last</span><strong>{workoutSet.measured.first_to_last_change_percent === null ? "--" : `${signed(workoutSet.measured.first_to_last_change_percent, 1)}%`}</strong></div></div>
-      <div className="history-rep-spark">{workoutSet.reps.map((rep) => <i key={rep.rep_number} style={{ height:`${Math.max(10,Math.min(100,rep.mean_velocity*90))}%` }} />)}</div>
+      <BarChart size="spark" className="history-rep-spark" max={1 / 0.9} label="Speed of each rep" bars={workoutSet.reps.map((rep) => ({ value: rep.mean_velocity, label: `Rep ${rep.rep_number}: ${velocity(rep.mean_velocity)} m/s` }))} />
       <button className="history-set-action" onClick={onToggle} aria-expanded={expanded} aria-controls={`history-set-${workoutSet.id}`}>{expanded ? "Close comparison" : "Compare reps"}<b aria-hidden="true">{expanded ? "−" : "+"}</b></button>
     </div>
     {expanded && <RepComparison workoutSet={workoutSet} />}
