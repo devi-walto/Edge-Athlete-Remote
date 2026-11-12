@@ -44,7 +44,7 @@ Devin's convention, set 2026-10-06:
 Merged feature branches are deleted (locally and on GitHub) once their pull request is in;
 the pull request page keeps the history and can restore the branch. Two unmerged branches
 are kept on GitHub as backups: `feature-rep_counting` (spec 09, one commit) and
-`feature-shared_racks` (spec 18, which lives only on that branch until it is picked up).
+`feature-shared_racks` (spec 18's first text; picked up on `feature-rack_setup` 2026-11-12).
 
 Spec and mockup edits that are not part of a feature are committed straight to
 `SprintBranch`. Release tags and the public docs are cut from `main`.
@@ -103,7 +103,7 @@ By v0.8.3 (2026-11-09) CI ran **1,114 tests** on every pull request: the backend
 | 13 | [Registry of schools and operator's console](later/13-registry-and-console.md) | Written, later |
 | 15 | [Usage history and cloud cost](later/15-usage-and-cost.md) | Written, later (Phase 0, recording, can start any time) |
 | 17 | [Several sessions at once](later/17-concurrent-sessions.md) | Written, later |
-| 18 | Shared racks online (common login) | Written on `feature-shared_racks` only |
+| 18 | [Shared racks online, and racks that set themselves up](remote/18-shared-racks-online.md) | In progress on `feature-rack_setup` (picked up 2026-11-12, before spec 19 Phase 1); Phase 5 moves the local install to the same flow |
 
 ## The roadmap after the class
 
@@ -130,7 +130,9 @@ rules:
   spec 18, the room display for athletes from spec 10). Depends only on spec 06, so it can run
   alongside the athlete or coach work.
 - **Still needs a board:** the rack screen's Room display button (spec 19 Phase 6).
-- **Later in the track:** spec 18 (shared racks), spec 17 (several sessions at once).
+- **Racks first (Devin, 2026-11-12):** spec 18 (racks name themselves and pair their own
+  sensor, online and local) before spec 19's Phase 1, which builds on it.
+- **Later in the track:** spec 17 (several sessions at once).
 - **Known bugs:** the calendar's Move picker labels the slot's own date "Today"
   (`react/src/schedule.js`, `moveDateChoices`); `eactl seed --reset` fails once
   calendar-staged sessions use the demo plan (`seed_active_session._reset`).

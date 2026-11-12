@@ -2,7 +2,8 @@
 
 - Owner: Devin Walton
 - Date: 2026-11-11
-- Status: Phase 0 built (2026-11-12), awaiting review. Two decisions are still proposed (see
+- Status: Phase 0 built (2026-11-12). Paused for spec 18 (Devin, 2026-11-12), which changes
+  how racks are made; Phase 1 on resumes after it. Two decisions are still proposed (see
   "Still to confirm")
 - Form item: #11 (unified interface; internal)
 - Depends on: [06 Design rules](06-design-rules.md) (done). Nothing else: it can start any
@@ -230,6 +231,10 @@ unit on the rack screen changes it for the athlete's pages on the same device, a
 **Stop. Devin reviews.**
 
 ## Phase 5 — The corner switch, on a local install
+
+**Moved to spec 18, Phase 5 (2026-11-12):** spec 18 now moves the local install to racks that
+set themselves up, and builds the corner switch once for both versions. Kept here for
+reference.
 
 Built to `F_Rack_L1` (the corner button), `F_Rack_SwitchToDisplay`, `F_Display` and
 `F_Display_SwitchToRack`.
