@@ -25,6 +25,17 @@ from ..models import (AthleteReferenceMax, AthleteWorkoutExerciseOverride, Node,
 from .lifting_math import normalize_to_single, round_to_loadable
 
 
+def current_reference_max_row(athlete_id, exercise_id):
+    """The row behind current_reference_max(): this athlete's newest recorded max for one
+    movement, or None. For a reader that also needs where the number came from (its
+    `source`: estimated or entered by a coach), such as the athlete's My Recent Progress.
+    One query for both, so they can never pick different rows."""
+    return (AthleteReferenceMax.objects
+            .filter(athlete_id=athlete_id, exercise_id=exercise_id)
+            .order_by("-recorded_at", "-id")
+            .first())
+
+
 def current_reference_max(athlete_id, exercise_id):
     """This athlete's current working max for one movement, on a 1-rep basis.
 
@@ -34,10 +45,7 @@ def current_reference_max(athlete_id, exercise_id):
 
     Returns None when they have never had a max recorded for this movement.
     """
-    row = (AthleteReferenceMax.objects
-           .filter(athlete_id=athlete_id, exercise_id=exercise_id)
-           .order_by("-recorded_at", "-id")
-           .first())
+    row = current_reference_max_row(athlete_id, exercise_id)
     if row is None:
         return None
     return normalize_to_single(row.reference_weight_lbs, row.rep_basis)

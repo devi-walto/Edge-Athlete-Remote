@@ -29,9 +29,8 @@ from django.db.models import Max
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
-from ..models import AthleteReferenceMax, Rep, ScheduledSession, Set, TrainingSession
-from .lifting_math import normalize_to_single
-from .plan_resolution import movements_for_athlete
+from ..models import Rep, ScheduledSession, Set
+from .plan_resolution import current_reference_max, current_reference_max_row, movements_for_athlete
 
 MAX_POINTS = 14
 LADDER = ('session', 'week', 'month', 'quarter', 'year')
@@ -153,11 +152,12 @@ def _trend(sets, step, start, to):
 
 
 def _max_today(athlete, exercise_id):
-    row = (AthleteReferenceMax.objects.filter(athlete=athlete, exercise_id=exercise_id)
-           .order_by('-recorded_at', '-id').first())
+    """Today's max for the movement, read from the database (never recomputed here): the
+    same row and number the prescribed weights use, plus where it came from."""
+    row = current_reference_max_row(athlete.pk, exercise_id)
     if row is None:
         return None
-    return {'weight_lbs': normalize_to_single(row.reference_weight_lbs, row.rep_basis), 'source': row.source}
+    return {'weight_lbs': current_reference_max(athlete.pk, exercise_id), 'source': row.source}
 
 
 # ── planned ──
