@@ -525,9 +525,9 @@ login a gym doesn't need. Boards: the same as Phase 4 (`F_Rack_Setup`, `F_Rack_P
   - The network's name is passed in the same way. Applying a change is unchanged
     (`wifi_config.py`, the host's `apply-wifi.sh`), and every rack tablet and TV still
   shows the new password before the drop (`WifiChangeOverlay.jsx`). Changing it becomes
-  administrators only (any coach today), the same rule as the common login. Boards on
-  the canvas's Proposed page: `F_RackWifi_Coach`, `F_RackWifi_Admin`, `F_RackWifi_Change`,
-  `F_RackWifi_Done` (proposed 2026-11-12, v2).
+  administrators only (any coach today), the same rule as the common login. Boards
+  **approved 2026-11-12**, on Final designs in the Room Layout row (after the common login
+  boards): `F_RackWifi_Coach`, `F_RackWifi_Admin`, `F_RackWifi_Change`, `F_RackWifi_Done`.
 - **The corner switch** (rack ↔ room display, asking first) on local tablets: what spec 19
   Phase 5 planned, built here once for both versions.
 - **A gym that's already set up keeps working after the update.** Each existing tablet
