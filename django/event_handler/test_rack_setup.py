@@ -4,8 +4,9 @@ WHY THESE EXIST: a tablet no longer waits for a coach to give it a numbered slot
 takes the next free number and a name on "Set up this rack", in a gym with no login
 and online with the common login. These pin that each new tablet gets its own rack,
 that a name can be changed by the right people and shows everywhere a rack is
-printed, that a shared name gets its number added, and that a dead tablet's empty
-rack leaves the room without anything being deleted.
+printed, that a shared name gets its number added, that a dead tablet's empty rack
+leaves the room at once and is cleaned up after 30 days, and that a new tablet takes the
+lowest number nothing still points at.
 """
 import importlib
 from datetime import timedelta
@@ -15,9 +16,11 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
-from .models import (Athlete, CoachProfile, Node, RackCheckIn, RackRuntime, RackScreen,
-                     TrainingSession)
-from .services.rack_names import labels_by_rack
+from django.core.cache import cache
+
+from .models import (Athlete, CoachProfile, CommonDevice, Exercise, Node, RackCheckIn, RackRuntime,
+                     RackScreen, Set, TrainingSession)
+from .services.rack_names import clean_up, labels_by_rack, next_rack_number
 from .services.room_state import room_state_snapshot
 from .test_common_login import TABLET_PASSWORD, make_common
 
@@ -54,9 +57,20 @@ class InAGymTests(APITestCase):
         self.assertEqual(again.data['rack'], made)
         self.assertEqual(self.mine('tab-a').data['rack'], made)
 
-    def test_numbers_skip_anything_already_used(self):
-        Node.objects.create(node_id='old-bar', rack_number=7)
-        self.assertEqual(self.mine('tab-a', 'post').data['rack']['rack_number'], 8)
+    def test_the_lowest_free_number_is_taken(self):
+        # 1, _, 3 gives the next tablet 2 (Devin, 2026-11-13).
+        RackScreen.objects.create(device_id='one', rack_number=1, name='Rack 1')
+        RackScreen.objects.create(device_id='three', rack_number=3, name='Rack 3')
+        self.assertEqual(self.mine('tab-a', 'post').data['rack']['rack_number'], 2)
+        self.assertEqual(self.mine('tab-b', 'post').data['rack']['rack_number'], 4)
+
+    def test_a_number_anything_still_points_at_is_not_free(self):
+        Node.objects.create(node_id='old-bar', rack_number=1)            # a sensor
+        RackRuntime.objects.create(rack_number=2)                        # a rack's live state
+        session = TrainingSession.objects.create(label='Thursday', started_at=timezone.now())
+        athlete = Athlete.objects.create(name='Riley Brooks')
+        RackCheckIn.objects.create(session=session, athlete=athlete, rack_number=3)   # someone here today
+        self.assertEqual(self.mine('tab-a', 'post').data['rack']['rack_number'], 4)
 
     def test_a_name_must_be_a_name(self):
         self.assertEqual(self.mine('tab-a', 'post', {'name': 'x' * 41}).status_code, 400)
@@ -114,6 +128,63 @@ class ADeadTabletsEmptyRackTests(TestCase):
         session.athletes.add(athlete)
         RackCheckIn.objects.create(session=session, athlete=athlete, rack_number=6)
         self.assertIn(6, rack_labels())
+
+
+@override_settings(EA_DEPLOYMENT='local')
+class TheThirtyDayCleanUpTests(TestCase):
+    """A rack quiet 30 days, with no sensor and no set open, goes; its number is free."""
+
+    def setUp(self):
+        cache.clear()
+        self.long_ago = timezone.now() - timedelta(days=31)
+        self.screen = RackScreen.objects.create(device_id='gone', rack_number=2, name='Old tablet')
+        RackScreen.objects.filter(pk=self.screen.pk).update(last_seen=self.long_ago)
+        RackRuntime.objects.create(rack_number=2, lease_expires_at=self.long_ago)
+
+    def test_it_goes_with_its_live_state_and_its_number_is_free(self):
+        self.assertEqual(clean_up(), {2})
+        self.assertFalse(RackScreen.objects.filter(rack_number=2).exists())
+        self.assertFalse(RackRuntime.objects.filter(rack_number=2).exists())
+        self.assertEqual(next_rack_number(), 1)
+        RackScreen.objects.create(device_id='one', rack_number=1, name='Rack 1')
+        self.assertEqual(next_rack_number(), 2)
+
+    def test_it_stays_if_heard_lately_or_has_a_sensor(self):
+        RackRuntime.objects.filter(rack_number=2).update(lease_expires_at=timezone.now() - timedelta(days=29))
+        self.assertEqual(clean_up(), set())
+        RackRuntime.objects.filter(rack_number=2).update(lease_expires_at=self.long_ago)
+        Node.objects.create(node_id='bar-2', rack_number=2)
+        self.assertEqual(clean_up(), set())
+
+    def test_it_stays_with_a_set_open_or_someone_checked_in_today(self):
+        session = TrainingSession.objects.create(label='Thursday', started_at=timezone.now())
+        athlete = Athlete.objects.create(name='Riley Brooks')
+        exercise, _ = Exercise.objects.get_or_create(name='Back Squat')
+        open_set = Set.objects.create(session=session, athlete=athlete, exercise=exercise, set_number=1)
+        RackRuntime.objects.filter(rack_number=2).update(current_set=open_set)
+        self.assertEqual(clean_up(), set())
+        RackRuntime.objects.filter(rack_number=2).update(current_set=None)
+        RackCheckIn.objects.create(session=session, athlete=athlete, rack_number=2)
+        self.assertEqual(clean_up(), set())
+
+    def test_old_common_login_sign_ins_go_too(self):
+        common = make_common()
+        old = CommonDevice.objects.create(common_login=common.common_login, device_id='a',
+                                          signed_out_at=self.long_ago)
+        recent = CommonDevice.objects.create(common_login=common.common_login, device_id='b',
+                                             signed_out_at=timezone.now() - timedelta(days=2))
+        still_in = CommonDevice.objects.create(common_login=common.common_login, device_id='c')
+        clean_up()
+        self.assertEqual(set(CommonDevice.objects.values_list('pk', flat=True)), {recent.pk, still_in.pk})
+        self.assertNotIn(old.pk, CommonDevice.objects.values_list('pk', flat=True))
+
+    def test_reading_the_room_runs_it_at_most_once_an_hour(self):
+        self.client.get('/api/room-state/')
+        self.assertFalse(RackScreen.objects.filter(rack_number=2).exists())
+        again = RackScreen.objects.create(device_id='gone-too', rack_number=5, name='Another')
+        RackScreen.objects.filter(pk=again.pk).update(last_seen=self.long_ago)
+        self.client.get('/api/room-state/')
+        self.assertTrue(RackScreen.objects.filter(rack_number=5).exists())   # not again within the hour
 
 
 @override_settings(EA_DEPLOYMENT='remote')

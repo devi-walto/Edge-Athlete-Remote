@@ -2536,6 +2536,7 @@ def room_state(request):
     if include_details and not _require_coach(request):
         return Response({"error": "coach login required for ?details=true"}, status=401)
 
+    rack_names.tidy_up()   # spec 18: racks quiet for 30 days go (at most hourly)
     response = Response(room_state_snapshot(include_details=include_details))
     # Never cache: a stale room picture is worse than a slow one, and this is
     # per-viewer data on a shared network.

@@ -380,6 +380,15 @@ Server 824 in each version (local skips 8).
   Layout.
 - A rack whose tablet has gone silent, and that has no sensor and nobody checked in,
   drops out of the room view and the coach's list.
+- **Clean-up and numbers (Devin, 2026-11-13):**
+  - **After 30 days** with no word from its tablet, no sensor and no set open, a rack is
+    removed with its live state, as if a coach had pressed Remove. Common-login sign-ins
+    that ended 30 days ago go too. History keeps everything it shows: frozen reports keep
+    their names, sets and check-ins their numbers.
+  - **A new rack takes the lowest free number** (1, _, 3 gives 2). A number is free only
+    when nothing points at it: a tablet's rack, a sensor, a rack's live state, or a
+    check-in during the running session (so a rack removed mid-practice can't hand its
+    number, and its athletes, to a new tablet that day).
 - The rack's name appears wherever its number does today (rack screen, room view, the
   daily report's rack list). On the coach's screens, a name two racks share is followed
   by each rack's number in small brackets.
@@ -419,18 +428,24 @@ Server 824 in each version (local skips 8).
     history and report rows.
   - A guard test fails if a screen prints "Rack N" from a bare number. The old setup
     screens Phases 4–5 replace are listed in it by name.
-- **Dead tablets:** a rack whose tablet's lease ran out over 10 minutes ago, with no
-  sensor and nobody checked in, leaves the room view; nothing is deleted.
-  - Room Layout's own list is rebuilt in Phase 4 and uses the same rule.
+- **Dead tablets:**
+  - a rack quiet for over 10 minutes (no heartbeat), with no sensor and nobody checked in,
+    leaves the room view; nothing is deleted;
+  - after 30 days the clean-up removes it (`clean_up()`, run at most hourly when the room
+    or a tablet's rack is read; no background job), and its number is free again.
+  - "Quiet" and "in use" are one function each (`quiet_racks()`, `numbers_in_use()`),
+    shared by the 10-minute hide, the clean-up and the next free number.
+  - Room Layout's own list is rebuilt in Phase 4 and uses the same rules.
 
 Tests:
-- 15 in `test_rack_setup.py`: gym and online setup, numbers skipping used ones, names,
-  renaming everywhere and nothing else, shared-name labels, the dead-rack rule, the
+- 22 in `test_rack_setup.py`: gym and online setup, the lowest free number and what
+  keeps a number taken, names, renaming everywhere and nothing else, shared-name labels,
+  the 10-minute hide, the 30-day clean-up (what stays, what goes, at most hourly), the
   migration.
 - The route walk's lists gained the two routes.
 - Frontend: 3 new, 1 updated.
 
-Server 840 in each version (local skips 8), frontend 505, build passes.
+Server 846 in each version (local skips 8), frontend 505, build passes.
 
 **Stop. Devin reviews.**
 

@@ -43,6 +43,7 @@ def my_rack(request):
     """GET: this device's rack, or none yet with the name it would be given.
     POST { name }: make this device's rack (the next free number, that name, or the
     suggested one). A device that already has a rack gets it back unchanged."""
+    rack_names.tidy_up()   # racks quiet for 30 days go first, freeing their numbers
     device_id = _device_id(request)
     if device_id is None:
         return Response({'code': 'device_required',
