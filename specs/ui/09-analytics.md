@@ -305,8 +305,17 @@ you straight to that session in your own analytics, if your login has them.
 
 **The change:**
 - **An athlete** (ended): the same page, with **View this session** opening their past
-  session page for it. Only for a session they lifted in; otherwise the polite "over" line
-  and Back to home. Small, and needs nothing from this spec: it can go in any time.
+  session page for it. Small, and needs nothing from this spec: it can go in any time.
+- **An athlete with nothing recorded in it** (Devin, 2026-11-14): their past session page
+  for that session (today a 404, since they didn't lift) says what to do instead, from their
+  make-up (spec 21):
+  - open: "You didn't lift in this session. Get with your coach to make it up in the next
+    9 days." (the days left on their make-up);
+  - excused: "Your coach excused this session.";
+  - expired: "The time to make this session up has passed. Talk to your coach.";
+  - made up: the page shows the make-up sets, marked with the day they were lifted.
+  Until spec 21 exists, it says only that they didn't lift in it. The ended link's View
+  this session leads here too.
 - **A coach or administrator**, signed in on that device:
   - **Ended:** "This session is over" and **View in History**, opening History (Phase 3: it
     holds the reports) on that session's day and report.
@@ -316,9 +325,9 @@ you straight to that session in your own analytics, if your login has them.
 - **The common login** (a rack tablet, spec 18) has no analytics: the polite "over" line only.
 
 **Done when:**
-- [ ] *(Frontend test)* An athlete opening an ended session's link they lifted in gets View
-      this session, opening their past session page; one they didn't lift in gets only the
-      "over" line.
+- [ ] *(Frontend test)* An athlete opening an ended session's link gets View this session,
+      opening their past session page; for a session they didn't lift in, that page shows
+      the make-up line with the days left (or excused, or passed).
 - [ ] *(Frontend test)* A coach opening an ended session's link gets View in History on that
       session; a running one opens the live room; neither shows the athlete's "not part of"
       line.
