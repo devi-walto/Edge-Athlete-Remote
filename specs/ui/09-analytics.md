@@ -289,6 +289,40 @@ screen says so as each rep lands (2026-10-30). Both now live in
 rack screen changes are built together instead of waiting for this spec. Once spec 19 Phase 1
 is built, every count this spec shows (History, Behind, the reports) is of counted reps only.
 
+## Added 2026-11-14 — a finished session's link leads to its analytics
+
+Devin: opening a session link after the session has ended should say so politely and take
+you straight to that session in your own analytics, if your login has them.
+
+**Today:** the link (`/session/<id>`, spec 04) is the athlete's way onto their own rack.
+- **An athlete** opening an ended session's link sees "the session has ended" with their
+  day's totals (spec 10's session-ended page, board `F_Ath_R10`) and Back to home, but no
+  way to the full session, which their past session page already shows
+  (`/athlete/sessions/<id>`, spec 10 Phase 3).
+- **A coach** opening any session link is asked to join it as an athlete; the join is
+  refused, so they see "This link is for a session you are not part of. Ask your coach.":
+  wrong for a coach.
+
+**The change:**
+- **An athlete** (ended): the same page, with **View this session** opening their past
+  session page for it. Only for a session they lifted in; otherwise the polite "over" line
+  and Back to home. Small, and needs nothing from this spec: it can go in any time.
+- **A coach or administrator**, signed in on that device:
+  - **Ended:** "This session is over" and **View in History**, opening History (Phase 3: it
+    holds the reports) on that session's day and report.
+  - **Running:** straight to the coach's live room for that session (spec 17: the right one
+    when several run).
+- **Nobody signed in:** sign in first, then the above (as the athlete link does now).
+- **The common login** (a rack tablet, spec 18) has no analytics: the polite "over" line only.
+
+**Done when:**
+- [ ] *(Frontend test)* An athlete opening an ended session's link they lifted in gets View
+      this session, opening their past session page; one they didn't lift in gets only the
+      "over" line.
+- [ ] *(Frontend test)* A coach opening an ended session's link gets View in History on that
+      session; a running one opens the live room; neither shows the athlete's "not part of"
+      line.
+
 ## Acceptance criteria
 
 - [ ] ANALYTICS has three tabs and one picker.
