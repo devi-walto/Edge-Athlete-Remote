@@ -102,7 +102,7 @@ By v0.8.3 (2026-11-09) CI ran **1,114 tests** on every pull request: the backend
 | 19 | [The rack screen](ui/19-rack-screen.md) | Written 2026-11-11: every rack screen change in one place, both versions (waiting screen, only the planned reps count and each rep's feedback, the plate loader from spec 16, the corner switch, the room display for athletes). Can start any time |
 | 13 | [Registry of schools and operator's console](later/13-registry-and-console.md) | Written, later |
 | 15 | [Usage history and cloud cost](later/15-usage-and-cost.md) | Written, later (Phase 0, recording, can start any time) |
-| 17 | [Several sessions at once](later/17-concurrent-sessions.md) | Written, later |
+| 17 | [Locations, and several sessions at once](later/17-concurrent-sessions.md) | Written, later; revised 2026-11-14 (locations, rooms, idle sessions); after spec 18 |
 | 18 | Shared racks online (common login) | Written on `feature-shared_racks` only |
 
 ## The roadmap after the class
@@ -150,8 +150,14 @@ rules:
 
 ### 4. Operations and scale
 
-Spec 13 (registry and console), spec 15 (usage, cost and load baselines), moving a
-database between a local install and the remote server, a second node.
+Spec 13 (registry and console), spec 15 (usage, cost and load baselines), a second node.
+**Data export and sync** (to write, agreed 2026-11-14): one export format holding every
+table with its original ids and timestamps; "Export my data" in every tier (the
+anti-lock-in promise); a manual "Sync my data" button in the coach's settings between a
+local install and the remote server, built on the design already in
+`docs/journal/core/remote/databases.md` (first a copy, then only finished sessions are
+added each way, the remote server wins a shared record edited on both sides). Several
+rooms on the remote server are spec 17, not sync: one school, one database.
 
 ### 5. Kept out of this repository
 
