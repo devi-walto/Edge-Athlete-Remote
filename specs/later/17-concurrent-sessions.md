@@ -146,7 +146,7 @@ first).
 - **One location, nothing new on screen.** No picker, no "where" field, no location name in
   the banner. Everything below appears only once a second location exists.
 - **Managed where?** Room Layout (or the coach's settings): add, rename, set the address,
-  archive. Adding past the school's allowance is refused with a plain sentence. Archiving
+  archive. Adding past the plan's "Locations included" is refused with a plain sentence ("Your plan includes 2 locations"). Archiving
   a location with tablets or sensors asks where they go first.
 
 ## Checking in across locations
@@ -222,9 +222,11 @@ Every "which session?" question becomes **"which session for this ..."**:
 `active_session()` stays for a gym box and for a school with the switch off; the callers
 above move to the "for this rack / coach / display" versions.
 
-**The switch becomes a count (Devin, 2026-11-14: decided):** instead of on/off, the
-registry records **how many locations the school may have** (1 unless set), applied the
-same way (`EA_LOCATIONS_ALLOWED`), and sold that way ("Program: up to 2 rooms"). One running session per location follows from it, so
+**The switch becomes a count: "Locations included" (Devin, 2026-11-14: decided, and named
+so it says what it limits):** instead of on/off, the registry records **how many locations
+the school's plan includes**, meaning how many places it can run a session in at the same
+time (1 unless set). Applied the same way (`EA_LOCATIONS_INCLUDED`, read only by
+`locations_included()`), and sold that way ("Program: 2 locations included"). One running session per location follows from it, so
 "several sessions at once" needs no separate switch. An online-only school with two teams
 lifting at the same hour gives each its own location ("Football", "Track"); the address is
 optional.
@@ -244,7 +246,7 @@ settings); a location picker for a sensor on no rack.
 ## Phases (outline; cut properly when scheduled)
 
 0. **Locations:** the table, one row made on every install, names and addresses, managed in
-   the app, the allowance from the registry (spec 13). Nothing else changes; every test
+   the app, the "Locations included" count from the registry (spec 13). Nothing else changes; every test
    passes with one location.
 1. **"Which session?" by location:** `active_session()` takes a location; the rack routes,
    check-in, sets, the rack screen's reads and the room view find the session through the
