@@ -1,13 +1,14 @@
-# Feature Spec 3: Athlete login links
+# Feature Spec 05: Athlete login links
 
+- Previously spec 03 (renumbered into build order, 2026-11-14)
 - Owner: Devin Walton
 - Date: 2026-10-06
 - Status: **Done 2026-10-18** (Phases 0–4) on `feature-login_links`, browser checks
-  passed by Devin on a remote-mode copy of the app on his Mac. Coach login codes (once Phase 5 here) moved to spec 11, Phase 4
+  passed by Devin on a remote-mode copy of the app on his Mac. Coach login codes (once Phase 5 here) moved to spec 17, Phase 4
 - Form item: Definition of Done #4
-- Depends on: [02 Roles](02-roles.md) (must be merged first), [05 Hosted mode](05-hosted-mode.md)
+- Depends on: [02 Roles](02-roles.md) (must be merged first), [03 Hosted mode](03-hosted-mode.md)
 - Mockup: `F_Remote_Roster`, `F_Remote_LoginLink` and the REMOTE flow on the canvas's Final
-  designs page. Coach login codes (now spec 11, Phase 4): **approved 2026-10-07**, on the Final designs page
+  designs page. Coach login codes (now spec 17, Phase 4): **approved 2026-10-07**, on the Final designs page
   ("The same in both: accounts and access"): `F_Coaches` (the code in the same dialog an
   athlete login link uses, with the link icon on **Copy code**; Invited and Reset rows),
   `F_SignIn` ("I have a login code"), `F_CodeNewCoach`, `F_CodeReset`
@@ -70,7 +71,7 @@ that just sign in.
 
 ## Non-goals
 
-- The athlete's rack screen and what they see after signing in (spec 04 and the athlete
+- The athlete's rack screen and what they see after signing in (spec 06 and the athlete
   screens, not yet designed).
 - One login across several programs (future; `docs/journal/core/remote/access.md`).
 - Sending the link for the coach. The coach copies it and sends it themselves.
@@ -163,7 +164,7 @@ page's address.
   coach creation uses (unique, case-insensitive).
 - Sign-in is the existing endpoint. The serializer gives an athlete a **30-day** refresh
   token and a coach the existing 7 days.
-- These two routes are the only new open ones. Add them to spec 05's allow-list on purpose.
+- These two routes are the only new open ones. Add them to spec 03's allow-list on purpose.
 
 **Done when:**
 
@@ -180,7 +181,7 @@ page's address.
 
 ## Phase 3 — The coach interface
 
-On the Roster (spec 07 builds the tab; if it does not exist yet, add this to the
+On the Roster (spec 14 builds the tab; if it does not exist yet, add this to the
 existing roster in PLANNING → Groups), **only when `useDeployment()` says hosted**:
 
 - A **Remote login** column: *Linked* with the username · *Link sent* with its expiry ·
@@ -190,7 +191,7 @@ existing roster in PLANNING → Groups), **only when `useDeployment()` says host
 - The dialog: the link with **Copy link**; "Works once · Expires <date> · Earlier links
   cancelled"; the warning **"Don't post this in a group chat. Whoever opens it becomes
   <name>."**; **Cancel this link**; **Done**.
-- The same shortcut on SESSION's "Not joined yet" list (spec 04).
+- The same shortcut on SESSION's "Not joined yet" list (spec 06).
 
 **Done when:**
 
@@ -210,9 +211,9 @@ Mockups `F_Ath_R1` (login link), `F_Ath_R1b` (a link that no longer works) and
   link doesn't work any more. Ask your coach for a new one."
 - `/athlete`: username and password; a line under it — "Forgot it? Ask your coach for a
   new login link." The coach sign-in page links here ("Athlete? …").
-- Both use the solid look (spec 06 rule 9), sized for a phone. After either, the
+- Both use the solid look (spec 08 rule 9), sized for a phone. After either, the
   athlete lands on a placeholder ("You're signed in. Open the session link your coach
-  sent.") until [spec 10](10-athlete-pages.md) replaces it with the home page.
+  sent.") until [spec 09](09-athlete-pages.md) replaces it with the home page.
 
 **Done when:**
 
@@ -234,7 +235,7 @@ Mockups `F_Ath_R1` (login link), `F_Ath_R1b` (a link that no longer works) and
   the wrong-attempt limit (`LimitWrongAttempts.counted_statuses`), so links can't be
   guessed freely. Usernames ignore capitals. An athlete's sign-in lasts 30 days on
   sign-in, link and renewal (`ATHLETE_SIGN_IN_LIFETIME`); a coach keeps 7.
-- **Phase 3:** the roster has no Roster tab yet (spec 07 builds it), so the Login
+- **Phase 3:** the roster has no Roster tab yet (spec 14 builds it), so the Login
   column, Send login link / Send new link / Unlink and the dialog went on the existing
   roster table in PLANNING → Groups (Devin, 2026-10-18: build with what exists; the
   server side is already what the redesign needs). Remote only.
@@ -247,14 +248,14 @@ Mockups `F_Ath_R1` (login link), `F_Ath_R1b` (a link that no longer works) and
   copy, cancel and unlink update the row without a reload; link → choose a login →
   signed in → sign out → sign in again; a used link shows the dead-link page.
 - **Not yet:** the "Send login link" shortcut on SESSION's "Not joined yet" list (that list is
-  spec 04, Phase 4).
+  spec 15, Phase 5).
 
 ---
 
-## Coach login codes: moved to spec 11
+## Coach login codes: moved to spec 17
 
 Moved 2026-10-18 (Devin): coach login codes are built as the **last phase of the coach
-interface redesign**, [spec 11, Phase 4](../ui/11-mine-first.md), not here. They change
+interface redesign**, [spec 17, Phase 4](../ui/17-mine-first.md), not here. They change
 the Coaches page and coach sign-in, which the redesign rebuilds anyway, and they are not
 needed for Definition of Done #4. This spec is complete without them.
 

@@ -1,12 +1,13 @@
-# Feature Spec 21: Make-ups
+# Feature Spec 22: Make-ups
 
+- Previously spec 21 (renumbered into build order, 2026-11-14)
 - Owner: Devin Walton
 - Date: 2026-11-14 (rewritten the same day around a make-up session, Devin's design)
 - Status: **Written, not scheduled.** Needs boards before its screens are built.
-- Depends on: [17 Locations and several sessions](17-concurrent-sessions.md) (idle sessions
+- Depends on: [21 Locations and several sessions](21-locations-and-concurrent-sessions.md) (idle sessions
   end on their own, so more sessions end with someone missing),
-  [19 The rack screen](../ui/19-rack-screen.md) (only the planned reps count),
-  [10 The athlete's pages](../remote/10-athlete-pages.md) (where an athlete sees it online)
+  [11 The rack screen](../ui/11-rack-screen.md) (only the planned reps count),
+  [09 The athlete's pages](../remote/09-athlete-pages.md) (where an athlete sees it online)
 
 ## Why
 
@@ -65,7 +66,7 @@ an ordinary session is not making anything up.
 
 ## The pointer
 
-- **Made when a session ends** (by a coach, or automatically, spec 17): one `MakeUp` row for
+- **Made when a session ends** (by a coach, or automatically, spec 21): one `MakeUp` row for
   each athlete who was on the roster and completed **no counted set**. Fields: athlete, the
   missed session, status (`open`, `done`, `excused`, `expired`), made, closed, and the
   make-up session that closed it.
@@ -85,7 +86,7 @@ an ordinary session is not making anything up.
   other another day.
 - **What's stored:** an ordinary `TrainingSession` with `is_makeup_session`, one
   `SessionParticipation` per athlete as now, each gaining `makeup_for` (the missed session).
-  It takes a location like any session (spec 17), so with one location it runs on its own,
+  It takes a location like any session (spec 21), so with one location it runs on its own,
   never alongside a regular session; a school with more locations included could run one
   next to another.
 - **The rack and the athlete's phone:** nothing new on screen. When an athlete taps in, the
@@ -98,7 +99,7 @@ an ordinary session is not making anything up.
 - **The sets:** filed into the **make-up session** (so its live room, "At this rack", next-set
   numbers and statuses all work unchanged), each marked by the server with `is_makeup` and
   `makeup_for` (the missed session). Nothing is ever written into an ended session.
-- **Ending it** (the coach, or idle, spec 17), as any session: its own report; new maxes
+- **Ending it** (the coach, or idle, spec 21), as any session: its own report; new maxes
   for the athletes who lifted in it, from its sets; then, for each athlete who lifted, their
   pointer becomes `done` and their missed session's report is rebuilt. An athlete who was
   ticked but didn't lift keeps their pointer open.

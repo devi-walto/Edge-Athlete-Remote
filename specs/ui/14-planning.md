@@ -1,10 +1,11 @@
-# Feature Spec 7: Planning — Design, Groups, Roster, Calendar
+# Feature Spec 14: Planning — Design, Groups, Roster, Calendar
 
+- Previously spec 07 (renumbered into build order, 2026-11-14)
 - Owner: Devin Walton
 - Date: 2026-10-06
 - Status: Written — not started. No decisions open
 - Form item: #11 (unified coach interface)
-- Depends on: [06 Design rules](06-design-rules.md); [01 Coach accounts](../remote/01-coach-accounts.md) for archiving an athlete
+- Depends on: [08 Design rules](08-design-rules.md); [01 Coach accounts](../remote/01-coach-accounts.md) for archiving an athlete
 - Mockup: `V3a_DesignStep1`, `V3g_CreateProgram`, `V3b_DesignStep2`,
   `V3e_ScheduleOnCalendar`, `V3h_AddToExistingSession`, `V3f_ProgramScheduled`, `V4a_Groups`, `V4b_Roster`,
   `V4c_Calendar` in [`mockups/coach-ui-final.html`](mockups/coach-ui-final.html); the Add athlete
@@ -64,7 +65,7 @@ A program can be **saved as a new Training Block** at any time.
 - **Athletes are created only in the Roster.** A group's **Add athlete** button picks
   from the roster; it is the only way into a group and it never creates anyone.
 - **The one-off session leaves Planning.** It is unplanned work and lives in SESSION
-  (spec 08).
+  (spec 15).
 
 ### Decided 2026-10-06 — several groups share a session; a program stays one group
 
@@ -134,7 +135,7 @@ can run at a time.
 
 - Moving or unscheduling a scheduled program.
 - Renaming or deleting a training group.
-- Login links and sensors on the roster (specs 03 and 04 add those columns).
+- Login links and sensors on the roster (specs 05 and 06 add those columns).
 - The "my groups" filter.
 
 ---
@@ -284,7 +285,7 @@ overlap in time instead.
 
 ## Phase 4 — The Design tab
 
-Frontend, on the components from spec 06. Mockups `V3a`, `V3g`, `V3b`, `V3e`, `V3f`.
+Frontend, on the components from spec 08. Mockups `V3a`, `V3g`, `V3b`, `V3e`, `V3f`.
 
 - **Header sentence:** "A Training Block is a template. Create a Training Program from
   it for one group, then schedule that program as Training Sessions."
@@ -352,7 +353,7 @@ New tab, mockup `V4b`. New file `react/src/coach/RosterView.jsx`.
   - Both versions: **Link a wristband**, a checkbox under it, **unticked to start**. Only
     when ticked does a **Wristband ID** box appear, with the hint that the ID is what the
     rack reader reads, which can differ from the number printed on the band. On both
-    versions because a wristband node for hosted common-login racks is planned (spec 18).
+    versions because a wristband node for hosted common-login racks is planned (spec 10).
   - **Cancel** (quiet), **Add another** (outline) and **Add athlete** (lime).
     **Add athlete** adds them and closes the panel; with Generate login link ticked, the
     existing Send a login link dialog opens next. **Add another** adds them, keeps the
@@ -449,12 +450,12 @@ Mockup `V4c`. `ScheduleWorkspace.jsx`.
   Sessions. Setting one up creates its roster. It does not start it."
 - The **next** session that is not complete is the focus card, with its group, program
   and workout, and **Set up this session**.
-- Two views behind one **List | Month** switch (spec 06 rule 9; mockups
+- Two views behind one **List | Month** switch (spec 08 rule 9; mockups
   `F_Local_CalendarList`, `F_Local_CalendarMonth`). **List**: "Coming up" and "Earlier"
   as solid rows with the existing four states. **Month**: a grid of solid square day
   blocks; pressing a day with a session opens it, as pressing its row does. The switch
   remembers the coach's last choice. The old Cards view is replaced by Month.
-- The "open a day from scratch" panel leaves this tab (spec 08 gives it a home).
+- The "open a day from scratch" panel leaves this tab (spec 15 gives it a home).
 - The empty state names the real next step: "Nothing is scheduled. Create a Training
   Program in Design and schedule it."
 
@@ -476,7 +477,7 @@ Mockup `V4c`. `ScheduleWorkspace.jsx`.
       cannot be scheduled twice.
 - [ ] A coach can add one athlete from the Roster, and only from the Roster.
 - [ ] The interface uses Training Block / Training Program / Training Session throughout.
-- [ ] Every screen follows spec 06.
+- [ ] Every screen follows spec 08.
 
 ## Risks
 

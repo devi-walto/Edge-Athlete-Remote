@@ -1,11 +1,12 @@
-# Feature Spec 16: The plate loader on the rack screen
+# Feature Spec 11b: The plate loader on the rack screen
 
+- Previously spec 16 (renumbered 2026-11-14; part of spec 11, built as its Phases 3–4)
 - Owner: Devin Walton
 - Date: 2026-10-21
-- Status: Written — not started. **Built as part of [spec 19, the rack screen](19-rack-screen.md)**
+- Status: Written — not started. **Built as part of [spec 11, the rack screen](11-rack-screen.md)**
   (its Phases 3 and 4); this file keeps the plate loader's decisions and checklists
 - Form item: #11 (unified interface; internal)
-- Depends on: [06 Design rules](06-design-rules.md); [09 Analytics](09-analytics.md) adds
+- Depends on: [08 Design rules](08-design-rules.md); [16 Analytics](16-analytics.md) adds
   the other per-movement setting kept in our catalog (mean or peak velocity)
 - Mockup: `F_Rack_Plates1` to `F_Rack_Plates5` (the athlete's phone) and
   `F_Rack_Plates6` (the gym rack tablet) on the canvas's Final designs page (approved
@@ -43,7 +44,7 @@ the set I'm about to start, so I can load it without doing the maths.
 - **Pounds by default. Tapping anywhere on the card switches between pounds and
   kilograms**; the small LB | KG pill only shows which one is on. **The choice is
   remembered on that tablet or phone** until it's tapped again. A school-wide setting
-  can come later. **It is one setting shared with the athlete's pages** (spec 10, decided
+  can come later. **It is one setting shared with the athlete's pages** (spec 09, decided
   2026-11-11): the LB | KG toggle in My Recent Progress's movement panel and this card
   read and change the same remembered choice, so every load an athlete sees on that
   phone is in one unit.
@@ -109,7 +110,7 @@ the set I'm about to start, so I can load it without doing the maths.
 
 ## Phase 0 — Which movements use a barbell
 
-- `Exercise` gains **`barbell`** (yes or no), kept by us like spec 09's velocity metric:
+- `Exercise` gains **`barbell`** (yes or no), kept by us like spec 16's velocity metric:
   yes for every movement in the built-in catalog (all of them are barbell lifts today),
   set by hand for any we add later. Coaches don't see it.
 - A movement a coach or an import creates starts as **no**, so the widget never shows

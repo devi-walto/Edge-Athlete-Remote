@@ -1,11 +1,14 @@
-# Feature Spec 19: The rack screen
+# Feature Spec 11: The rack screen
 
+- Previously spec 19 (renumbered into build order, 2026-11-14)
 - Owner: Devin Walton
 - Date: 2026-11-11
-- Status: Written — not started. Two decisions are still proposed (see "Still to confirm")
+- Status: Phase 0 built (2026-11-12). Paused for spec 10 (Devin, 2026-11-12), which changes
+  how racks are made; Phase 1 on resumes after it. Two decisions are still proposed (see
+  "Still to confirm")
 - Form item: #11 (unified interface; internal)
-- Depends on: [06 Design rules](06-design-rules.md) (done). Nothing else: it can start any
-  time, and alongside [10 The athlete's pages](../remote/10-athlete-pages.md), whose files it
+- Depends on: [08 Design rules](08-design-rules.md) (done). Nothing else: it can start any
+  time, and alongside [09 The athlete's pages](../remote/09-athlete-pages.md), whose files it
   doesn't touch
 - Mockups: the gym rack row on the canvas's Final designs page: `F_Rack_NoSession`,
   `F_Rack_L1` to `F_Rack_L6` (with the corner switch on `F_Rack_L1`),
@@ -16,11 +19,11 @@
 ## Why
 
 The rack screen is the one screen every athlete uses on every set: the gym's rack tablet
-and an online athlete's phone run the same `react/src/rack/RackScreen.jsx` (spec 04 Phase 3).
+and an online athlete's phone run the same `react/src/rack/RackScreen.jsx` (spec 06 Phase 3).
 Several changes to it were decided over October, but each was written into a different
-spec: the plate loader (spec 16), only the planned reps counting and each rep's feedback
-(spec 09, the coach's Analytics spec, which comes last), the waiting screen and the corner
-switch (spec 18, on an unmerged branch), and the athlete's room display button (spec 10).
+spec: the plate loader (spec 11b), only the planned reps counting and each rep's feedback
+(spec 16, the coach's Analytics spec, which comes last), the waiting screen and the corner
+switch (spec 10, on an unmerged branch), and the athlete's room display button (spec 09).
 Built that way, the one screen would be changed four times in four pull requests, and the
 rep-counting work would wait behind the whole coach redesign.
 
@@ -45,25 +48,25 @@ Carried over unchanged from the specs they were written in; each phase names whe
 - **One screen, both versions.** Every change here lands in `RackScreen.jsx` and its
   pieces, so the gym tablet and the athlete's phone get it together. Where a change is for
   one version only, the phase says so.
-- **The rack screen keeps its own look** (spec 06 rule 8): big, readable from the bar.
-  Its colours already come from `styles/tokens.css` through `theme.js` (spec 06 Phase 0).
-- **No session running: the rack says it's ready and waiting** (spec 18, approved
+- **The rack screen keeps its own look** (spec 08 rule 8): big, readable from the bar.
+  Its colours already come from `styles/tokens.css` through `theme.js` (spec 08 Phase 0).
+- **No session running: the rack says it's ready and waiting** (spec 10, approved
   2026-10-27, `F_Rack_NoSession`, local and remote).
-- **Only the planned reps count** (Devin, 2026-10-27; was spec 09). The sensor sends every
+- **Only the planned reps count** (Devin, 2026-10-27; was spec 16). The sensor sends every
   rep; the server decides which count and keeps them all. The first N count, N being the
   reps planned for that athlete and movement; no planned reps, nothing is capped.
 - **The screen answers "did that one count?" as each rep lands** (Devin, 2026-10-30; was
-  spec 09 on `feature-rep_counting`): the count pulses lime on a counted rep; a rep that
+  spec 16 on `feature-rep_counting`): the count pulses lime on a counted rep; a rep that
   won't count shows greyed with its reason. The speed keeps its zone colour.
-- **The plate loader** (spec 16, approved 2026-10-21): one side of the bar, before each
+- **The plate loader** (spec 11b, approved 2026-10-21): one side of the bar, before each
   barbell set, pounds by default, one remembered lb / kg choice per device shared with the
   athlete's pages.
-- **The corner switch** (spec 18, approved 2026-10-27): a small button in the idle rack
+- **The corner switch** (spec 10, approved 2026-10-27): a small button in the idle rack
   screen's corner flips the tablet to the room display and back, asking first.
 - **An athlete may open the room display** online, read-only; its button is on their rack
-  screen only while their session is live (was spec 10 Phase 6).
+  screen only while their session is live (was spec 09 Phase 6).
 - **The footer stays word for word** (`phase`, `node`, `buffered`): it's how you see reps
-  are being kept on the device (spec 04 Phase 3).
+  are being kept on the device (spec 06 Phase 3).
 
 ## Still to confirm (proposed, Devin to decide before the phase that needs it)
 
@@ -79,7 +82,7 @@ Carried over unchanged from the specs they were written in; each phase names whe
 - `react/src/rack/RackScreen.jsx` (the phases: idle, ready, countdown, active, summary,
   rest), `Idle.jsx`, `CheckInList.jsx`, `WeightPad.jsx`, `velocity.js`; a rack picks up a
   new session on its own (PR #14).
-- Reps arrive through the live rack state; a rep sent twice is counted once (spec 14
+- Reps arrive through the live rack state; a rep sent twice is counted once (spec 07
   Phase 4). `Rep` has no "counts" field; `POST /api/sets/<id>/complete/` takes the
   tablet's `reps_completed` and velocities.
 - `target_reps` per movement is already on the rack's plan (`plan_resolution.py`).
@@ -94,7 +97,7 @@ Carried over unchanged from the specs they were written in; each phase names whe
 
 ## Non-goals
 
-- The common login and rack tablets online (spec 18). The corner switch online comes with it.
+- The common login and rack tablets online (spec 10). The corner switch online comes with it.
 - The sensor's own light answering each rep (later, below).
 - Editing plate sets; other bars; a speed-based max.
 
@@ -102,7 +105,7 @@ Carried over unchanged from the specs they were written in; each phase names whe
 
 ## Phase 0 — No session running
 
-Built to `F_Rack_NoSession` (spec 18's approved board), local and remote.
+Built to `F_Rack_NoSession` (spec 10's approved board), local and remote.
 
 - A rack with no session running shows **"No session yet"** in the header, and in place of
   the empty check-in list: **"Rack 3 is ready · Waiting for today's session"**, with "A coach
@@ -114,16 +117,33 @@ Built to `F_Rack_NoSession` (spec 18's approved board), local and remote.
 
 **Done when:**
 
-- [ ] *(Frontend test)* With no session, the rack shows the waiting message and no
+- [x] *(Frontend test)* With no session, the rack shows the waiting message and no
       check-in list or NFC prompt; with a session, the list is back.
-- [ ] *(Browser)* Local and remote: a coach starts a session and the check-in list replaces
-      the message within 5 seconds, with no reload.
+- [x] *(Browser)* Local ~~and remote~~: a coach starts a session and the check-in list replaces
+      the message within 5 seconds, with no reload. (Remote has no gym rack tablet until
+      spec 10, and an athlete's own rack never shows this screen; the same code serves both.)
+
+**Phase 0 result (2026-11-12).** `rack/NoSession.jsx` to `F_Rack_NoSession`: the header reads
+"No session yet" (muted), and in place of the empty list "Rack 3 is ready · Waiting for
+today's session" with the board's line. The rack screen keeps asking for a session every
+5 seconds as before, so the check-in list replaces it by itself; the wristband reader rests
+while waiting. The sensor chip is the shared `ui/Badge`: "Sensor rack_3 is live" (mint
+dot) while the sensor pulses, "Sensor rack_3 not responding" (amber) after 15 seconds
+without one, "No sensor linked to this rack" when none is. It listens to the sensor's own
+pulse (`edgeathlete/node/<id>/pulse`, which browsers may already read), held by the rack
+screen the whole time, so coming back to this screen after a session never starts from a
+stale guess. The two not-live wordings are mine; the board drew only the live one. The
+corner switch on the board is Phase 5. Footer unchanged. An athlete's own rack is untouched.
+Tests: frontend 7 in `rack/noSession.test.jsx`. Browser, a throwaway local install at
+375 px with the simulated sensor on rack 1: waiting screen as on the board; session started
+→ the list in about 1 second; session ended with the sensor on → waiting with "is live"
+straight away; sensor switched off → "not responding".
 
 **Stop. Devin reviews.**
 
 ## Phase 1 — Only the planned reps count (the server)
 
-Moved from spec 09 ("Added 2026-10-27"). Decision 1 above must be settled first.
+Moved from spec 16 ("Added 2026-10-27"). Decision 1 above must be settled first.
 
 - **`Rep` gains `counts`** (yes or no) and, when no, the reason (`past_plan`, or `too_slow`
   if decision 1 is yes), in one migration. Reps already saved all count. Nothing is thrown
@@ -139,7 +159,7 @@ Moved from spec 09 ("Added 2026-10-27"). Decision 1 above must be settled first.
 - **Everything that reads reps reads only the counted ones:** the athlete's analytics
   (`services/athlete_analytics.py`), the session summary, its frozen report and PDF
   (`services/session_completion.py`), the live room and its leaders, "most reps" among them
-  (`services/room_state.py`), velocity records, "Behind", and the athlete's pages (spec 10).
+  (`services/room_state.py`), velocity records, "Behind", and the athlete's pages (spec 09).
 - False Set is unchanged: the whole set is marked false. No change to the sensor, its
   firmware or its messages.
 
@@ -158,7 +178,7 @@ Moved from spec 09 ("Added 2026-10-27"). Decision 1 above must be settled first.
 
 ## Phase 2 — The rack screen says so, as each rep lands
 
-Moved from spec 09 (both sections). Decision 2 above must be settled first.
+Moved from spec 16 (both sections). Decision 2 above must be settled first.
 
 - **The count reads against the plan** ("4 / 5") and stays the largest thing on the screen.
 - **On every rep the count pulses once** (about half a second), big enough to read from the
@@ -189,29 +209,33 @@ Moved from spec 09 (both sections). Decision 2 above must be settled first.
 
 ## Phase 3 — The plate loader: which movements use a barbell, and the maths
 
-Spec 16's Phases 0 and 1, built as written there (its decisions, plate sets, colours and
+Spec 11b's Phases 0 and 1, built as written there (its decisions, plate sets, colours and
 tests are unchanged): `Exercise.barbell`, kept by us, yes for the built-in catalog; and
 `react/src/rack/plates.js`, `platesForLoad(loadLb, unit)`.
 
-**Done when:** spec 16's Phase 0 and Phase 1 checklists are all true.
+**Done when:** spec 11b's Phase 0 and Phase 1 checklists are all true.
 
 **Stop. Devin reviews.**
 
 ## Phase 4 — The plate loader: the widget
 
-Spec 16's Phase 2, built as written there (`PlateLoader.jsx`, to `F_Rack_Plates1` to `6`),
+Spec 11b's Phase 2, built as written there (`PlateLoader.jsx`, to `F_Rack_Plates1` to `6`),
 with one change since: **the lb / kg choice is one remembered setting per device, shared with
-the athlete's pages** (spec 10, decided 2026-11-11). It lives in one small module both read
+the athlete's pages** (spec 09, decided 2026-11-11). It lives in one small module both read
 and change (one storage key), so tapping the card here and the LB | KG toggle on My Recent
 Progress always agree. Loads stay stored in pounds; kilograms are for display, to the
 nearest 0.5 on the athlete's pages.
 
-**Done when:** spec 16's Phase 2 checklist is all true, and *(frontend test)* changing the
+**Done when:** spec 11b's Phase 2 checklist is all true, and *(frontend test)* changing the
 unit on the rack screen changes it for the athlete's pages on the same device, and back.
 
 **Stop. Devin reviews.**
 
 ## Phase 5 — The corner switch, on a local install
+
+**Moved to spec 10, Phase 5 (2026-11-12):** spec 10 now moves the local install to racks that
+set themselves up, and builds the corner switch once for both versions. Kept here for
+reference.
 
 Built to `F_Rack_L1` (the corner button), `F_Rack_SwitchToDisplay`, `F_Display` and
 `F_Display_SwitchToRack`.
@@ -222,7 +246,7 @@ Built to `F_Rack_L1` (the corner button), `F_Rack_SwitchToDisplay`, `F_Display` 
 - **Either way it asks first:** "Switch Rack 3 to the room display?" / "Switch back to
   Rack 3?", with Cancel and Switch, so a stray tap can't take a rack away.
 - The tablet remembers which it was showing (its existing device role), so a reload keeps it.
-- **Local install only** for now: online, gym rack tablets arrive with spec 18, which turns
+- **Local install only** for now: online, gym rack tablets arrive with spec 10, which turns
   the switch on there. An athlete's phone never shows it (its rack is its own; Phase 6 gives
   athletes their own way to the display).
 - The room display's cog keeps its other settings; "Change device role" stays for going back
@@ -239,14 +263,14 @@ Built to `F_Rack_L1` (the corner button), `F_Rack_SwitchToDisplay`, `F_Display` 
 
 ## Phase 6 — The room display, for athletes (remote)
 
-Moved from spec 10 Phase 6.
+Moved from spec 09 Phase 6.
 
 - **Server:** online, `/dashboard` and the routes behind it accept an athlete login,
   read-only (no route that changes anything). A coach login still works as today.
 - **Button:** the athlete's rack screen shows **Room display** while their session is live,
   opening the room display. It never appears on Home or in the menu.
 - **Before building:** the button has no board yet. Draw it on the Proposed page and get it
-  approved first (spec 06's Final designs rule).
+  approved first (spec 08's Final designs rule).
 
 **Done when:**
 
@@ -265,7 +289,7 @@ Moved from spec 10 Phase 6.
 
 The same "did that count?" answer could blink the sensor's light, so a lifter facing away
 from the screen still sees it. It needs the server to send each rep's answer back to that
-sensor on its own topic (which the broker's per-sensor rules from spec 14 let only that
+sensor on its own topic (which the broker's per-sensor rules from spec 07 let only that
 sensor read), and the firmware to subscribe and blink: once the moment it sends a rep, then
 the answer when it comes back (green / red where the light has two colours; one colour shows
 counted as a long blink, won't count as two short ones). With no answer (offline, an older
@@ -288,7 +312,7 @@ server) the light just shows the first blink. Not in this spec's phases.
 |---|---|
 | Counting changes the numbers coaches already trust | Every rep is kept with its reason; the rule can be changed and recalculated; old reps all count |
 | The pulse distracts mid-set | Half a second, on the count only; the speed's colour is untouched |
-| An athlete trusts a kilogram load that's off the prescription | Spec 16's warning names both numbers whenever it isn't exact |
+| An athlete trusts a kilogram load that's off the prescription | Spec 11b's warning names both numbers whenever it isn't exact |
 | A stray tap turns a rack into a display mid-session | The switch asks first, and sits only on the idle screen |
 
 ## Docs to update when done

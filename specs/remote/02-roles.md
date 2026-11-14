@@ -1,11 +1,11 @@
-# Feature Spec 2: Roles — administrator, coach, athlete
+# Feature Spec 02: Roles — administrator, coach, athlete
 
 - Owner: Devin Walton
 - Date: 2026-10-06
 - Status: Done 2026-10-07, merged into `SprintBranch`
 - Form item: Definition of Done #3
 - Depends on: [01 Secure coach accounts](01-coach-accounts.md)
-- Next: [05 Hosted mode](05-hosted-mode.md), then 03 and 04
+- Next: [03 Hosted mode](03-hosted-mode.md), then 03 and 04
 
 ## Why
 
@@ -15,7 +15,7 @@ accepted trade for a gym with two staff logins.
 
 It stops being acceptable the moment an athlete has a login: that login would be able
 to edit the roster, end sessions and delete plans. **This spec has to be finished
-before the first athlete login can exist.** Spec 03 creates those logins; it must not
+before the first athlete login can exist.** Spec 05 creates those logins; it must not
 start until this one is merged.
 
 ### Decided 2026-10-06 — every coach may use Room Layout
@@ -96,9 +96,9 @@ an athlete access to their own rack can never give them my controls.
 
 ## Non-goals
 
-- Creating athlete logins (spec 03).
-- The 21 open endpoints (spec 05).
-- What an athlete may read or do on a rack (specs 04 and 05).
+- Creating athlete logins (spec 05).
+- The 21 open endpoints (spec 03).
+- What an athlete may read or do on a rack (specs 06 and 03).
 - The athlete's own screens.
 
 ---
@@ -189,7 +189,7 @@ own tests. The last-administrator rule now counts coach logins only.
   archive an athlete and forget the login. It acts only when archived-or-not changes:
   editing an athlete never switches a login back on.
 - **There is no un-archive route or screen yet.** The server rule is built and tested at
-  the model; the button belongs with the archived-athletes work in spec 09.
+  the model; the button belongs with the archived-athletes work in spec 16.
 - **Found and fixed: renewing a sign-in ignored a switched-off login.** The stock renewal
   route kept issuing tokens to a deactivated coach or archived athlete for up to a week.
   Each token was refused on use, so nothing leaked. `/api/auth/refresh/` now asks

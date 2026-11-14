@@ -1,29 +1,30 @@
-# Feature Spec 10: The athlete's pages
+# Feature Spec 09: The athlete's pages
 
+- Previously spec 10 (renumbered into build order, 2026-11-14)
 - Owner: Devin Walton
 - Date: 2026-10-06; rewritten 2026-11-11 after the athlete-account design was approved
 - Status: all phases (0–5) built 2026-11-11 (the Home route, the Home page, the session-ended
   page, All sessions and a past session, My Recent Progress, Account), awaiting review and
   the PR. Left: the docs below, and the Phase 1–2 browser checks that need a live session. No decisions
-  open. (Phase 6, the room display for athletes, moved to spec 19 on 2026-11-11)
+  open. (Phase 6, the room display for athletes, moved to spec 11 on 2026-11-11)
 - Form item: Definition of Done #4 (remote athlete access)
-- Depends on: [03 Login links](03-athlete-login-links.md) (the sign-in pages),
-  [04 Session link](04-session-link-and-virtual-racks.md) (the join rule and the rack screen),
-  [05 Hosted mode](05-hosted-mode.md), [14 Sensors online](14-sensors-online.md) (My sensor and
-  Manage sensors, its Phase 10). Reads what [07 Planning](../ui/07-planning.md) schedules.
-  Follows [06 Design rules](../ui/06-design-rules.md), rules 10–12
+- Depends on: [05 Login links](05-athlete-login-links.md) (the sign-in pages),
+  [06 Session link](06-session-link-and-virtual-racks.md) (the join rule and the rack screen),
+  [03 Hosted mode](03-hosted-mode.md), [07 Sensors online](07-sensors-online.md) (My sensor and
+  Manage sensors, its Phase 10). Reads what [14 Planning](../ui/14-planning.md) schedules.
+  Follows [08 Design rules](../ui/08-design-rules.md), rules 10–12
 - Mockups: the **REMOTE athlete account** row on the canvas's Final designs page (approved
   2026-11-11), laid out with Home on the left and each path running right:
   `F_Ath_H1` (Home), `F_Ath_H1b` (Home, a session is live), `F_Ath_H1c` (the name menu);
   `F_Ath_L1` (All sessions), `F_Ath_L2` (a past session); `F_Ath_P1`, `F_Ath_P2`,
   `F_Ath_P2b`, `F_Ath_P2c`, `F_Ath_P2d` (My Recent Progress); `F_Ath_A1`, `F_Ath_A2` (Account). Unchanged:
-  `F_Ath_R10` (session ended). The sensor boards `F_Ath_M1`, `M1b`, `M2` belong to spec 14.
+  `F_Ath_R10` (session ended). The sensor boards `F_Ath_M1`, `M1b`, `M2` belong to spec 07.
   Replaced and kept only for the record: `F_Ath_R3`, `R3b`, `R3c`, `S4`, `S5`
 
 ## Why
 
-After spec 03 an athlete can sign in, and after spec 04 a session link puts them on
-their rack. Between the two there is nothing: spec 03 lands them on a placeholder that
+After spec 05 an athlete can sign in, and after spec 06 a session link puts them on
+their rack. Between the two there is nothing: spec 05 lands them on a placeholder that
 says "open the session link your coach sent". An athlete who signs in on a Tuesday
 night has no idea what is planned, and on the day has to go and find a link in a group
 chat. And once a session is over, nothing shows them how they did, or whether they are
@@ -49,12 +50,12 @@ getting better.
   | **A past session** | a Recent sessions row, or All sessions | a set's reps (compare reps) |
   | **My Recent Progress** | Home's greeting card | a movement's trend and its Est. max |
   | **Account** | the name menu | the password help |
-  | **Manage sensors** | My sensor's Manage, on Home or Account | the remove confirm (spec 14 Phase 10) |
+  | **Manage sensors** | My sensor's Manage, on Home or Account | the remove confirm (spec 12) |
 
   Around them, already approved: the session (rack screen) and the Add my sensor page.
-- **The top bar is the same everywhere** (spec 06 rule 12): the picture goes Home; the
+- **The top bar is the same everywhere** (spec 08 rule 12): the picture goes Home; the
   athlete's name opens the menu, which holds only **Account** and **Sign out**.
-- **A drill-down page only leads back** (spec 06 rule 11): All sessions, a past session,
+- **A drill-down page only leads back** (spec 08 rule 11): All sessions, a past session,
   My Recent Progress, Account and Manage sensors each have one back link, under the top
   bar, to where they were opened from. A past session opened from All sessions goes back
   to All sessions.
@@ -84,7 +85,7 @@ getting better.
   number underneath when the app estimated it, **MAX** when the coach entered it, and
   **--** when there is none. A ⓘ opens a two-line explanation in place.
 - **Units: pounds or kilograms, one remembered choice on that phone, shared with the rack
-  screen's plate loader** (spec 16; Devin, 2026-11-11). Pounds by default. Every load on
+  screen's plate loader** (spec 11b; Devin, 2026-11-11). Pounds by default. Every load on
   these pages (a past session's sets, the bars' loads, Top load, EST. MAX, the PDF) shows
   in the chosen unit with its unit written ("225 lb" or "102 kg"); speeds always read m/s.
   Loads are stored in pounds (`weight_lbs`) and converted only for display, kilograms to
@@ -94,8 +95,8 @@ getting better.
 - **Download my report (PDF)**: the athlete's own sets only. Later this may become a more
   general athlete report instead of the coach's daily one.
 - **Account is read-only**: name, username and teams are shown, and the coach manages
-  them. The athlete's name is the coach's to set (spec 07's first and last name).
-- **No password change and no in-app reset request** (narrow attack surface, spec 03).
+  them. The athlete's name is the coach's to set (spec 14's first and last name).
+- **No password change and no in-app reset request** (narrow attack surface, spec 05).
   Account has a green **Changing your password?** line that opens, in place: ask your
   coach in person for a new login link; it lets you choose a new password.
 - **The room display.** An athlete may open `/dashboard` (read-only) by typing it, at any
@@ -106,24 +107,24 @@ getting better.
 - **Hosted only.** A gym box has no athlete logins and returns `404` for all of this.
 - **No calendar file.** A download goes stale the day a coach moves a program. Not in
   this spec.
-- **The look.** These pages use the coach interface's solid look (spec 06 rule 9), sized
+- **The look.** These pages use the coach interface's solid look (spec 08 rule 9), sized
   for a phone held upright. The lifting screen keeps the rack screen's own look, because
   it *is* the rack screen.
 
 Replaced decision (2026-10-06): Home showed the last three sessions as a summary and
 opening one was optional. It is now five rows, View all, and the past session page.
 
-## What exists (after specs 03, 04, 05 and 14)
+## What exists (after specs 05, 04, 05 and 14)
 
 - An athlete login is a Django user linked to one `Athlete` (`Athlete.user`).
-- `/athlete` (sign in) and `/login-link#<link>` (spec 03 Phase 4), currently ending on
+- `/athlete` (sign in) and `/login-link#<link>` (spec 05 Phase 4), currently ending on
   a placeholder page.
-- `POST /api/sessions/{id}/join/` and its membership rule (spec 04 Phase 1).
+- `POST /api/sessions/{id}/join/` and its membership rule (spec 06 Phase 1).
 - `ScheduledSession`: `training_program`, `training_program_workout`, `date`, and
   `session` (empty until the day is set up). A program belongs to one group.
 - `GET /api/sessions/active/athlete/{id}/progress/`: the athlete's plan and progress for
   the running session, already used by the rack screen.
-- `GET /api/athlete/sensors/` and the My sensor page (spec 14), which Home and Account
+- `GET /api/athlete/sensors/` and the My sensor page (spec 07), which Home and Account
   reuse for their My sensor row.
 - `AthleteReferenceMax`: append-only, newest wins, `source` manual or estimated;
   `plan_resolution.current_reference_max` reads it; `session_completion` writes the
@@ -138,13 +139,13 @@ opening one was optional. It is now five rows, View all, and the past session pa
 - What the athlete sees when a session ends.
 - Pointing the sign-in pages at Home instead of the placeholder.
 - (Letting an athlete open the room display, and its button on the rack screen: moved to
-  spec 19 Phase 6.)
+  spec 11 Phase 6.)
 
 ## Non-goals
 
 - The lifting screen itself, and the "not started yet" and "not on this session" messages
-  (spec 04 Phase 3).
-- Manage sensors, Swap and the live/standby rule (spec 14 Phase 10).
+  (spec 06 Phase 3).
+- Manage sensors, Swap and the live/standby rule (spec 12).
 - A calendar file or feed. Times on sessions.
 - Any athlete editing: their plan, their maxes, their name, their groups, their password.
 - A speed-based max estimate.
@@ -171,10 +172,10 @@ opening one was optional. It is now five rows, View all, and the past session pa
 
 - **`coming_up`**: calendar days dated today or later, in a program whose group the
   athlete is in, whose session has not ended. Soonest first, at most ten. Two programs on
-  one date that share a session (spec 07 Phase 3) come back as one entry naming both
+  one date that share a session (spec 14 Phase 3) come back as one entry naming both
   groups. Until that phase is built, each program's day is its own entry.
 - **`live`**: the session that is started, not ended, **and that this athlete may join**,
-  decided by the *same function* spec 04's `join` uses, so the two can never disagree.
+  decided by the *same function* spec 06's `join` uses, so the two can never disagree.
   Includes a Quick Training Session they were put on. At most one.
 - **`recent`**: the athlete's last 5 ended sessions they lifted in, newest first.
   `sets_done` counts their sets (false sets left out); `sets_planned` counts the sets
@@ -210,7 +211,7 @@ is the local date it started. Backend 764 tests pass as remote and as local.
 ## Phase 1 — Home, and the top bar
 
 Route `/athlete/home`. New file `react/src/athlete/Home.jsx`, opening with a plain-language
-comment on why it exists; the top bar is the shared `ui/TopBar.jsx` from spec 06 Phase 3.
+comment on why it exists; the top bar is the shared `ui/TopBar.jsx` from spec 08 Phase 3.
 Boards `F_Ath_H1`, `H1b`, `H1c`.
 
 - **Top bar (every athlete page):** the picture goes Home; the name opens a menu with
@@ -219,18 +220,18 @@ Boards `F_Ath_H1`, `H1b`, `H1c`.
 - **The banner is the one focus card**, in three forms:
   - **Live:** "● Live now · started 6:02 PM", the day's title and movements, and the
     screen's one lime button, **Join session**, inside the banner. It goes to
-    `/session/<id>` (spec 04).
+    `/session/<id>` (spec 06).
   - **Next:** "Next · Wed, Nov 11", title and movements, "A Join button appears here when
     your coach starts it", then the following day on one line ("Then: Fri, Nov 13 · Day 3
     — Power").
   - **Nothing planned:** "Nothing is scheduled yet. Your coach will add your sessions here."
 - **My sensor:** the athlete's live sensor, "Connected · seen just now", and **Manage**
-  (spec 14 Phase 10). No sensor: the Add my sensor row spec 14 already has.
+  (spec 12). No sensor: the Add my sensor row spec 07 already has.
 - **Recent sessions:** the 5 rows from `recent`, each opening the past session (Phase 3);
   **View all sessions ›** under them.
 - **Staying current:** the page asks the route again every 15 seconds while it is in
   view, so the banner turns live without a reload. It stops asking when the tab is hidden.
-- After signing in, and after using a login link, the athlete lands here. The spec 03
+- After signing in, and after using a login link, the athlete lands here. The spec 05
   placeholder page is removed. Opening a page signed out goes to `/athlete` and back.
 
 **Done when:**
@@ -251,7 +252,7 @@ Boards `F_Ath_H1`, `H1b`, `H1c`.
 back link, sign-in check), `SensorRow.jsx`, `athleteApi.js`; 11 tests in `home.test.jsx`.
 Until their phases exist, two small pages stand in so nothing on Home leads nowhere:
 `/athlete/account` (name, teams, sensor; Phase 5 finishes it) and `/athlete/sensors` (the
-existing sensor list; spec 14 Phase 10 rebuilds it). The Recent sessions rows and View all
+existing sensor list; spec 12 rebuilds it). The Recent sessions rows and View all
 become pressable in Phase 3, and the greeting's My Recent Progress link appears in Phase 4.
 The 390-pixel check was made on the real page with sample data; the live-banner, Join and
 Sign-out checks need a running server and are still open.
@@ -261,7 +262,7 @@ Sign-out checks need a running server and are still open.
 ## Phase 2 — When the session ends
 
 Board `F_Ath_R10`, unchanged. When the coach ends the session while an athlete is on the
-rack screen, the rack is released (spec 04 Phase 2). Instead of an error, the athlete
+rack screen, the rack is released (spec 06 Phase 2). Instead of an error, the athlete
 sees: "Session ended · Your coach ended the session. Everything is saved."; today's sets,
 reps and average speed ("not measured" if every set was typed in); each movement with how
 many of its sets were done; **Back to home** (the board's Sign out is replaced by Back to home,
@@ -326,7 +327,7 @@ screens.
       390-pixel-wide phone.
 - [x] ~~The coach's Analytics screens and `Dashboard.jsx` are unchanged.~~ Changed by Devin's
       call (2026-11-11): the coach's two rep charts in `Dashboard.jsx` now use the shared
-      `ui/BarChart` (spec 06 rule 13), looking as before; nothing else there changed.
+      `ui/BarChart` (spec 08 rule 13), looking as before; nothing else there changed.
 
 **Phase 3 result (2026-11-11).** Server: `GET /api/athlete/sessions/?before=` in
 `services/athlete_home.py` (`sessions_page`, cursor = last row's ended time + id, so a session
@@ -336,7 +337,7 @@ share one query, so they always agree; a session where every set was marked fals
 longer listed (there was nothing to open). Pages: `athlete/Sessions.jsx` (by month, loads as
 you scroll, a button where the browser can't), `PastSession.jsx`, and `SessionRow.jsx` (the
 row Home and All sessions share). The back link comes from `?from=sessions`. Beyond the spec:
-- **`ui/BarChart`**, the one bar chart (spec 06 rule 13, Devin's call): the past session's rep
+- **`ui/BarChart`**, the one bar chart (spec 08 rule 13, Devin's call): the past session's rep
   bars, and the coach's live rep chart (size `large`) and history sparkline (`spark`) in
   `Dashboard.jsx` moved onto it, looking as before; a guard test fails on a hand-drawn chart.
 - The page frame (`AthletePage.jsx`) finds the athlete's name itself (remembered for the tab,
@@ -438,13 +439,13 @@ unchanged). Choices made where the spec was silent:
   adds its own prescription to the sets planned.
 - No range given means the last 30 days.
 
-Page: `athlete/Progress.jsx`, built only from shared pieces (spec 06 rule 13), several new and
+Page: `athlete/Progress.jsx`, built only from shared pieces (spec 08 rule 13), several new and
 two folded in from `Dashboard.jsx`:
 - `ui/RangePicker` (the coach's History range now uses it too) and `ui/PillGroup` (the
   coach's range presets and Athlete / Group switch now use it; one look for both).
 - `ui/UnitToggle` + `ui/Load` on `units.js`: LB | KG remembered on the device (kept in
   memory too when storage is blocked); the past session, session ended and progress pages
-  all follow it. The rack screen's plate loader (spec 16/19) reuses it.
+  all follow it. The rack screen's plate loader (spec 11b/19) reuses it.
 - `ui/TrendLine`, `ui/Tiles` (with a `small` size), and `ui/BarChart` gained a dense mode
   (more than 8 bars) so 14 fit a phone.
 - Tests: server 15 in `test_athlete_progress.py` (both suites 794, local skips 8); frontend 485.
@@ -499,10 +500,10 @@ Manage → "‹ Account" → back to Account.
 
 **Stop. Devin reviews.**
 
-## Phase 6 — moved to spec 19
+## Phase 6 — moved to spec 11
 
 The room display for athletes (the server letting an athlete login read it, and the Room
-display button on their rack screen) is now [spec 19](../ui/19-rack-screen.md) Phase 6, with
+display button on their rack screen) is now [spec 11](../ui/11-rack-screen.md) Phase 6, with
 every other rack screen change. Its board is still to be drawn there.
 
 ---
@@ -525,7 +526,7 @@ every other rack screen change. Its board is still to be drawn there.
 | Another athlete's name leaks through a shared session, a group roster or the PDF | The routes send group and movement names only; tests search each response and the PDF |
 | Polling every 15 seconds from many phones loads the server | The route makes a fixed, small number of queries and stops when the tab is hidden |
 | Est. max confuses athletes, or disagrees with their weights | It is the very max their weights come from, labelled EST. or not, with a ⓘ; nothing new is estimated |
-| "Coming up" is wrong on a shared date before spec 07 Phase 3 exists | It degrades to one row per program, which is still true |
+| "Coming up" is wrong on a shared date before spec 14 Phase 3 exists | It degrades to one row per program, which is still true |
 | The room display shows athletes more than they should see | It is the screen already on the gym's wall; Phase 6 refuses every write route to athletes |
 
 ## Docs to update when done

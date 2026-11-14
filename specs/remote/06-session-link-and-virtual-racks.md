@@ -1,12 +1,13 @@
-# Feature Spec 4: The session link and virtual racks
+# Feature Spec 06: The session link and virtual racks
 
+- Previously spec 04 (renumbered into build order, 2026-11-14; its Phase 4 moved into spec 15)
 - Owner: Devin Walton
 - Date: 2026-10-06
 - Status: Built (2026-10-19): Phases 0–3 and 5. Phase 4 (the coach's side) moved to the
   end of the UI redesign; Phase 6 (the rehearsal) skipped by Devin. No decisions open
   (who may join: decided 2026-10-14; where a browser lands online: decided 2026-10-17)
 - Form items: Definition of Done #3 and #4
-- Depends on: [02 Roles](02-roles.md), [05 Hosted mode](05-hosted-mode.md), [03 Login links](03-athlete-login-links.md)
+- Depends on: [02 Roles](02-roles.md), [03 Hosted mode](03-hosted-mode.md), [05 Login links](05-athlete-login-links.md)
 - Mockup: coach side `F_Remote_Session` on the canvas's Final designs page. Athlete side:
   the `B_*` boards (lifting) and `A_Waiting`, `A_NotOnSession`, `A_Ended` on the
   "Remote athlete view (proposed)" page, each beside a screenshot of today's rack screen
@@ -64,7 +65,7 @@ The agreed rule is **"the athlete must be in a training group assigned to the
 session."** In the data, that is: one of the athlete's `training_groups` is the group
 of a `TrainingProgram` that has a `SessionParticipation` on this session.
 
-Spec 08 adds the **Quick Training Session**, where a coach picks athletes one by one
+Spec 15 adds the **Quick Training Session**, where a coach picks athletes one by one
 and may pick no workout at all. Such a session has a roster (`TrainingSession.athletes`)
 but can have no program, and so no group.
 
@@ -96,7 +97,7 @@ lock everyone out of a quick one.
 - The rack screen on a rack that has an owner (Phase 3), plus two changes to the rack
   screen in both versions: rep bars in, the WT901 card out.
 - What `/` shows on a remote installation (3f).
-- The ownership half of spec 05's rules for rack endpoints.
+- The ownership half of spec 03's rules for rack endpoints.
 - The coach's live room: virtual racks, sensor status, **Not joined yet**, **Copy
   session link**.
 - Assigning a sensor to an athlete from the roster.
@@ -117,7 +118,7 @@ Migration `0028`:
 
 - `Node.owner` — nullable FK to `Athlete`, `SET_NULL`. A gym sensor has no owner.
 - `RackRuntime.owner_athlete` — nullable FK to `Athlete`, `SET_NULL`. Set only on a
-  virtual rack. **This is the field spec 05's "the athlete whose rack it is" reads.**
+  virtual rack. **This is the field spec 03's "the athlete whose rack it is" reads.**
 - `RackRuntime.session` — nullable FK to `TrainingSession`, `SET_NULL`, so release can
   find a session's virtual racks.
 
@@ -169,7 +170,7 @@ Calling it again returns the same rack. Nothing else in the response.
 
 ## Phase 2 — "My rack" is enforced, and released
 
-- Fill in spec 05's ownership stubs: on a hosted installation an athlete may call the
+- Fill in spec 03's ownership stubs: on a hosted installation an athlete may call the
   rack endpoints **only for a rack whose `owner_athlete` is them**, may check in only
   themselves, and may create or complete a set only for themselves on that rack.
 - **The controller lease follows the login when hosted.** An athlete who reloads the
@@ -296,14 +297,14 @@ their login.
   When it says `local`, `Home` and `Picker` run exactly as today, picker included.
   When it says `remote`:
   - an athlete whose login is still valid goes to `/athlete`, their overview page
-    (spec 10; until it exists, spec 03 Phase 4's placeholder);
+    (spec 09; until it exists, spec 05 Phase 4's placeholder);
   - everyone else goes to `/coach`, where the coach sign-in already links to the
-    athlete one ("Athlete? …", spec 03 Phase 4).
+    athlete one ("Athlete? …", spec 05 Phase 4).
 - **A session link goes straight to the session.** `/session/<id>` with a valid login
   skips sign-in and the overview and joins at once (3a). Sign-in appears only when the
   login is missing or has expired, and it returns to the session afterwards.
 - **Where an athlete can go online:** their overview and their session. Never the
-  coach screens, the display view (dashboard), or the room's state (coach only, spec 05).
+  coach screens, the display view (dashboard), or the room's state (coach only, spec 03).
 - **The display view, coaches only, by choice.** During a live session the coach's
   screen shows a button that opens the existing display view (`/dashboard`) for that
   session, for a TV or a second device signed in as that coach. It is not shown when no
@@ -316,7 +317,7 @@ their login.
 - **While the switch has not answered yet** (the first moment of the page), `/` shows
   nothing rather than flashing the picker.
 - **Only `/` and that button change.** What `/rack/setup` and `/dashboard` may do
-  online is already decided by the server (spec 05).
+  online is already decided by the server (spec 03).
 
 **Built so far (2026-10-19): 3a, 3b, 3c, 3f.**
 - `/session/<id>` (`react/src/athlete/SessionPage.jsx`): signed out → `/athlete` and
@@ -344,7 +345,7 @@ rack and the open set; the coach ending the session shows "Session ended"; `/` l
 `/athlete` or `/coach`.
 
 **Left for later, on purpose:**
-- **R4's plan list and R10's summary** need athlete routes that spec 10 builds; for now
+- **R4's plan list and R10's summary** need athlete routes that spec 09 builds; for now
   those pages say what happened and what to do.
 - **3d and 3e** (velocity bars, the WT901 card, typed sets): not needed for the
   Definition of Done; an athlete without a sensor can open their rack but not run a set
@@ -394,34 +395,9 @@ rack and the open set; the coach ending the session shows "Session ended"; `/` l
 
 **Stop. Devin reviews.**
 
-## Phase 4 — The coach's side
+## Phase 4 — moved to spec 15
 
-Only when hosted:
-
-- **Copy session link** on the session strip (`SessionWidget.jsx`). The link is
-  `https://<this installation>/session/<id>`.
-- The live room lists virtual racks by **athlete name**, with a sensor dot.
-- **Not joined yet**: athletes who may join and have not, each showing *Has a login* or
-  a **Send login link** shortcut (spec 03).
-- On the roster: a **Sensor** column — the owned sensor's id and when it was last seen,
-  or **Add sensor ID** (type the id from the sensor's label). `PUT
-  /api/athletes/{id}/sensor/` `{node_id}`, coach only; a sensor has one owner at a time
-  and reassigning it is allowed.
-
-**Done when:**
-
-- [ ] The room-state response includes virtual racks with their athlete and sensor
-      status, for coaches only.
-- [ ] "Not joined yet" is exactly the athletes who may join minus those who have.
-- [ ] Assigning a sensor that another athlete owns moves it, and says so.
-- [ ] *(Frontend test)* None of this renders on a gym box.
-- [ ] *(Browser)* The copied link opens the right session for a signed-in athlete.
-
-**Moved (Devin, 2026-10-19): built at the end of the UI redesign (specs 06–11), with the
-rest of the coach's session screen.** Not needed for the Definition of Done: the link is
-`/session/<id>`, and a coach can share it by hand until the button exists.
-
-**Stop. Devin reviews.**
+The coach's side (copy the session link, virtual racks in the live room, Not joined yet, the roster's Sensor column) is built with the coach's Session screen: [15 Session](../ui/15-session.md), Phase 5.
 
 ## Phase 5 — Demo data: seeded athletes with their own simulated sensors
 
@@ -530,7 +506,7 @@ the "fake athletes that lift by themselves" left for later above.
   the session, takes their own rack, counts down, starts the next planned set at the
   planned load, sends the planned reps a little slower each rep, finishes, rests, and
   starts over when the plan is done. Online only; on a gym box the racks are tablets,
-  which is spec 18.
+  which is spec 10.
 - **Through the same routes a phone uses**, in the same order, so the live room and the
   room display show a phantom exactly as they show a person. Nothing in the rack rules
   is loosened for it.

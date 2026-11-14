@@ -1,12 +1,13 @@
-# Feature Spec 20: Data export, and syncing a local install with the remote server
+# Feature Spec 23: Syncing a local install with the remote server
 
+- Previously spec 20, "data export and sync" (renumbered 2026-11-14; export split out as spec 19)
 - Owner: Devin Walton
 - Date: 2026-11-14
 - Status: **Written, not scheduled.** Devin answered the open questions 2026-11-14; the
   remaining *proposed* points are smaller and can be settled when phases are cut. Business note: "full data export in every tier" is on the build-before-selling
   list (kept in the business repo).
-- Depends on: [12 Hosting](../remote/12-hosting.md) (the remote server, `eactl`),
-  [17 Locations](17-concurrent-sessions.md) (a local install is one location of its
+- Depends on: [04 Hosting](../remote/04-hosting.md) (the remote server, `eactl`),
+  [21 Locations](21-locations-and-concurrent-sessions.md) (a local install is one location of its
   school). Builds on the design already written in
   `docs/journal/core/remote/databases.md` ("Moving between a local install and the remote
   server", decided 2026-10-14, not built).
@@ -21,10 +22,10 @@ Two needs, one piece of work:
 - **Sync:** a school can run a local install in its gym and the remote server at the same
   time (training in the gym, athletes at home, the coach planning from anywhere). The two
   hold separate databases. **Live two-way sync is rejected** (two copies editing the same
-  data puts it at risk; databases.md, spec 12). Instead a coach presses **Sync my data**
+  data puts it at risk; databases.md, spec 04). Instead a coach presses **Sync my data**
   when they want the two to catch up, in either direction.
 
-Several rooms on the remote server are not this spec: one school, one database (spec 17).
+Several rooms on the remote server are not this spec: one school, one database (spec 21).
 
 ## User stories
 
@@ -56,38 +57,13 @@ New (Devin, 2026-11-14):
 
 - **One format for both.** The file Export produces is the file Sync sends. Build it once.
 - **A sync button in the coach's settings,** both directions, never automatic.
-- **Only finished sessions sync.** A session still running (or suspended, spec 17) stays
+- **Only finished sessions sync.** A session still running (or suspended, spec 21) stays
   behind and goes on the next sync once it has ended, so a sync never needs the whole
   program to be quiet.
 
-## The export file
+## The file
 
-A zip, so a coach can open it:
-
-- `manifest.json`: format version, the schema version (the last migration), the
-  installation's name, when it was made, which install made it (its sync id, below), and
-  the counts per table.
-- **One JSON Lines file per table** (`athletes.jsonl`, `sets.jsonl`, …): every row with its
-  original id, foreign keys and timestamps, exactly as stored. This is what Sync reads.
-- **One CSV per table people care about** (Devin, 2026-11-14: yes; a coach checking "can I
-  really get my data out?" opens the spreadsheet) (athletes, sessions, sets, reps, maxes, programs,
-  reports), with names in place of ids where that helps a spreadsheet ("Riley Brooks",
-  "Back Squat"). For people; Sync ignores them.
-- **What is never in it:** passwords and their hashes, sign-in tokens, sensor logins and
-  claim codes, the common login's sealed password, login links, the setup code. Logins are
-  each install's own (below).
-- **Who may make one:** an administrator, from the coach's settings ("Export my data");
-  also `eactl export "School"` for us. Big programs: made in the background and offered as
-  a download when ready (*proposed*), not held open in one page request.
-
-What goes in, by kind of table (from `models.py`, 2026-11-14):
-
-| Kind | Tables | In the export | How sync treats them |
-|---|---|---|---|
-| **Recorded** (a workout makes them; never edited after) | sessions, who took part, sets, reps, check-ins, daily reports, maxes | yes | added; a finished session and everything under it travel together |
-| **Shared records** (edited over time) | athletes, groups and their coaches, the movement catalog, tags, categories, templates, programs and their workouts and movements, calendar slots, per-athlete overrides, locations | yes | changed ones are sent; the remote server wins a conflict |
-| **Each install's own** | logins, coach profiles, the common login and its devices, password records, one-time codes, the setup record, rack tablets, live rack state, command receipts, live-update events | no | never synced |
-| **Sensors** | sensor records (`Node`) | yes (for the record) | *proposed:* not synced: a gym's sensors and an athlete's own are each install's |
+The export file from [11 Export my data](19-data-export.md), exactly; Sync reads its machine-readable files and ignores the CSVs. What each kind of table does in a sync is in the table there ("How sync treats them").
 
 ## Sync
 
@@ -118,10 +94,10 @@ What goes in, by kind of table (from `models.py`, 2026-11-14):
   with the remote server, never with each other. The remote server is the hub; every sync
   is still between two sides.
 - **Logins:** each side keeps its own. Athletes' logins live on the remote server; a local
-  install has none (spec 18: gym tablets need no login). **Coaches are matched by
+  install has none (spec 10: gym tablets need no login). **Coaches are matched by
   username** (Devin, 2026-11-14): a coach who exists on only one side is created on the
   other with no usable password, and sets one with the normal reset.
-- **Locations (spec 17):** a local install is one location of its school. Its sessions
+- **Locations (spec 21):** a local install is one location of its school. Its sessions
   arrive online at that location; the remote server's other locations' sessions are sent
   down only if the coach wants the gym to see them (*proposed:* yes, read-only history).
 
@@ -135,24 +111,19 @@ What goes in, by kind of table (from `models.py`, 2026-11-14):
 
 ## Phases (outline; cut properly when scheduled)
 
-0. **The export file:** the format, every table in its place, the CSVs, what's left out;
-   "Export my data" for an administrator, `eactl export`. Round trip: an export imported into
-   an empty install gives the same school.
-1. **What sync needs in the database:** `updated_at` on shared tables, deletion notes, the
+0. **What sync needs in the database:** `updated_at` on shared tables, deletion notes, the
    sync id, id ranges, `SyncPeer`.
-2. **The first copy:** a fresh side from a file, the id range moved apart, both on the same
+1. **The first copy:** a fresh side from a file, the id range moved apart, both on the same
    version (refused otherwise).
-3. **Sync by file, both directions:** finished sessions added, changed shared records with
+2. **Sync by file, both directions:** finished sessions added, changed shared records with
    the remote server winning, maxes with their times; running sessions held back.
-4. **Pairing and direct sync;** the button in the coach's settings, with what was sent and
+3. **Pairing and direct sync;** the button in the coach's settings, with what was sent and
    received; moving a school between remote servers over the internet.
-5. **Rehearsal:** a gym install and the remote server each record a workout the same day;
+4. **Rehearsal:** a gym install and the remote server each record a workout the same day;
    sync both ways; both workouts are on both sides, maxes and prescribed weights unchanged.
 
 ## Acceptance criteria
 
-- [ ] An administrator can download everything the school has recorded, in every plan, with
-      no passwords or secrets in it.
 - [ ] Two workouts recorded on two sides the same day are both on both sides after a sync.
 - [ ] A session still running isn't sent; it goes on the next sync after it ends.
 - [ ] Every athlete's current max and prescribed weights are the same before and after a

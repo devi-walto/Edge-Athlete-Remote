@@ -1,16 +1,17 @@
-# Feature Spec 17: Locations, and several sessions running at once (remote)
+# Feature Spec 21: Locations, and several sessions running at once (remote)
 
+- Previously spec 17 (renumbered into build order, 2026-11-14)
 - Owner: Devin Walton
 - Date: 2026-10-22; **revised 2026-11-14** (locations, shared racks in several rooms,
   check-in across locations, idle sessions, setting a device's location)
-- Status: **Written, not scheduled.** After spec 18 (racks that set themselves up), best
-  with or after the coach redesign (specs 07–09), since the coach's live room changes most.
+- Status: **Written, not scheduled.** After spec 10 (racks that set themselves up), best
+  with or after the coach redesign (specs 14–16), since the coach's live room changes most.
   Needs boards before its screens are built (see "Screens").
-- Depends on: [13 Registry and console](13-registry-and-console.md), **built first**
+- Depends on: [20 Registry and console](20-registry-and-console.md), **built first**
   (it records how many locations a school may have, and applies it),
-  [18 Shared racks](../remote/18-shared-racks-online.md) (rack tablets that set
-  themselves up), [04 Session link and virtual racks](../remote/04-session-link-and-virtual-racks.md),
-  [11 Mine first](../ui/11-mine-first.md) (a coach's own sessions come first)
+  [10 Shared racks](../remote/10-shared-racks-online.md) (rack tablets that set
+  themselves up), [06 Session link and virtual racks](../remote/06-session-link-and-virtual-racks.md),
+  [17 Mine first](../ui/17-mine-first.md) (a coach's own sessions come first)
 
 ## Why
 
@@ -21,7 +22,7 @@ own rack and sensor. A school with several teams (football and track, say) can w
 both lifting at the same hour, each with its own coach, start and end.
 
 **What works today, and when it is enough:** a session can have several groups taking
-part, each training its own plan (spec 07, "Add to the existing sessions?"). That is
+part, each training its own plan (spec 14, "Add to the existing sessions?"). That is
 the answer when teams lift together under one coach. It falls short when they don't:
 one **End training day** ends everyone's, there is one start time, one daily report, and
 one live room with both teams mixed.
@@ -94,10 +95,10 @@ remote server is a different feature: the data export and sync spec, not this on
 
 The whole feature hangs on one per-school switch. It's an entitlement, so it is kept
 where nobody at the school can change it: **recorded in the registry, applied to the
-school** (spec 13, "What a school may use"; decided 2026-10-22, with spec 13 built
+school** (spec 20, "What a school may use"; decided 2026-10-22, with spec 20 built
 first).
 
-- **The record:** the school's row in `ea_registry` (spec 13), `features`: several
+- **The record:** the school's row in `ea_registry` (spec 20), `features`: several
   sessions at once, on or off. Off unless set.
 - **Applied to the school:** the console (or `eactl sessions "School" on|off`) updates
   the record, then writes `EA_CONCURRENT_SESSIONS=on|off` into the school's own settings
@@ -182,14 +183,14 @@ first).
   at the end, wouldn't show it.
 - **Whether suspending saves compute in practice:** the live room, TV and tablets poll and
   listen only while a session runs, and online athletes' racks hold live connections; a
-  suspended session has none of these. Spec 15 (usage) measures it.
+  suspended session has none of these. Spec 24 (usage) measures it.
 
 ## Setting a device's location
 
-- **Rack tablet, at setup** (spec 18's "Set up this rack"): with more than one location,
+- **Rack tablet, at setup** (spec 10's "Set up this rack"): with more than one location,
   the step shows "Multiple locations found" and a pick, above the name. One location: no
   question, it's that one.
-- **Rack tablet, later:** a small settings menu on the idle rack screen (beside spec 18's
+- **Rack tablet, later:** a small settings menu on the idle rack screen (beside spec 10's
   corner switch): the rack's name, its location. Changing location mid-session is refused
   while a set is open; otherwise the tablet moves and shows that location's session.
 - **School sensor:** takes the location of the rack it's paired with; one on no rack is
@@ -211,11 +212,11 @@ Every "which session?" question becomes **"which session for this ..."**:
 | An athlete's current rack | newest check-in in the running session | newest check-in across all running sessions |
 | An athlete's rack (online) | the running session | the session its rack belongs to (`RackRuntime.session`) |
 | An athlete's page, joining | the session in the link | unchanged |
-| The coach's live room | the running session | **their own** (spec 11: sessions of groups they coach), with a switch between running sessions |
+| The coach's live room | the running session | **their own** (spec 17: sessions of groups they coach), with a switch between running sessions |
 | Starting a session | refused if one runs | allowed when the school's switch is on |
 | Ending a session | the session named | unchanged; ends only that one |
 | The wall display | the running session | the running session at its location |
-| Rack numbers free, 30-day clean-up (spec 18) | today's session | every running session |
+| Rack numbers free, 30-day clean-up (spec 10) | today's session | every running session |
 | An athlete in two groups, both running | — | they join whichever link they open; one rack each, in that session |
 | A gym box | one running session | unchanged |
 
@@ -246,7 +247,7 @@ settings); a location picker for a sensor on no rack.
 ## Phases (outline; cut properly when scheduled)
 
 0. **Locations:** the table, one row made on every install, names and addresses, managed in
-   the app, the "Locations included" count from the registry (spec 13). Nothing else changes; every test
+   the app, the "Locations included" count from the registry (spec 20). Nothing else changes; every test
    passes with one location.
 1. **"Which session?" by location:** `active_session()` takes a location; the rack routes,
    check-in, sets, the rack screen's reads and the room view find the session through the
