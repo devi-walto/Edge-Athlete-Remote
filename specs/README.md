@@ -104,7 +104,7 @@ By v0.8.3 (2026-11-09) CI ran **1,114 tests** on every pull request: the backend
 | 15 | [Usage history and cloud cost](later/15-usage-and-cost.md) | Written, later (Phase 0, recording, can start any time) |
 | 17 | [Locations, and several sessions at once](later/17-concurrent-sessions.md) | Written, later; revised 2026-11-14 (locations, rooms, idle sessions); after spec 18 |
 | 20 | [Data export, and syncing a local install with the remote server](later/20-data-export-and-sync.md) | Written 2026-11-14, later |
-| 21 | [Make-ups](later/21-make-ups.md) | Draft 2026-11-14, for review |
+| 21 | [Make-ups](later/21-make-ups.md) | Written 2026-11-14 (a coach's make-up session), later |
 | 18 | Shared racks online (common login) | Written on `feature-shared_racks` only |
 
 ## The roadmap after the class
@@ -160,17 +160,12 @@ local install and the remote server, built on the design already in
 `docs/journal/core/remote/databases.md` (first a copy, then only finished sessions are
 added each way, the remote server wins a shared record edited on both sides). Several
 rooms on the remote server are spec 17, not sync: one school, one database.
-**Make-up sessions**, [spec 21](later/21-make-ups.md) (draft 2026-11-14): an athlete who missed a session does it
-later, and the sets count toward the missed day. Devin's idea: the missed session leaves
-each absent athlete a pointer; any one-off session they lift later can be pointed at it,
-bringing in that day's plan, and their sets file into the original session as make-ups.
-Today the server still accepts a set filed into an ended session and every set has
-`is_makeup` (the original design's flow), but no screen does it, and the daily report,
-frozen at the end, wouldn't include it. Decided for it (Devin, 2026-11-14): a make-up **rebuilds that
-day's report in place** (the same report, rewritten), and **never recalculates anyone's
-max**, the make-up athlete's included: maxes are worked out once when a session ends,
-newest wins, so recalculating later would put old numbers ahead of newer ones. A make-up
-counts toward the missed session's date, with the real lift date shown beside it.
+**Make-ups**, [spec 21](later/21-make-ups.md) (written 2026-11-14): a missed session leaves
+each absent athlete a pointer; a coach opens a **make-up session** and ticks athletes from a
+"Has make-ups" list, each doing their own missed day's plan; sets file into the make-up
+session linked to the missed one; that day's report is rebuilt in place; only the athletes
+who lifted in the make-up get new maxes. Also fixes `is_makeup`, which the rack sets wrongly
+today.
 
 ### 5. Kept out of this repository
 
