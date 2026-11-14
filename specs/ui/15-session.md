@@ -1,10 +1,11 @@
-# Feature Spec 8: Session
+# Feature Spec 15: Session
 
+- Previously spec 08 (renumbered into build order, 2026-11-14; gained old spec 04's Phase 4 as its Phase 5)
 - Owner: Devin Walton
 - Date: 2026-10-06
 - Status: Written — not started
 - Form item: #11 (unified coach interface)
-- Depends on: [06 Design rules](06-design-rules.md)
+- Depends on: [08 Design rules](08-design-rules.md)
 - Mockup: `V3c_SessionEmpty`, `V3d_QuickSession`, `V4d_Session`, `V2e_RackStates` in
   [`mockups/coach-ui-final.html`](mockups/coach-ui-final.html)
 
@@ -61,7 +62,7 @@ Three problems on the live room, and one about getting into it:
 
 ## Non-goals
 
-- Remote racks, the session link and "Not joined yet" (spec 04 adds them to this screen).
+- Remote racks, the session link and "Not joined yet" (spec 06 adds them to this screen).
 - Moving an athlete between racks from the coach's tablet (removed on purpose earlier;
   an athlete's rack is wherever they checked in).
 - Changing what ending a day does.
@@ -116,7 +117,7 @@ Mockup `V3c`.
 
 ## Phase 2 — The Quick Training Session
 
-Mockup `V3d`. New file `react/src/coach/QuickSession.jsx`. Uses spec 06's `Step`.
+Mockup `V3d`. New file `react/src/coach/QuickSession.jsx`. Uses spec 08's `Step`.
 
 1. **Choose athletes** — whole Training Groups, or individual athletes from the roster.
    Once done it collapses to one line with **Change**.
@@ -154,7 +155,7 @@ Behind it:
 
 Mockups `V4d` and `V2e`.
 
-- Remove the lone ROOM tab (spec 06, rule 7).
+- Remove the lone ROOM tab (spec 08, rule 7).
 - Remove `RackSelectionControls`.
 - The set card always renders for the selected rack, as the focus card:
 
@@ -212,6 +213,36 @@ Mockups `V4d` and `V2e`.
 
 ---
 
+## Phase 5 — The coach's side for online athletes (carried in from spec 06, Phase 4)
+
+Only when hosted:
+
+- **Copy session link** on the session strip (`SessionWidget.jsx`). The link is
+  `https://<this installation>/session/<id>`.
+- The live room lists virtual racks by **athlete name**, with a sensor dot.
+- **Not joined yet**: athletes who may join and have not, each showing *Has a login* or
+  a **Send login link** shortcut (spec 05).
+- On the roster: a **Sensor** column — the owned sensor's id and when it was last seen,
+  or **Add sensor ID** (type the id from the sensor's label). `PUT
+  /api/athletes/{id}/sensor/` `{node_id}`, coach only; a sensor has one owner at a time
+  and reassigning it is allowed.
+
+**Done when:**
+
+- [ ] The room-state response includes virtual racks with their athlete and sensor
+      status, for coaches only.
+- [ ] "Not joined yet" is exactly the athletes who may join minus those who have.
+- [ ] Assigning a sensor that another athlete owns moves it, and says so.
+- [ ] *(Frontend test)* None of this renders on a gym box.
+- [ ] *(Browser)* The copied link opens the right session for a signed-in athlete.
+
+**Moved (Devin, 2026-10-19): built at the end of the UI redesign (specs 08, 14, 15, 16, 09 and 17), with the
+rest of the coach's session screen.** Not needed for the Definition of Done: the link is
+`/session/<id>`, and a coach can share it by hand until the button exists.
+
+**Stop. Devin reviews.**
+
+
 ## Acceptance criteria
 
 - [ ] A coach can reach SESSION at any time, and start either a planned or an unplanned
@@ -221,7 +252,7 @@ Mockups `V4d` and `V2e`.
 - [ ] A rack with an athlete but no set is visible.
 - [ ] A failing sensor is visible from the rack list and the set card, and can be
       swapped without leaving the room.
-- [ ] Every screen follows spec 06.
+- [ ] Every screen follows spec 08.
 
 ## Risks
 

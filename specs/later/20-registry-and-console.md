@@ -1,15 +1,16 @@
-# Feature Spec 13: The registry of schools, and the operator's console
+# Feature Spec 20: The registry of schools, and the operator's console
 
+- Previously spec 13 (renumbered into build order, 2026-11-14)
 - Owner: Devin Walton
 - Date: 2026-10-14
 - Status: **After the class.** Written so the design is not lost; not scheduled, and not
   part of the Definition of Done
-- Depends on: [12 Hosting](../remote/12-hosting.md) (its namespace labels and `eactl`)
+- Depends on: [04 Hosting](../remote/04-hosting.md) (its namespace labels and `eactl`)
 
 ## Why
 
 A server runs many schools: one shared Postgres with a database per school, and the
-rest of each school's app in its own namespace (spec 12). During the class, the
+rest of each school's app in its own namespace (spec 04). During the class, the
 directory of schools is the labels on those namespaces, read by `eactl list`. That is
 enough for two schools (the real one and the demo). It stops being enough once there
 are schools to look after: an operator wants one place that lists every school with what
@@ -36,7 +37,7 @@ each:
 | database, namespace | `school_lincoln`, `ea-lincoln` |
 | status | active · suspended · archived |
 | version | `v0.4.0` |
-| features | what this school may use, e.g. several sessions at once: off (spec 17) |
+| features | what this school may use, e.g. several sessions at once: off (spec 21) |
 | contact, created, notes | … |
 
 ```text
@@ -66,7 +67,7 @@ ever appear in the registry.**
 ### What a school may use: recorded here, applied to the school
 
 Some features are switched on per school: the first is running several sessions at once
-(spec 17). Whether a school has one is an **entitlement**, so nobody at the school may be
+(spec 21). Whether a school has one is an **entitlement**, so nobody at the school may be
 able to change it: not its administrator, not its own app, not a restored safety copy.
 (Decided 2026-10-22: the registry way.)
 
@@ -75,7 +76,7 @@ able to change it: not its administrator, not its own app, not a restored safety
 - **The console applies it** by writing the value into the school's own settings (the
   `school-settings` ConfigMap, e.g. `EA_CONCURRENT_SESSIONS=on`) and restarting its
   django. `eactl` does the same steps from the command line.
-- **A school only ever reads its own copy**, through one function per feature (spec 17:
+- **A school only ever reads its own copy**, through one function per feature (spec 21:
   `concurrent_sessions_allowed()`). **No school's app gets a login to the registry**, so
   schools can't see each other or change their own record. A school's copy can't be
   changed from inside the school either: its app has no rights to its settings.
@@ -97,7 +98,7 @@ able to change it: not its administrator, not its own app, not a restored safety
 
 ### What carries over from the class
 
-- Spec 12's namespace labels (`ea/installation`, address, version, `ea/status`) are the
+- Spec 04's namespace labels (`ea/installation`, address, version, `ea/status`) are the
   registry's first rows: a one-time import.
 - `eactl` keeps working; the console calls the same steps.
 - The installation's name on the sign-in card (reads "Coach workspace" today) comes from
@@ -129,7 +130,7 @@ landing page ─ search or scroll "Demo U" ─▶ remembered in this browser ─
 - **It's a new screen:** a mockup on the Final designs page first. Remote only.
 - **It goes live with the new domain, not before** (Devin, 2026-10-19). The landing
   page lives at the domain's own address (`<domain>`, no school in front), and that
-  address only exists once spec 12 Phase 4's domain work is done. So the picker and the
+  address only exists once spec 04 Phase 4's domain work is done. So the picker and the
   domain work are launched together, after the class, as one from-scratch test of the
   public face: landing page, schools, certificates. The page itself doesn't depend on
   DNS and can be built and tried at any address first; moving it is the ingress
@@ -140,7 +141,7 @@ landing page ─ search or scroll "Demo U" ─▶ remembered in this browser ─
 0. `ea_registry` and its import from the namespace labels; `eactl list` reads it.
 1. The console, read-only: list and detail pages, operator sign-in.
 2. Actions: add, suspend and reactivate, upgrade, and change a school's features
-   (record, then apply; spec 17's switch is the first).
+   (record, then apply; spec 21's switch is the first).
 3. The installation's name on each school's sign-in card.
 4. The school picker landing page.
 
@@ -156,4 +157,4 @@ landing page ─ search or scroll "Demo U" ─▶ remembered in this browser ─
 - Whether the console is part of the same Django codebase (a separate settings mode) or
   its own small app.
 - Where operator logins live, and whether they use the same one-time login codes as
-  coaches (spec 11 Phase 4).
+  coaches (spec 17 Phase 4).

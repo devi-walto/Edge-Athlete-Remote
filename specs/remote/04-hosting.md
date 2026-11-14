@@ -1,13 +1,14 @@
-# Feature Spec 12: Hosting on k3s, with CD
+# Feature Spec 04: Hosting on k3s, with CD
 
+- Previously spec 12 (renumbered into build order, 2026-11-14; its Phases 5–7 became spec 18)
 - Owner: Devin Walton
 - Date: 2026-10-14
 - Status: In progress — Phases 0–3 done and merged (PR #4); Phase 4 on `feature-live-updates`; Phases 5–7 tabled
 - Form items: Definition of Done #1 (k3s, public HTTPS, automatic certificates, CI/CD) and
   #5 (a separate demo installation from the same template). Feeds #7 (end to end) and #8
   (docs on deploying to k3s)
-- Depends on: [05 Hosted mode](05-hosted-mode.md). Phases 0–3 need only spec 05's CI phase;
-  **Phase 4 (going public) needs all of spec 05.** Runs alongside specs 03 and 04
+- Depends on: [03 Hosted mode](03-hosted-mode.md). Phases 0–3 need only spec 03's CI phase;
+  **Phase 4 (going public) needs all of spec 03.** Runs alongside specs 05 and 06
 - Branch: `feature-hosting`
 - Design it builds: `docs/journal/core/remote/hosting.md`, `docs/journal/core/remote/databases.md`,
   `docs/journal/core/remote/deployments.md`
@@ -88,7 +89,7 @@ on my memory.
   | Address | `demo-u-k7m2qx.<domain>` | from the short name; clicked, never typed |
 
   People never type a school's address: they follow a login link, or (after the class)
-  pick their school on a public landing page that sends them to it (spec 13).
+  pick their school on a public landing page that sends them to it (spec 20).
   `eactl find <text>` searches display names.
 - **Everything else a school runs is its own**, in its own namespace `ea-<short name>`:
   Django, the two workers, the broker, the screens, one ConfigMap and one Secret
@@ -98,7 +99,7 @@ on my memory.
   what labels can't hold (`ea/display-name`, which may contain spaces, and
   `ea/address`). `eactl list` reads them; `eactl status <short name>` drills into one. The full
   directory (a registry database and a web console) is after the class:
-  [spec 13](../later/13-registry-and-console.md).
+  [spec 20](../later/20-registry-and-console.md).
 - **Server settings are asked once and kept out of the repo.** `eactl init` asks for the
   domain, the email for certificate warnings and similar server-wide answers, and saves
   them to `eactl.env` on the laptop, which git ignores. The repo's files use
@@ -140,7 +141,7 @@ on my memory.
   `seed` profile), `nginx/nginx.conf` (`/api/auth/` rate-limited, `/api/`, `/admin/`,
   static admin and DRF files → django; `/` → react), `mosquitto/mosquitto.conf`
   (anonymous listeners on 1883 and 9001/WebSockets).
-- **After spec 05:** `EA_DEPLOYMENT=local|remote`, `/api/system/info/` (reports the mode
+- **After spec 03:** `EA_DEPLOYMENT=local|remote`, `/api/system/info/` (reports the mode
   and an `EA_VERSION` build label), hosted refusals, and a CI workflow on pull requests.
 
 ## Lessons from the practice cluster (do not relearn)
@@ -163,7 +164,7 @@ on my memory.
 - The Dell's add-ons copied into the repo, and a bootstrap for a bare machine.
 - `eactl`.
 - Deploys on version tags, rollback, and the release pull request into `main`.
-- Going public, once spec 05 is done.
+- Going public, once spec 03 is done.
 - Backups, and a rehearsed restore.
 - The demo installation.
 - A full rebuild rehearsal on a blank machine.
@@ -247,7 +248,7 @@ image and printed `v0.3.1-test.1`; a pod without it got `ImagePullBackOff`.
   - **react**: the image.
   - An **Ingress** that does what `nginx.conf` does: `/api/` and the browsable API's
     static path to django, `/` to react, for the school's own host name. (The sign-in
-    limit and `no-store` are already in the app when remote: spec 05 Phase 3.)
+    limit and `no-store` are already in the app when remote: spec 03 Phase 3.)
     **`/admin/` and its static path were dropped on 2026-10-26:** an administrator's
     password opened every table there, with no wrong-password limit, and nothing a
     coach does needs it. A remote server doesn't have the page at all (`urls.py`);
@@ -256,7 +257,7 @@ image and printed `v0.3.1-test.1`; a pod without it got `ImagePullBackOff`.
     public** (Devin, 2026-10-16). A Tailscale-only guard was built and dropped: a school's
     address points at the public IP, so even a Tailscale device's browser arrives from the
     internet and was refused; and a new school is already protected by its one-time
-    setup code. Switching a school off is spec 13's **suspend** (app off, data kept).
+    setup code. Switching a school off is spec 20's **suspend** (app off, data kept).
   - Live updates in the browser connect to port 9001 directly, which isn't reachable
     yet: they arrive in Phase 4 with the `wss` path. Pages, sign-in and data work now.
 - **Traefik keeps each visitor's real address** (found and fixed 2026-10-16,
@@ -478,7 +479,7 @@ health check fails (Django and React update side by side, so the old copy keeps 
 
 ## Phase 4 — Going public
 
-**Starts only when spec 05 is done** (the open routes require a login when hosted,
+**Starts only when spec 03 is done** (the open routes require a login when hosted,
 `DEBUG` is refused, hosts are checked).
 
 - **One wildcard for every school, instead of one setup per school** (to decide here;
@@ -511,7 +512,7 @@ health check fails (Django and React update side by side, so the old copy keeps 
   above, Cloudflare DNS for the new domain, and Demo U's real address. Done then as a
   test of the whole setup from scratch (new accounts, certificates, DNS), alongside
   Phase 7. Until then schools stay on the current domain. The `wss` part ships now.
-  - **Launched together with spec 13's school picker** (Devin, 2026-10-19), because
+  - **Launched together with spec 20's school picker** (Devin, 2026-10-19), because
     the picker lives at the domain's own address.
   - **A wildcard certificate does not cover the domain's own address:**
     `*.<domain>` matches `demo-u-k7m2qx.<domain>` but not `<domain>`. The certificate
@@ -529,7 +530,7 @@ health check fails (Django and React update side by side, so the old copy keeps 
 - [ ] *(Browser, from a phone on mobile data)* The site loads over HTTPS with a trusted
       certificate.
 - [ ] From the internet, every route except sign-in, first-run setup and
-      `/api/system/info/` answers `401` without a login (spec 05's walk, against the
+      `/api/system/info/` answers `401` without a login (spec 03's walk, against the
       live address).
 - [ ] *(Browser, from a phone on mobile data)* Live updates arrive over `wss`: starting
       a set on one phone shows on another without a refresh.
@@ -569,108 +570,9 @@ What v0.5.1 changes:
   that changed goes back to its setup from before (`kubectl rollout undo`). Re-applying
   the old release would not have been enough: the template itself was what broke.
 
-## Phase 5 — Backups, and a restore that has been done
+## Phases 5–7 — moved to spec 18
 
-- A CronJob per installation: a nightly database dump, **copied off the Dell**, so a dead
-  disk, a stolen machine or a house problem doesn't take the backups with it.
-  - **Where (recommended, 2026-10-16):** a cloud storage bucket (e.g. Backblaze B2 or AWS
-    S3; well under $1 a month at this size). The laptop over Tailscale is the free
-    fallback, but only while it's on, and it's in the same house.
-  - **Kept: 7 daily, 4 weekly, 6 monthly**, in **one folder per school**.
-  - **Encrypted before leaving the Dell**: they hold athletes' data. The key is kept like
-    any other secret, never in the repo.
-- `eactl backup` and `eactl restore` (Phase 2) use the same format.
-
-**Done when:**
-
-- [ ] A backup appears off the Dell every night.
-- [ ] *(By hand)* A restore into a scratch namespace brings back the same athletes, sets
-      and reports, with original timestamps.
-- [ ] A restore refuses a dump from a different schema version (`docs/journal/core/remote/databases.md`).
-
-**Stop. Devin reviews.**
-
-## Phase 6 — The demo installation: a dry run of onboarding a new school (Definition of Done #5)
-
-Decided 2026-10-14. The demo is **set up the way a new school's installation would be,
-from start to finish, by hand**, so it doubles as the rehearsal of onboarding a real
-customer. Devin then hands the faculty reviewer invented login details as if they were
-that school's administrator, and demos the whole app from there.
-
-- **The demo is Demo U** (`eactl new --name "Demo U"`, Devin, 2026-10-16), made in
-  Phase 1, from the same base as any school: its own namespace, address, Secret, and its
-  own database in the shared Postgres. The walkthrough below is rehearsed on it. Never a hand-edited copy of another
-  school's files, and never a new server.
-- **It starts empty, like a real new school.** First-run setup with a setup code from
-  `eactl setup-code`, exactly as spec 01 built it. Devin claims it, creates **an
-  administrator login for the faculty reviewer** with an invented username and a real (not
-  well-known) password, and hands those over. No `coach` / `coachpass`; spec 01's rule
-  against well-known logins holds here too.
-- Any data in it is **invented**: entered through the app during the walkthrough, or
-  loaded with the seed command. **Never** a copy of the real database.
-- The same version tag deploys both installations.
-- **Every step the walkthrough needed that the guide did not have is added to the
-  guide.** That makes the next school's onboarding a matter of following it.
-
-**Done when:**
-
-- [ ] *(By hand)* The demo was set up from nothing by following the hosting guide, and
-      the guide now has every step that was needed.
-- [ ] *(Browser)* Signed in with the login details handed to the faculty reviewer, the demo shows
-      the administrator's view: Coaches page, adding a coach, the whole workspace.
-- [ ] The demo runs at its own address with its own database; nothing in it can read the
-      real installation (separate namespaces, separate Secrets, separate databases).
-- [ ] Deleting the demo namespace leaves the real installation untouched.
-- [ ] One tag updates both.
-
-**Stop. Devin reviews.**
-
-## Phase 7 — From a blank machine: the bootstrap, and the rebuild rehearsal
-
-The rule this spec is judged by, tested end to end. Last on purpose: the app is on the
-existing cluster by Phase 1, and this phase proves the same result can be had without
-the Dell.
-
-- **The machine itself is prepared by hand, from a written checklist, not a script**
-  (Devin, 2026-10-14): Linux installed with the operator's user; Tailscale joined; the
-  operator's laptop key added (`ssh-copy-id`) and SSH passwords turned off. Clouds
-  (AWS, Azure) ask for the key when the machine is made. Scripts start from a machine
-  that already works and is reachable.
-- `infra/bootstrap.sh` (new): run once on that prepared machine. Installs the **same
-  pinned** k3s version as the Dell. Safe to run twice. On a cloud machine, installs k3s
-  with `--disable=servicelb` and uses the cloud's load balancer instead (see Phase 1's
-  visitor-address fix). Opens with a plain-language
-  comment on why it exists. Written from what was done by hand on the Dell, not invented.
-- **A release bundle** (Devin, 2026-10-14): `release.yml` also attaches
-  `eactl-<version>.tar.gz` (`scripts/remote/` and `k8s/`, nothing else) to each version
-  tag. A new server downloads the bundle for the version it will run, so its playbook
-  always matches its images; no git needed. Until then (Phases 1–6), the server holds a
-  clone, because the files change constantly.
-- **Secrets encrypted on disk from the start** (decided 2026-10-14). Before installing
-  k3s, the bootstrap writes `secrets-encryption: true` into `/etc/rancher/k3s/config.yaml`,
-  so the new cluster encrypts every Secret it ever stores. By default a Secret is only
-  base64-encoded, and anyone with a copy of the cluster's database file could read it.
-  This is what managed clouds (AKS, EKS, GKE) do by default. It protects copies of that
-  file (a stolen disk, a leaked backup), not someone holding cluster credentials. The
-  key lives in `/var/lib/rancher/k3s/server/cred/`: a backup of the cluster's own
-  database is useless without it.
-- **The Dell gets the same setting by hand**, walked through step by step with Devin:
-  add the line, restart k3s, re-encrypt the Secrets already stored
-  (`k3s secrets-encrypt reencrypt`), and check one is unreadable in the database file.
-- `docs/guides/hosting.md` (new): the machine checklist, bootstrap, the release bundle,
-  `eactl init` and `eactl apply-cluster`, the written secret steps, deploy the current
-  tag, restore last night's backup.
-
-**Done when:**
-
-- [ ] *(By hand)* On a **throwaway machine** (see open decisions), the guide alone brings
-      the real installation back with all its data. The time taken is written in the
-      guide.
-- [ ] Running `bootstrap.sh` a second time changes nothing and reports so.
-- [ ] On the throwaway machine and on the Dell, `k3s secrets-encrypt status` reports
-      encryption enabled, and a known Secret's value does not appear in plain text in the
-      cluster's database file.
-- [ ] Nothing in that run needed a step that is not in the guide.
+Backups, the demo installation dry run and the rebuild from a blank machine are their own spec now: [18 Backups and rebuild](../later/18-backups-and-rebuild.md).
 
 ---
 
@@ -686,7 +588,7 @@ athlete login. Would become `eactl copy-db`.
 ## Deferred, with a home
 
 - **The registry database and the operator's web console**, an installation's name on
-  the sign-in card, and account standing: [spec 13](../later/13-registry-and-console.md),
+  the sign-in card, and account standing: [spec 20](../later/20-registry-and-console.md),
   after the class. Phase 1's namespace labels are its starting point.
 - **Moving CI onto the Dell** once the repo is private; ephemeral runners with Actions
   Runner Controller as a stretch.
@@ -704,7 +606,7 @@ athlete login. Would become `eactl copy-db`.
 
 - [ ] The app runs on k3s at a public HTTPS address with a certificate that renews
       itself (Definition of Done #1).
-- [ ] Tagging a version deploys it; tests gate every merge (CI from spec 05, CD here).
+- [ ] Tagging a version deploys it; tests gate every merge (CI from spec 03, CD here).
 - [ ] A demo installation runs from the same template, isolated from the real one (#5).
 - [ ] The whole service has been rebuilt on a blank machine from the repo, the guide and
       a backup.
@@ -715,7 +617,7 @@ athlete login. Would become `eactl copy-db`.
 
 | Risk | What reduces it |
 |---|---|
-| The real app goes public before its open routes are closed | Phase 4 is gated on spec 05; Phase 1 keeps the site Tailscale-only |
+| The real app goes public before its open routes are closed | Phase 4 is gated on spec 03; Phase 1 keeps the site Tailscale-only |
 | A fork's pull request runs code on the Dell | Tests and builds run on GitHub's machines; the Dell runner deploys only, on tags only Devin can create; fork approval required |
 | The home connection or the Dell goes down before a live demo | Backups off the Dell; the rebuild rehearsal is timed; record the end-to-end demo on video early (Definition of Done #7 allows video) |
 | A new subdomain silently fails its certificate | The two-line rule (coredns-custom + DDNS) is in the hosting guide and in Phase 4's and 6's checklists |

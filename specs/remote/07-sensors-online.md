@@ -1,5 +1,6 @@
-# Feature Spec 14: Sensors online
+# Feature Spec 07: Sensors online
 
+- Previously spec 14 (renumbered into build order, 2026-11-14; its Phase 10 became spec 12)
 - Owner: Devin Walton
 - Date: 2026-10-19
 - Status: Phases 0–9 built and merged. Phase 10 (Manage sensors, several sensors per
@@ -7,9 +8,9 @@
 - Form items: Definition of Done #6 (sensors: MQTT over TLS, one credential each, publish
   only their own data, settings stored on the sensor) and #7 (end to end from a
   different network with a real sensor)
-- Depends on: [04 Session link and virtual racks](04-session-link-and-virtual-racks.md)
-  (sensors owned by athletes), [12 Hosting](12-hosting.md) (the `/mqtt` route, the
-  school's certificate), [03 Login links](03-athlete-login-links.md) (the one-time secret
+- Depends on: [06 Session link and virtual racks](06-session-link-and-virtual-racks.md)
+  (sensors owned by athletes), [04 Hosting](04-hosting.md) (the `/mqtt` route, the
+  school's certificate), [05 Login links](05-athlete-login-links.md) (the one-time secret
   pattern this spec makes shared)
 - Background: `docs/journal/core/remote/sensors.md` (saved networks, trust the root, the BNO085,
   getting every rep through). This spec changes two of its choices; see Decisions.
@@ -52,7 +53,7 @@ and to be able to switch off a lost one.
    - The setup page (Phase 8) is served by the sensor over its own small Wi-Fi network,
      without the padlock a website has, so it should never ask for an account password.
    - **The coach doesn't link remote sensors.** Claiming does it. The coach can see an
-     athlete's sensor and remove a lost one (the screens come with spec 04 Phase 4, in
+     athlete's sensor and remove a lost one (the screens come with spec 15, Phase 5, in
      the UI redesign). Gym sensors are unchanged: a coach links them to racks.
 3. **Sensors use port 443 with WebSockets, like the screens** (replaces 8883 in
    `sensors.md`). No router change, it reaches athletes on networks that block other
@@ -68,8 +69,8 @@ and to be able to switch off a lost one.
    sensor are refused; the programs door (1883) is unaffected.
 5. **One shared piece of code for one-time secrets** (Devin). Three parts of the project
    hand out something that works once and expires: the first-run setup code (spec 01),
-   login links (spec 03) and sensor claim codes (this spec), with coach login codes
-   (spec 11 Phase 4) next. They share one module instead of three copies.
+   login links (spec 05) and sensor claim codes (this spec), with coach login codes
+   (spec 17 Phase 4) next. They share one module instead of three copies.
 6. **One firmware for every sensor; behaviour follows the network** (unchanged from
    `sensors.md`). The sensor keeps a list of **servers** (a gym box: plain, port 1883,
    no login; a school: 443, encrypted, its own login) and a list of **Wi-Fi networks**,
@@ -92,7 +93,7 @@ and to be able to switch off a lost one.
   cancels the older, every failure gives the same answer.
 - `LimitWrongAttempts` in `coach_auth.py`: a remote installation turns an address away
   for a minute after 10 wrong attempts.
-- `Node.owner` (spec 04): a sensor owned by an athlete attaches to that athlete's rack
+- `Node.owner` (spec 06): a sensor owned by an athlete attaches to that athlete's rack
   when they join a session.
 - The remote broker (`k8s/app/base/mosquitto-remote.conf`): programs door 1883 (inside
   the cluster only), screens door 9001 (`/mqtt`, listen-only). Each door has its own
@@ -120,8 +121,8 @@ and to be able to switch off a lost one.
   happen at Traefik, where the broker can't see which sensor it was; a token is
   checked by the broker itself.
 - Sensors over TLS on a local install. The gym box keeps plain MQTT on its own Wi-Fi.
-- The coach's sensor screens (spec 04 Phase 4, in the UI redesign).
-- Finding the school from the phone page without typing its address (needs spec 13's
+- The coach's sensor screens (spec 15, Phase 5, in the UI redesign).
+- Finding the school from the phone page without typing its address (needs spec 20's
   directory).
 
 ---
@@ -270,9 +271,9 @@ passes it on, the way `/mqtt` reaches the screens door on 9001.
 - The claim checks the code first (so only a working code learns whether an ID is
   taken), refuses a sensor someone else owns, and tells the broker last: if the broker
   can't be reached, nothing is saved and the code still works. A claimed sensor is made
-  active, so joining a session attaches it (spec 04).
+  active, so joining a session attaches it (spec 06).
 - The athlete's page (`MySensor.jsx`), built to Final designs F_Ath_S1 to S5 (approved
-  2026-10-20): "My sensor" on the signed-in page (the full home is spec 10), the code
+  2026-10-20): "My sensor" on the signed-in page (the full home is spec 09), the code
   page that checks every 3 seconds and changes by itself, and Remove with a confirm.
 - Tests: 20 backend (`test_sensor_claims.py`, one against the real broker) and 5
   frontend (`mySensor.test.jsx`). The route walk now expects 404 from online-only
@@ -300,7 +301,7 @@ software stand-in for a real sensor at home.
 
 **Done on the review copy first (2026-10-20); Demo U waits** (Devin: the Dell stays on
 v0.6.0 for a demo, so this branch isn't released yet). Demo U and the phone on mobile
-data come with the release that carries spec 14.
+data come with the release that carries spec 07.
 - **Changed from the plan:** not `simulate_node --claim` but a standalone
   `scripts/sensor/fake_sensor.py`. A sensor at home can't see the school's database,
   and `simulate_node` reads it to know when a set is running, so the stand-in knows
@@ -522,67 +523,9 @@ lock emoji is a drawn padlock. Firmware 2.3.0.
       through the setup page: 409 first, then "Make it mine"; off its rack; Riley's 10 sets
       stay Riley's. Connected on the first try at full power.
 
-## Phase 10 — Manage sensors: several sensors, one live (2026-11-11)
+## Phase 10 — moved to spec 12
 
-Boards: Final designs, `F_Ath_M1` (Manage sensors), `F_Ath_M1b` (two sensors, one on
-standby), `F_Ath_M2` (remove confirm), approved 2026-11-11 with the athlete pages
-(spec 10). The My sensor row on Home and Account (`F_Ath_H1`, `F_Ath_A1`) opens this page.
-
-**Decisions (Devin, 2026-11-11):**
-
-- **An athlete may own several sensors.** One is **live** and follows them onto their
-  rack; the rest are **on standby** and send nothing that counts. The live one is the
-  sensor **seen most recently**. Today nothing stops an athlete owning two, and both would
-  follow them onto their rack and could count the same rep twice; this closes that.
-- **To keep two switched-on sensors from trading places every few seconds**, live passes
-  to another sensor only when the live one has gone quiet (no pulse for 30 seconds), and
-  never in the middle of a set.
-- **The My sensor row** (Home and Account) shows the live sensor, "Connected · seen just
-  now", and one **Manage** button. The school code is not on the row any more: it lives
-  on the Add my sensor page, large.
-- **Manage sensors is its own page** with one way out, back to where it was opened
-  (spec 06 rule 11). Each sensor is a card: its ID, "Live · connected · seen just now" or
-  "On standby · seen 3 days ago", and **Swap** and **Remove**. At the bottom, the lime
-  **Add new sensor**.
-- **Add new sensor** and **Swap** open the existing Add my sensor page and setup steps
-  (`F_Ath_S2`, `F_Setup1–5`). **Setup's Done returns to Manage sensors**, not Home.
-- **Swap** is "add this new sensor in place of that one": when the new sensor claims
-  itself, the swapped one is removed in the same step. Its sets stay the athlete's.
-- **Remove** confirms first (`F_Ath_M2`): "It stops connecting straight away. Every set it
-  measured stays." The red **Remove sensor** and **Keep it**.
-
-**Server:**
-
-- `GET /api/athlete/sensors/` gains `state` (`live` | `standby`) and `last_seen` per
-  sensor, newest seen first.
-- The rule for live lives in one function, used when the athlete joins a session and when
-  a sensor's pulse arrives: only the live sensor holds the athlete's rack; a standby
-  sensor's reps are ignored, the same way an unlinked sensor's are today.
-- The claim (Phase 2) takes an optional `replaces: <sensor id>`, accepted only for a
-  sensor the claiming athlete owns. The claim and the removal happen in one transaction:
-  if the claim fails, the old sensor stays.
-
-**Page:** `/athlete/sensors`, new file `react/src/athlete/ManageSensors.jsx` opening with
-a plain-language comment on why it exists. Its back link names where it was opened from
-(Home or Account). The Add my sensor page learns where to return when setup is done.
-
-**Done when:**
-
-- [ ] *(Backend test)* With two sensors, the one seen most recently is `live`; the other is
-      `standby` and its reps are not saved.
-- [ ] *(Backend test)* Live does not move while the live sensor keeps pulsing, nor during
-      an open set; it moves after 30 seconds of silence.
-- [ ] *(Backend test)* A claim with `replaces` removes the replaced sensor only when the
-      claim succeeds; `replaces` naming someone else's sensor is refused.
-- [ ] *(Backend test)* Removing a sensor keeps every set it measured.
-- [ ] *(Frontend test)* Manage sensors shows one card per sensor with Swap and Remove, and
-      Remove asks first.
-- [ ] *(Browser)* Home → Manage → Add new sensor → setup → Done lands back on Manage
-      sensors with the new sensor listed.
-- [ ] *(Real sensors)* Two sensors switched on: reps from the standby one never reach the
-      rack; switch the live one off, and within 30 seconds the other is live.
-
-**Stop. Devin reviews.**
+Manage sensors (several sensors, one live, Swap) is its own spec now: [12 Manage sensors](12-manage-sensors.md).
 
 ## Acceptance criteria
 

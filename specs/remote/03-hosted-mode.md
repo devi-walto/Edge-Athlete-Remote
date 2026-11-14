@@ -1,5 +1,6 @@
-# Feature Spec 5: Hosted mode
+# Feature Spec 03: Hosted mode
 
+- Previously spec 05 (renumbered into build order, 2026-11-14)
 - Owner: Devin Walton
 - Date: 2026-10-06
 - Status: Done 2026-10-14 — all five phases, on `feature-deployment_switch`; its pull request into `SprintBranch` is ready for Devin to merge (branch `feature-deployment_switch`, open pull request into `SprintBranch`)
@@ -40,7 +41,7 @@ to require a login, without changing how a rack tablet works in a gym.
   served. Never a second build or a fork of a file. **Hosted-only screens are allowed
   where the Final designs page draws them** (a login link, the athlete's pages); they may
   look slightly different, but they use the same components and call the same code and
-  logic underneath (spec 06 rule 8). The specs that add a hosted behaviour (12 for HTTPS
+  logic underneath (spec 08 rule 8). The specs that add a hosted behaviour (12 for HTTPS
   and `wss`, 03 and 04 for athletes) key it off this switch.
 - **The frontend is told, it does not guess.** One small endpoint reports the mode, and
   remote-only controls key off it.
@@ -49,7 +50,7 @@ to require a login, without changing how a rack tablet works in a gym.
 
 | Endpoint (view name) | Gym box | Hosted |
 |---|---|---|
-| `rack_register`, `rack_racknumber` | open | **refused** — hosted racks are created by joining a session (spec 04) |
+| `rack_register`, `rack_racknumber` | open | **refused** — hosted racks are created by joining a session (spec 06) |
 | `rack_state`, `rack_sensor_health` | open | coach, or the athlete whose rack it is |
 | `rack_controller_acquire`, `_heartbeat`, `_release` | open | coach, or the athlete whose rack it is |
 | `rack_checkin`, `rack_checkins` | open | coach, or the athlete whose rack it is; an athlete can only check **themselves** in |
@@ -63,8 +64,8 @@ to require a login, without changing how a rack tablet works in a gym.
 | `nodes_list`, `node_register` | open | coach only (per-sensor credentials are the sensors work) |
 | `room_state` | open | coach only |
 
-"The athlete whose rack it is" is answered by spec 04, which records which athlete a
-hosted rack was created for. Until spec 04 lands, **an athlete is refused** on those
+"The athlete whose rack it is" is answered by spec 06, which records which athlete a
+hosted rack was created for. Until spec 06 lands, **an athlete is refused** on those
 rows and only a coach passes; that is safe and lets this spec ship first.
 
 ## Scope
@@ -81,7 +82,7 @@ rows and only a coach passes; that is safe and lets this spec ship first.
 
 - TLS, certificates, the cluster (hosting work).
 - Broker logins for browsers and sensors (sensors work).
-- Which athlete owns which rack (spec 04).
+- Which athlete owns which rack (spec 06).
 
 ---
 
@@ -114,13 +115,13 @@ Added 2026-10-14. CI lives here because Phase 2 needs the suite run in both mode
 every change, and because this spec's own pull request is the project's **first manual
 approval**: from here on, work reaches `SprintBranch` only through a pull request whose
 checks pass and which Devin merges (see "Branches" in `specs/README.md`). Deploys on
-version tags are the other half of CI/CD and live in [spec 12](12-hosting.md).
+version tags are the other half of CI/CD and live in [spec 04](04-hosting.md).
 
 - `.github/workflows/ci.yml` (new), opening with a plain-language comment on why it
   exists. Runs **on pull requests into `SprintBranch` and `main`**, not on every push
   (Devin, 2026-10-14), and can be started by hand.
 - **On GitHub's own runners** while the repo is public: free, and a stranger's pull
-  request never reaches a machine in the house (spec 12 explains the runners).
+  request never reaches a machine in the house (spec 04 explains the runners).
 - Jobs:
   - **backend**, twice — once with `EA_DEPLOYMENT=local`, once with `remote`: build the
     django image from its Dockerfile (which also proves the image builds), start a
@@ -158,7 +159,7 @@ version tags are the other half of CI/CD and live in [spec 12](12-hosting.md).
 - [x] The time one full run takes is written down (it matters once the repo is private
       and minutes are counted).
 
-**Result, 2026-10-14.** The first run on the spec 05 pull request passed all four checks.
+**Result, 2026-10-14.** The first run on the spec 03 pull request passed all four checks.
 One full run takes about **2½ minutes** (jobs run side by side: backend local 2m23s,
 backend remote 1m44s, frontend 27s, docs 24s), about 6 minutes of runner time in all.
 Rulesets read back from GitHub: `SprintBranch` requires a pull request (0 approvals) and
@@ -175,7 +176,7 @@ the push-without-PR check was confirmed by the workflow having no push trigger.
 - `OpenOnLocal(remote=<rule>)`: on a gym box, allow. Hosted, apply the rule from the
   table (`coach`, `any_role`, `coach_or_owner`, `refuse`).
 - Replace `AllowAny` on all 21 views. No view logic changes.
-- Ownership checks for `coach_or_owner` are stubs that refuse athletes until spec 04.
+- Ownership checks for `coach_or_owner` are stubs that refuse athletes until spec 06.
 
 **Done when:**
 
@@ -197,7 +198,7 @@ and walks them as `LocalTests` and `RemoteTests`.
 
 - **Built a little ahead of the stubs:** an athlete may already read their **own** plan
   (`prescriptions?athlete=<own id>`) and their **own** progress when remote; that check
-  needs only the login, not spec 04. Only the rack routes wait for spec 04's owner.
+  needs only the login, not spec 06. Only the rack routes wait for spec 06's owner.
 - **The allow-list also has `health`.** The container's health check cannot sign in;
   it reveals only whether the database answers.
 - **Adding an athlete stays coach-only in both modes**, as it already was (the view
@@ -258,7 +259,7 @@ cleanly.
 ## Phase 4 — The frontend learns the mode
 
 - A small hook, `useDeployment()`, fetches `/api/system/info/` once and caches it.
-- Nothing visible changes yet. Specs 03, 04 and 07 use the hook to show remote-only
+- Nothing visible changes yet. Specs 05, 04 and 07 use the hook to show remote-only
   controls: login-link status, sensor ownership, the session link.
 
 **Done when:**

@@ -39,17 +39,17 @@ Devin's convention, set 2026-10-06:
 |---|---|
 | `SprintBranch` | **The working trunk for this project.** Every feature branch starts from it and merges back into it. It must always pass the tests. |
 | `feature-xyz` | One branch per spec, named `feature-` plus a short name, with underscores between words: `feature-coach_accounts`. Reviewed phase by phase, merged into `SprintBranch` after its last phase. |
-| `main` | **What is deployed.** Nobody commits to it. It is only moved forward to match `SprintBranch` by the **Move main forward** workflow on Devin's say-so, then tagged; the tag deploys it (spec 12). |
+| `main` | **What is deployed.** Nobody commits to it. It is only moved forward to match `SprintBranch` by the **Move main forward** workflow on Devin's say-so, then tagged; the tag deploys it (spec 04). |
 
 Merged feature branches are deleted (locally and on GitHub) once their pull request is in;
 the pull request page keeps the history and can restore the branch. Two unmerged branches
-are kept on GitHub as backups: `feature-rep_counting` (spec 09, one commit) and
-`feature-shared_racks` (spec 18's first text; picked up on `feature-rack_setup` 2026-11-12).
+are kept on GitHub as backups: `feature-rep_counting` (spec 16, one commit) and
+`feature-shared_racks` (spec 10's first text; picked up on `feature-rack_setup` 2026-11-12).
 
 Spec and mockup edits that are not part of a feature are committed straight to
 `SprintBranch`. Release tags and the public docs are cut from `main`.
 
-**Pull requests (decided 2026-10-14, starting with spec 05 Phase 1).** Once CI exists,
+**Pull requests (decided 2026-10-14, starting with spec 03 Phase 1).** Once CI exists,
 work reaches `SprintBranch` only through a pull request: one per spec, with each phase
 added to it. Its checks must pass, and Devin merges it. Merging is the approval, because
 GitHub does not let anyone approve a pull request opened under their own account. Tests
@@ -81,29 +81,57 @@ By v0.8.3 (2026-11-09) CI ran **1,114 tests** on every pull request: the backend
 
 ---
 
-## The specs
+## The specs, in build order
 
-| # | Spec | Status |
-|---|---|---|
-| 01 | [Secure coach accounts](remote/01-coach-accounts.md) | **Done** 2026-10-07 |
-| 02 | [Roles: administrator, coach, athlete](remote/02-roles.md) | **Done** 2026-10-07 |
-| 05 | [Hosted mode](remote/05-hosted-mode.md) | **Done** 2026-10-14 (includes CI) |
-| 12 | [Hosting on k3s, with CD](remote/12-hosting.md) | Phases 0–4 **done**: schools on the Dell, deploy on a version tag, `wss`, the domain. Phases 5–7 tabled |
-| 03 | [Athlete login links](remote/03-athlete-login-links.md) | **Done** 2026-10-18 |
-| 04 | [Session link and virtual racks](remote/04-session-link-and-virtual-racks.md) | Built (Phases 0–3, 5). Phase 4 (coach's side) belongs to the UI redesign |
-| 14 | [Sensors online](remote/14-sensors-online.md) | Phases 0–9 **done**. Phase 10 (Manage sensors, live/standby, Swap) written 2026-11-11 |
-| 10 | [The athlete's pages](remote/10-athlete-pages.md) | All phases built 2026-11-11 (Home, session ended, All sessions, a past session, My Recent Progress, Account); review + PR next |
-| 06 | [Design rules](ui/06-design-rules.md) | **Done** 2026-11-11: every colour in one token file (guarded in CI, app and sensor setup page), shared pieces in `react/src/ui/`, one-tab rows hidden, developer text out, top bar split |
-| 07 | [Planning](ui/07-planning.md) | Written; Add athlete panel and the first/last name split added 2026-11-08 |
-| 08 | [Session](ui/08-session.md) | Written |
-| 09 | [Analytics](ui/09-analytics.md) | Written |
-| 11 | [Mine first](ui/11-mine-first.md) | Written |
-| 16 | [The plate loader on the rack screen](ui/16-plate-loader.md) | Built as part of spec 19 (Phases 3–4); its lb/kg choice is shared with the athlete pages |
-| 19 | [The rack screen](ui/19-rack-screen.md) | Written 2026-11-11: every rack screen change in one place, both versions (waiting screen, only the planned reps count and each rep's feedback, the plate loader from spec 16, the corner switch, the room display for athletes). Can start any time |
-| 13 | [Registry of schools and operator's console](later/13-registry-and-console.md) | Written, later |
-| 15 | [Usage history and cloud cost](later/15-usage-and-cost.md) | Written, later (Phase 0, recording, can start any time) |
-| 17 | [Several sessions at once](later/17-concurrent-sessions.md) | Written, later |
-| 18 | [Shared racks online, and racks that set themselves up](remote/18-shared-racks-online.md) | In progress on `feature-rack_setup` (picked up 2026-11-12, before spec 19 Phase 1); Phase 5 moves the local install to the same flow |
+Renumbered on 2026-11-14 so the numbers are the order they're built in. Each spec's file
+starts with a "Previously spec #" line; old numbers in commits, code comments and the docs
+journal are looked up in the table under this one. Status words: **Complete**, **In
+progress** (phases built of phases), **Specced** (phases written, not started), **Not
+specced**.
+
+| # | Spec | What it delivers, and why it's here | Status |
+|---|---|---|---|
+| 01 | [Secure coach accounts](remote/01-coach-accounts.md) | Coach logins, first-run setup, password rules | Complete (2026-10-07) |
+| 02 | [Roles](remote/02-roles.md) | Administrator, coach, athlete: a login's role comes from what it's attached to | Complete (2026-10-07) |
+| 03 | [Hosted mode](remote/03-hosted-mode.md) | One codebase, local or remote, every route with its online rule; CI tests both | Complete (2026-10-14) |
+| 04 | [Hosting on k3s, with CD](remote/04-hosting.md) | Schools on the Dell, deploys on a version tag, `wss`, the domain | Complete (Phases 0–4); the rest became spec 18 |
+| 05 | [Athlete login links](remote/05-athlete-login-links.md) | A coach sends a link; the athlete picks a password | Complete (2026-10-18) |
+| 06 | [Session link and virtual racks](remote/06-session-link-and-virtual-racks.md) | An online athlete joins a session on their phone, their own rack | Complete (Phases 0–3, 5); the coach's side moved into spec 15 |
+| 07 | [Sensors online](remote/07-sensors-online.md) | An athlete's own sensor: claim code, setup page, firmware, MQTT online | Complete (Phases 0–9); Manage sensors became spec 12 |
+| 08 | [Design rules](ui/08-design-rules.md) | Colour tokens, shared pieces in `react/src/ui/`, the top bar, one shared piece per element | Complete (2026-11-11) |
+| 09 | [The athlete's pages](remote/09-athlete-pages.md) | Home, session ended, all sessions, a past session, My Recent Progress, Account | Complete (2026-11-12, PR 22) |
+| **10** | [Rack setup and shared racks](remote/10-shared-racks-online.md) | **Now.** A school's common login for tablets and TVs online; racks that name themselves; one-rep pairing; the shared dialog; the local install moves to the same flow. Changes how racks are made, so it comes before the rack screen | **In progress: 3 of 9 phases built** (0, 1, 2), awaiting review, on `feature-rack_setup` |
+| 11 | [The rack screen](ui/11-rack-screen.md) (+ [11b plate loader](ui/11b-plate-loader.md)) | Only the planned reps count, each rep's feedback, the plate loader, the room display for athletes. Resumes once spec 10 has changed how racks are made | **In progress: 1 of 6 phases built** (Phase 0), paused for spec 10 |
+| 12 | [Manage sensors](remote/12-manage-sensors.md) | Several sensors per athlete, one live, Swap. Small, and builds on spec 10's sensor pairing | Specced, 1 phase |
+| 13 | School usage card and monthly report | What a school sees about its own use, including the "60% of the roster logging weekly" guarantee. Before the coach redesign so the redesign has a place for it | **Not specced** |
+| 14 | [Planning](ui/14-planning.md) | Coach redesign 1: groups, roster, calendar, Add athlete, the name audit | Specced, 8 phases |
+| 15 | [Session](ui/15-session.md) | Coach redesign 2: running a session, one card per rack, the coach's side for online athletes | Specced, 6 phases |
+| 16 | [Analytics](ui/16-analytics.md) | Coach redesign 3: history with reports, Behind, a finished session's link leads to analytics | Specced, 6 phases |
+| 17 | [Mine first](ui/17-mine-first.md) | Coach redesign 4: a coach's own groups and sessions first | Specced, 5 phases |
+| 18 | [Backups and rebuild](later/18-backups-and-rebuild.md) | Safety copies off the server with a tested restore, a demo-school dry run, rebuilding from a blank machine. After the redesign (Devin, 2026-11-14) | Specced, 3 phases |
+| 19 | [Export my data](later/19-data-export.md) | Everything a school recorded, in every plan; the format sync reuses | Specced, 1 phase |
+| 20 | [Registry and console](later/20-registry-and-console.md) | The operator's list of schools, and what each plan includes ("Locations included"). Needed before locations | Specced, 5 phases |
+| 21 | [Locations and several sessions](later/21-locations-and-concurrent-sessions.md) | Several rooms, one session per location at once, idle sessions suspended, a device's location | Specced, 6 phases |
+| 22 | [Make-ups](later/22-make-ups.md) | A coach's make-up session; missed days filled in; fixes `is_makeup`. Needs locations (idle sessions end on their own) and the rack screen | Specced, 6 phases |
+| 23 | [Sync](later/23-sync.md) | "Sync my data" between a local install and the remote server; moving a school between servers. Needs locations and export | Specced, 5 phases |
+| 24 | [Usage history and cloud cost](later/24-usage-and-cost.md) | Our own server cost per school, load baselines (its Phase 0, recording, can start any time) | Specced, 6 phases |
+
+### Old numbers
+
+| Was | Now | | Was | Now |
+|---|---|---|---|---|
+| 01 | 01 | | 12, Phases 0–4 | 04 |
+| 02 | 02 | | 12, Phases 5–7 | 18 |
+| 03 | 05 | | 13 | 20 |
+| 04 | 06 (its Phase 4 → 15) | | 14, Phases 0–9 | 07 |
+| 05 | 03 | | 14, Phase 10 | 12 |
+| 06 | 08 | | 15 | 24 |
+| 07 | 14 | | 16 | 11b |
+| 08 | 15 | | 17 | 21 |
+| 09 | 16 | | 18 | 10 |
+| 10 | 09 | | 19 | 11 |
+| 11 | 17 | | 20 | 19 (export) and 23 (sync) |
+| | | | 21 | 22 |
 
 ## The roadmap after the class
 
@@ -111,7 +139,7 @@ Five tracks, in the order Devin set on 2026-11-11: housekeeping, then the produc
 
 ### 1. Housekeeping (before the repository goes private)
 
-- [x] Spec 07's Add athlete and name-split edits committed.
+- [x] Spec 14's Add athlete and name-split edits committed.
 - [x] Merged branches deleted; the two unmerged ones backed up on GitHub.
 - [x] This page rewritten.
 - [ ] A last public docs publish (`./docs/publish.sh --push` from a tagged commit).
@@ -119,41 +147,29 @@ Five tracks, in the order Devin set on 2026-11-11: housekeeping, then the produc
 
 ### 2. Product
 
-The UI redesign and the athlete pages, built from the Final designs page and spec 06's
-rules:
-
-- **Coach:** specs 06 → 07 (starting with the name audit) → 08 → 09 → 11, with 16 and spec
-  04's Phase 4 alongside; the top bar split (spec 06 rule 12) lands with 06.
-- **Athlete:** spec 10, and spec 14 Phase 10 with it.
-- **Rack screen (both versions):** spec 19, which gathers every rack screen change (spec 16's
-  plate loader, the rep counting moved from spec 09, the waiting screen and corner switch from
-  spec 18, the room display for athletes from spec 10). Depends only on spec 06, so it can run
-  alongside the athlete or coach work.
-- **Still needs a board:** the rack screen's Room display button (spec 19 Phase 6).
-- **Racks first (Devin, 2026-11-12):** spec 18 (racks name themselves and pair their own
-  sensor, online and local) before spec 19's Phase 1, which builds on it.
-- **Later in the track:** spec 17 (several sessions at once).
-- **Known bugs:** the calendar's Move picker labels the slot's own date "Today"
-  (`react/src/schedule.js`, `moveDateChoices`); `eactl seed --reset` fails once
-  calendar-staged sessions use the demo plan (`seed_active_session._reset`).
+In the order of the table above (specs 09 to 17, then 18 onward). Still needs a board: the
+rack screen's Room display button (spec 11 Phase 6). **Known bugs:** the calendar's Move
+picker labels the slot's own date "Today" (`react/src/schedule.js`, `moveDateChoices`);
+`eactl seed --reset` fails once calendar-staged sessions use the demo plan
+(`seed_active_session._reset`); the rack screen marks an athlete's later sets as make-ups
+(fixed by spec 22, Phase 0).
 
 ### 3. Going private (2026-11-17) and infrastructure
 
 | Work | Why it waits | Where the design is |
 |---|---|---|
 | Make the repository private | Public until 2026-11-17, Devin's call | — |
-| Moving CI onto the Dell | Only safe once the repository is private | spec 12, Deferred |
+| Moving CI onto the Dell | Only safe once the repository is private | spec 04, Deferred |
 | Unhold the kernel; fix the AppArmor problem properly | Held since 2026-11-05 after kernel 7.0.0-42 broke every container | `docs/handbook/guides/remote-server.md` |
 | Docs published by the release workflow | Published by hand today | — |
-| An image pull key that renews itself (a GitHub App) | The 90-day token is renewed by hand meanwhile | spec 12, Phase 0 result |
-| Browser logins to the broker | Needed before a real program's athletes use it | spec 12, Phase 4 and Non-goals |
-| A real secrets vault; Ansible in place of `bootstrap.sh` | One server does not need them yet | spec 12 |
+| An image pull key that renews itself (a GitHub App) | The 90-day token is renewed by hand meanwhile | spec 04, Phase 0 result |
+| Browser logins to the broker | Needed before a real program's athletes use it | spec 04, Phase 4 and Non-goals |
+| A real secrets vault; Ansible in place of `bootstrap.sh` | One server does not need them yet | spec 04 |
 | The hosting spec: bootstrap a fresh Linux PC like a cloud machine | Not written yet | — |
 
 ### 4. Operations and scale
 
-Spec 13 (registry and console), spec 15 (usage, cost and load baselines), moving a
-database between a local install and the remote server, a second node.
+Specs 10 to 24 in the table, and a second node.
 
 ### 5. Kept out of this repository
 
@@ -168,7 +184,7 @@ The sensor's own circuit board, and business plans (pricing, billing).
 A **gym box** (one machine in the gym, its own Wi-Fi, no internet needed) and a
 **hosted installation** (on a k3s cluster, reached over the internet) run the same
 code, the same database schema and the same message topics. **Every decision must work
-in both.** The only intended difference is spec 05's switch: `EA_DEPLOYMENT`, set to
+in both.** The only intended difference is spec 03's switch: `EA_DEPLOYMENT`, set to
 `local` (a gym box, the default) or `remote` (hosted).
 
 One database per installation. The code never knows another installation exists.
@@ -218,11 +234,11 @@ a day can still change, but days cannot be added, removed or reordered.
   Both are intentional.
 - **Local and hosted are one interface.** Hosted mode adds or hides elements on a
   screen; it never gets its own screen. Features change, form does not. The
-  screen-by-screen comparison is rule 8 of spec 06.
+  screen-by-screen comparison is rule 8 of spec 08.
 - **The look is solid surfaces** (adopted 2026-10-06): every row, card and table on a
   solid panel with a border; tints only on banners; solid block buttons; every End
-  button a red outline, in both versions. Spec 06 rule 9.
-- Full rules in [spec 06](ui/06-design-rules.md).
+  button a red outline, in both versions. Spec 08 rule 9.
+- Full rules in [spec 08](ui/08-design-rules.md).
 
 ---
 
@@ -263,15 +279,15 @@ Checked on 2026-10-06 against commit `31f0573`.
 - **Several groups already share a session on the server.** A session holds one
   `SessionParticipation` per program; `plan_resolution.py` gives an athlete in two of
   those groups both plans combined, lighter percentage winning on a shared movement.
-  The front end has no way to put two programs on one session yet; spec 07 Phase 3
+  The front end has no way to put two programs on one session yet; spec 14 Phase 3
   adds it ("Add to the existing sessions?"). Explained in `docs/handbook/reference/database-tables.md`.
 - **A program's days cannot be edited through the API today.** Blocks have routes for
   adding, reordering, editing and deleting days; programs have only "create" and
-  "promote". See spec 07.
+  "promote". See spec 14.
 - **`promote_program_to_block()`** copies days and movements up into a new block. It
   copies no dates and no group. A block has no date field.
 - **"Behind"** (an athlete trending down) is worked out in the browser, one request per
-  athlete, in `react/src/coach/groupHistory.js`. See spec 09.
+  athlete, in `react/src/coach/groupHistory.js`. See spec 16.
 - **Design and Workout catalog are one component** (`react/src/WorkoutCatalog.jsx`)
   shown twice with a different `section` value.
 - **The local app** runs from the team clone at

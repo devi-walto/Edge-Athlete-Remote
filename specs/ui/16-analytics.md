@@ -1,10 +1,11 @@
-# Feature Spec 9: Analytics
+# Feature Spec 16: Analytics
 
+- Previously spec 09 (renumbered into build order, 2026-11-14)
 - Owner: Devin Walton
 - Date: 2026-10-06
 - Status: Written — not started
 - Form item: #11 (unified coach interface)
-- Depends on: [06 Design rules](06-design-rules.md)
+- Depends on: [08 Design rules](08-design-rules.md)
 - Mockup: `V4e_Athlete`, `V4f_History`, `V4g_Group`, `V4h_Notes` in
   [`mockups/coach-ui-final.html`](mockups/coach-ui-final.html)
 
@@ -122,17 +123,17 @@ the whole-room view, the frozen record, and the PDF.
 
 ## Phase 2 — The marker follows the athlete
 
-Spec 06's `RiskTag`, fed by Phase 1:
+Spec 08's `RiskTag`, fed by Phase 1:
 
 | Where | Form |
 |---|---|
-| Roster rows (spec 07) | the tag "Behind 4/5", and the row tinted |
-| A group's athlete list (spec 07) | the tag |
-| SESSION's rack list (spec 08) | the small red triangle beside the name |
+| Roster rows (spec 14) | the tag "Behind 4/5", and the row tinted |
+| A group's athlete list (spec 14) | the tag |
+| SESSION's rack list (spec 15) | the small red triangle beside the name |
 | Analytics → Athlete | the tag under the name, with one line: "Slower than the session before on 4 of the last 5 Training Sessions." |
 | Analytics → History, Group scope | Phase 4 |
 
-If specs 07 or 08 have not landed, add the tag to the screens that exist now and carry
+If specs 14 or 08 have not landed, add the tag to the screens that exist now and carry
 it across when they are rebuilt.
 
 **Done when:**
@@ -247,7 +248,7 @@ Build it with whichever phase of this spec reworks the athlete picker:
       a plan.
 - [ ] No picker in PLANNING or SESSION lists an archived athlete.
 
-## Carried in from spec 14 — each movement is judged by mean or peak velocity
+## Carried in from spec 07 — each movement is judged by mean or peak velocity
 
 Decided 2026-10-21. Every rep the sensor sends carries both its **mean velocity** (its
 average on the way up: how far the bar rose ÷ how long it took) and its **peak
@@ -285,9 +286,52 @@ there) or Phase 5 (the Athlete tab's numbers), whichever comes first.
 
 Decided by Devin, 2026-10-27: reps past the plan are kept but don't count, and the rack
 screen says so as each rep lands (2026-10-30). Both now live in
-[spec 19, the rack screen](19-rack-screen.md), Phases 1 and 2 (server and screen), so the
-rack screen changes are built together instead of waiting for this spec. Once spec 19 Phase 1
+[spec 11, the rack screen](11-rack-screen.md), Phases 1 and 2 (server and screen), so the
+rack screen changes are built together instead of waiting for this spec. Once spec 11 Phase 1
 is built, every count this spec shows (History, Behind, the reports) is of counted reps only.
+
+## Added 2026-11-14 — a finished session's link leads to its analytics
+
+Devin: opening a session link after the session has ended should say so politely and take
+you straight to that session in your own analytics, if your login has them.
+
+**Today:** the link (`/session/<id>`, spec 06) is the athlete's way onto their own rack.
+- **An athlete** opening an ended session's link sees "the session has ended" with their
+  day's totals (spec 09's session-ended page, board `F_Ath_R10`) and Back to home, but no
+  way to the full session, which their past session page already shows
+  (`/athlete/sessions/<id>`, spec 09 Phase 3).
+- **A coach** opening any session link is asked to join it as an athlete; the join is
+  refused, so they see "This link is for a session you are not part of. Ask your coach.":
+  wrong for a coach.
+
+**The change:**
+- **An athlete** (ended): the same page, with **View this session** opening their past
+  session page for it. Small, and needs nothing from this spec: it can go in any time.
+- **An athlete with nothing recorded in it** (Devin, 2026-11-14): their past session page
+  for that session (today a 404, since they didn't lift) says what to do instead, from their
+  make-up (spec 22):
+  - open: "You didn't lift in this session. Get with your coach to make it up in the next
+    9 days." (the days left on their make-up);
+  - excused: "Your coach excused this session.";
+  - expired: "The time to make this session up has passed. Talk to your coach.";
+  - made up: the page shows the make-up sets, marked with the day they were lifted.
+  Until spec 22 exists, it says only that they didn't lift in it. The ended link's View
+  this session leads here too.
+- **A coach or administrator**, signed in on that device:
+  - **Ended:** "This session is over" and **View in History**, opening History (Phase 3: it
+    holds the reports) on that session's day and report.
+  - **Running:** straight to the coach's live room for that session (spec 21: the right one
+    when several run).
+- **Nobody signed in:** sign in first, then the above (as the athlete link does now).
+- **The common login** (a rack tablet, spec 10) has no analytics: the polite "over" line only.
+
+**Done when:**
+- [ ] *(Frontend test)* An athlete opening an ended session's link gets View this session,
+      opening their past session page; for a session they didn't lift in, that page shows
+      the make-up line with the days left (or excused, or passed).
+- [ ] *(Frontend test)* A coach opening an ended session's link gets View in History on that
+      session; a running one opens the live room; neither shows the athlete's "not part of"
+      line.
 
 ## Acceptance criteria
 
@@ -298,7 +342,7 @@ is built, every count this spec shows (History, Behind, the reports) is of count
 - [ ] Group views announce that athletes are at risk without naming one; single-athlete
       views announce nothing.
 - [ ] "Behind" is computed once, on the server, with a fixed number of queries.
-- [ ] Every screen follows spec 06.
+- [ ] Every screen follows spec 08.
 
 ## Risks
 
@@ -307,7 +351,7 @@ is built, every count this spec shows (History, Behind, the reports) is of count
 | The server's "behind" disagrees with the old browser one | Phase 1 ports the existing test cases first and keeps the JavaScript as the reference until Phase 4 |
 | Folding Reports in loses the difference between "as recorded" and "frozen" | Rows say Frozen or Session still open; an opened finished day is checked against its PDF |
 | History becomes overwhelming with three scopes | One control row, one table shape, detail only when a day is opened |
-| A flag on a minor's name is seen by the wrong person | Coach-only fields; hosted athletes never receive them about others (spec 05) |
+| A flag on a minor's name is seen by the wrong person | Coach-only fields; hosted athletes never receive them about others (spec 03) |
 
 ## Docs to update when done
 

@@ -1,11 +1,12 @@
-# Feature Spec 6: Design rules for the coach interface
+# Feature Spec 08: Design rules for the coach interface
 
+- Previously spec 06 (renumbered into build order, 2026-11-14)
 - Owner: Devin Walton
 - Date: 2026-10-06
 - Status: **Done** 2026-11-11, all four phases (pull request #21). The acceptance criteria
-  below come true screen by screen as specs 07–10 rebuild the screens with these pieces
+  below come true screen by screen as specs 14, 15, 16 and 09 rebuild the screens with these pieces
 - Form item: #11 (unified coach interface, added 2026-10-06)
-- Depends on: nothing. **Specs 07, 08, 09 and 10 (the athlete's pages) all depend on this one**
+- Depends on: nothing. **Specs 14, 08, 09 and 10 (the athlete's pages) all depend on this one**
 - Updated 2026-11-11: the shared pieces live in `react/src/ui/` (coach and athlete screens
   share them), `Button` carries every kind in rule 2, Phase 3 builds rule 12's top bar,
   and Phase 0 moves every colour into one token file with a guard against drift
@@ -122,7 +123,7 @@ tab goes. If a second is ever added, the row comes back by itself.
 **The rule.** Hosted mode may **add or hide elements on a screen**. A screen both
 versions have is one screen: it never gets a hosted copy, its own layout, its own
 components or its own tokens. Every difference hangs off one switch, `useDeployment()`
-(spec 05).
+(spec 03).
 
 **Hosted-only screens exist where the Final designs page draws them** (loosened by Devin,
 2026-10-14): **Send a login link**, the athlete's sign-in and home pages, and the
@@ -161,8 +162,8 @@ annotation, not part of the interface):
   are two-line cells so the row still fits at 1180 px.
 - The athlete's own screens are drawn on Final designs (the REMOTE flow, `F_Ath_*`).
   Lifting uses the **same `RackScreen.jsx`** as the gym, with what a remote athlete does
-  not need stripped away (spec 04 Phase 3); it keeps the rack screen's own look. Home and
-  the sign-in pages use the solid look (spec 10).
+  not need stripped away (spec 06 Phase 3); it keeps the rack screen's own look. Home and
+  the sign-in pages use the solid look (spec 09).
 
 ### 9. Solid surfaces, clear edges
 
@@ -230,13 +231,13 @@ its own chart. Before building an element, look in `ui/`; if it's missing and wi
 twice, build it there first. When a shared piece lands, a guard test fails if the
 hand-drawn version comes back.
 
-- **`ui/BarChart`** (spec 10, Phase 3) is the one bar chart: the coach's live rep chart
+- **`ui/BarChart`** (spec 09, Phase 3) is the one bar chart: the coach's live rep chart
   (`large`), the coach's history sparkline (`spark`), the athlete's past session rep bars
-  and My Recent Progress (`normal`), and the rack screen's set summary (spec 19). Options:
+  and My Recent Progress (`normal`), and the rack screen's set summary (spec 11). Options:
   number above, text inside (written upward), label below, colour per bar, lighter bars,
   legend lines, a fixed top, scroll or fit, height. `ui.test.jsx` fails on a bar height set
   by hand anywhere outside `ui/`.
-- Also shared (spec 10, Phase 4): `ui/PillGroup` (one chosen pill: range presets, Athlete /
+- Also shared (spec 09, Phase 4): `ui/PillGroup` (one chosen pill: range presets, Athlete /
   Group, LB | KG), `ui/RangePicker` (presets + From / To + label, coach History and athlete
   progress), `ui/UnitToggle` and `ui/Load` (pounds or kilograms, one device setting in
   `units.js`), `ui/TrendLine`, `ui/Tiles`.
@@ -360,7 +361,7 @@ Two stops. It changes how colours are written, never what a screen does.
 ## Phase 1 — The shared pieces
 
 New folder `react/src/ui/`, one small component per file, each opening with a
-plain-language comment. It sits outside `coach/` because the athlete's pages (spec 10) are
+plain-language comment. It sits outside `coach/` because the athlete's pages (spec 09) are
 built from the same pieces: one interface, one set of components (rule 8).
 
 | Component | What it is |
@@ -414,11 +415,11 @@ Build them against the Final designs boards, each with a render test. Use them n
 Today the coach's corner is one button, the picture and "Edge Athlete", that opens the
 account menu (`react/src/coach/AccountMenu.jsx`). It splits into two targets, and the
 result becomes a shared `TopBar` in `react/src/ui/` that the athlete's pages use too
-(spec 10 Phase 1). The menu's contents and its rules (close on Escape or a press
+(spec 09 Phase 1). The menu's contents and its rules (close on Escape or a press
 elsewhere; Coaches shown to administrators only, as a courtesy, with the server as the
 lock) move with it unchanged.
 
-| Part | Coach | Athlete (spec 10) |
+| Part | Coach | Athlete (spec 09) |
 |---|---|---|
 | The picture (profile image on the lime square) | Goes to **Planning**, always, even while a training day is running. The session strip stays and the day keeps running | Goes to the athlete's Home |
 | The name beside it | Opens the menu: Coaches (administrators only), Change password, Log out | Opens the menu: Account, Sign out |
@@ -467,7 +468,7 @@ Also in `react/src/ui/`: `BackLink`, the one link under the top bar on a drill-d
 
 | Risk | What reduces it |
 |---|---|
-| The rules drift as screens are rebuilt one at a time | Specs 07–10 may only use the Phase 1 components for buttons, rows and focus cards |
+| The rules drift as screens are rebuilt one at a time | Specs 14, 15, 16 and 09 may only use the Phase 1 components for buttons, rows and focus cards |
 | A restyle quietly changes behaviour | This spec has no behaviour change at all; any is a bug |
 | "One lime button" hides something that used to be obvious | Rule 3 wins over rule 2: if a coach needs it weekly, it is an outline button on the row, never a menu |
 

@@ -1,12 +1,13 @@
-# Feature Spec 11: Mine first — a coach sees their own work first
+# Feature Spec 17: Mine first — a coach sees their own work first
 
+- Previously spec 11 (renumbered into build order, 2026-11-14)
 - Owner: Devin Walton
 - Date: 2026-10-06
 - Status: Written — not started
 - Form item: #11 (unified coach interface)
 - Depends on: [02 Roles](../remote/02-roles.md) (a coach is a login with a coach profile),
-  [06 Design rules](06-design-rules.md). Touches the screens of [07 Planning](07-planning.md)
-  and [09 Analytics](09-analytics.md); build it after them or alongside
+  [08 Design rules](08-design-rules.md). Touches the screens of [14 Planning](14-planning.md)
+  and [16 Analytics](16-analytics.md); build it after them or alongside
 - Mockup: **approved 2026-10-07**, on the canvas's Final designs page ("The same in both:
   Planning"): `F_Groups` (the Mine | Everyone switch, coaches by name, the pencil),
   `F_CoachesEditor` (the pencil pressed), `F_NewCoachEveryone` (a coach on no group).
@@ -242,7 +243,7 @@ The same names show, read-only, on the group's programs and on a session.
 ## Phase 3 — Mine | Everyone on the lists
 
 Frontend. One switch, the same two-option control as the calendar's List | Month
-(spec 06 rule 9), with **Mine** and **Everyone**.
+(spec 08 rule 9), with **Mine** and **Everyone**.
 
 | Screen | With Mine chosen |
 |---|---|
@@ -276,12 +277,12 @@ Frontend. One switch, the same two-option control as the calendar's List | Month
 
 ## Phase 4 — Coach login codes (replaces temporary passwords)
 
-Moved here from spec 03 (where it was Phase 5) on 2026-10-18 by Devin: it is built
+Moved here from spec 05 (where it was Phase 5) on 2026-10-18 by Devin: it is built
 last in the coach interface redesign, because it changes the Coaches page and coach
 sign-in, which the redesign rebuilds. Mockups: `F_Coaches`, `F_SignIn`,
 `F_CodeNewCoach`, `F_CodeReset` (approved 2026-10-07). "The dialog the athlete login link
-uses" below is `react/src/coach/LoginLinkDialog.jsx` (spec 03, Phase 3); "the rules
-`services/login_links.py` already has" are spec 03, Phase 0.
+uses" below is `react/src/coach/LoginLinkDialog.jsx` (spec 05, Phase 3); "the rules
+`services/login_links.py` already has" are spec 05, Phase 0.
 
 **Still to decide before building** (the Done-when list asks for it): what happens to a
 login still on a temporary password. Recommended (2026-10-18): the migration switches
@@ -291,7 +292,7 @@ would stop automatic deploys; printing codes would put them in deploy logs.
 
 
 Added 2026-10-06 by Devin's decision. **This phase is for both deployments**, `local`
-and `remote`; unlike the athlete phases above it does not depend on spec 05.
+and `remote`; unlike the athlete phases above it does not depend on spec 03.
 
 **Why.** Spec 01 brought in Braydon's way of adding a coach: the administrator types a
 username, the system makes a temporary password, the administrator hands both over, and

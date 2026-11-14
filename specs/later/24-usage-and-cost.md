@@ -1,13 +1,14 @@
-# Feature Spec 15: Usage history, a cloud cost estimate, and when to scale
+# Feature Spec 24: Usage history, a cloud cost estimate, and when to scale
 
+- Previously spec 15 (renumbered into build order, 2026-11-14)
 - Owner: Devin Walton
 - Date: 2026-10-20
 - Status: **After the class, except Phase 0.** Phase 0 (recording) can start any time:
   history can't be collected later, so the sooner it runs, the more there is to work
   with. Not part of the Definition of Done (the form leaves out measurement and load
   testing).
-- Depends on: [12 Hosting](../remote/12-hosting.md) (the Dell, the shared Postgres, the
-  namespace per school). Phase 5 builds on [13 Registry and console](13-registry-and-console.md).
+- Depends on: [04 Hosting](../remote/04-hosting.md) (the Dell, the shared Postgres, the
+  namespace per school). Phase 5 builds on [20 Registry and console](20-registry-and-console.md).
 
 ## Why
 
@@ -31,7 +32,7 @@ slows down rather than after.
 
 ## Decisions (Devin, 2026-10-20)
 
-- **Its own spec**, not part of spec 13. Spec 13's console shows the results later
+- **Its own spec**, not part of spec 20. Spec 20's console shows the results later
   (Phase 5).
 - **Record now, analyse later.** Only the recording (Phase 0) is worth doing before
   November 11.
@@ -57,7 +58,7 @@ that day's samples, so one odd spike doesn't decide it) as well as the average.
 ### Phase 0 — Record (can start now)
 
 - **A small database, `ea_usage`, in the shared Postgres**, beside the schools' (the way
-  spec 13 adds `ea_registry`). Two tables:
+  spec 20 adds `ea_registry`). Two tables:
   - `sample`: time, school (or "server"), CPU, memory. One row per part per 5 minutes.
   - `daily`: date, school, the day's busy-hour and average CPU and memory, database
     size, broker disk, and the counts (active athletes, sessions, sets, reps, coaches).
@@ -147,7 +148,7 @@ that day's samples, so one odd spike doesn't decide it) as well as the average.
 
 ### Phase 5 — In the console
 
-The report and forecast as pages in spec 13's operator console: charts per month, per
+The report and forecast as pages in spec 20's operator console: charts per month, per
 school, and the forecast line.
 
 ---
@@ -171,7 +172,7 @@ school, and the forecast line.
 - The Dell's own figures: CPU cores, memory, disk size, and its electricity use, for
   the comparison. *(Devin to fill in.)*
 - The AWS region to price in.
-- Whether `daily` rows move into spec 13's `ea_registry` when that exists, or stay in
+- Whether `daily` rows move into spec 20's `ea_registry` when that exists, or stay in
   their own database.
 
 ## Risks

@@ -1,9 +1,9 @@
-# Feature Spec 1: Secure coach accounts
+# Feature Spec 01: Secure coach accounts
 
 - Owner: Devin Walton
 - Date: 2026-10-05
-- Status: **Done 2026-10-07. All five phases complete; merged into `SprintBranch`.** Two things were handed on by Devin's decisions: an archived athlete's page in Analytics (spec 09) and opening Room Layout to every coach (spec 02). Temporary passwords are replaced by login codes in spec 11 Phase 4 (moved from spec 03 on 2026-10-18)
-- Mockup: `F_FirstRun`, `F_AccountMenu` on the canvas's **Final designs** page, and `R3_SignIn`, `R3_Coaches` on its Remote coach view page. (On 2026-10-07 the Final page's `F_SignIn` and `F_Coaches` were replaced by the login-code versions that [spec 11 Phase 4](../ui/11-mine-first.md) builds; what this spec built matches the `R3_` boards.) Earlier wording: `F_SignIn`, `F_FirstRun`, `F_Coaches`, `F_AccountMenu` on the **Final designs** page ("The same in both: accounts and access"), also in [`specs/ui/mockups/coach-ui-final.html`](../ui/mockups/coach-ui-final.html). Look: [spec 06](../ui/06-design-rules.md) rule 9
+- Status: **Done 2026-10-07. All five phases complete; merged into `SprintBranch`.** Two things were handed on by Devin's decisions: an archived athlete's page in Analytics (spec 16) and opening Room Layout to every coach (spec 02). Temporary passwords are replaced by login codes in spec 17 Phase 4 (moved from spec 05 on 2026-10-18)
+- Mockup: `F_FirstRun`, `F_AccountMenu` on the canvas's **Final designs** page, and `R3_SignIn`, `R3_Coaches` on its Remote coach view page. (On 2026-10-07 the Final page's `F_SignIn` and `F_Coaches` were replaced by the login-code versions that [spec 17 Phase 4](../ui/17-mine-first.md) builds; what this spec built matches the `R3_` boards.) Earlier wording: `F_SignIn`, `F_FirstRun`, `F_Coaches`, `F_AccountMenu` on the **Final designs** page ("The same in both: accounts and access"), also in [`specs/ui/mockups/coach-ui-final.html`](../ui/mockups/coach-ui-final.html). Look: [spec 08](../ui/08-design-rules.md) rule 9
 - Index and shared decisions: [specs/README.md](../README.md)
 - Form item: Definition of Done #2 ("Coach accounts are secured")
 - Next spec: 02 — roles (coach, athlete, everyone else refused)
@@ -86,14 +86,14 @@ cleanly; the screens have to be re-homed. That is Phase 2.
 ## Non-goals
 
 - **Coach login codes.** Decided 2026-10-06: the temporary password this spec uses is
-  replaced by a one-time login code in [spec 11, Phase 4](../ui/11-mine-first.md) (moved
-  there from spec 03 on 2026-10-18).
+  replaced by a one-time login code in [spec 17, Phase 4](../ui/17-mine-first.md) (moved
+  there from spec 05 on 2026-10-18).
   This spec ships the temporary-password flow as it is.
 
 - **Athlete logins, and tightening "coach" to mean "has a coach profile"** — Spec 02.
   This spec only lays the groundwork (profiles exist, the list is filtered).
-- Login links, session links, virtual racks — Specs 03 and 04.
-- The "my groups" filter. It is [spec 11, Mine first](../ui/11-mine-first.md).
+- Login links, session links, virtual racks — Specs 05 and 06.
+- The "my groups" filter. It is [spec 17, Mine first](../ui/17-mine-first.md).
 - The laptop preview compose file (`b59a531`).
 - The parent registry of installations — hosting work.
 - His `RosterWorkspace` screen as a tab. The redesign already has a roster in
@@ -164,7 +164,7 @@ No new screen is wired up yet.
    sits in front of every route, rack screens included.
 2. **`GET /api/athletes/` stays open.** His commit made it coach-only. The connection
    test and gym tools read it with no login, and this phase promised the open routes
-   would not move. Spec 05 closes it for `remote`. His archive filter on that route
+   would not move. Spec 03 closes it for `remote`. His archive filter on that route
    is kept.
 3. **His guide is `docs/_COACH_ACCOUNTS.md`, private, with a credit line.** It describes
    screens that are not attached yet, and anything in `docs/` without the underscore is
@@ -271,13 +271,13 @@ since Phase 0. Credit him in each file that carries his logic.
 | **Change password** | No board: the same card as sign in, with current password, new password, new password again | Forced after a temporary password; also in the account menu | His `ChangePassword.jsx` |
 | **Coaches** — banner, the temporary-password card, the table, **Add coach** | `F_Coaches` | The account menu, **administrators only** | His `CoachManagement.jsx` |
 | **Account menu** — signed in as, the Administrator badge, Coaches, Change password, Log out | `F_AccountMenu` | Opens from the top bar, as today | The existing menu, restyled |
-| **Archive athlete** | The **Archive** action on a roster row (`F_Local_Roster`) | Today's roster, in PLANNING → Groups. It moves to the Roster tab when spec 07 builds that tab | The archive call in his `RosterWorkspace.jsx` |
+| **Archive athlete** | The **Archive** action on a roster row (`F_Local_Roster`) | Today's roster, in PLANNING → Groups. It moves to the Roster tab when spec 14 builds that tab | The archive call in his `RosterWorkspace.jsx` |
 
 **What is not built:** his `RosterWorkspace` as a screen (the design already has a
 roster), and his tab entries for the old page. When this phase ends, any of his screen
 files that nothing imports are deleted, and so is the dead `coachTabs.js`.
 
-**The look** (spec 06 rule 9, and the boards):
+**The look** (spec 08 rule 9, and the boards):
 
 - Sign in and first-run setup are a solid card with a 10px corner on the dark page,
   with the lime "EA" mark, because nobody is signed in. Inputs are `#0b1114` with a
@@ -288,7 +288,7 @@ files that nothing imports are deleted, and so is the dead `coachTabs.js`.
   with **Copy**, then one table on one solid surface. **Add coach** is the screen's one
   lime button. Row actions are quiet text; **Deactivate** is the only red one.
 - On a `remote` installation the sign-in page also shows "Athlete? Open the session
-  link your coach shared." and **Athlete sign in**. That line is added by spec 03, not
+  link your coach shared." and **Athlete sign in**. That line is added by spec 05, not
   here; leave room for it.
 
 **Rules:**
@@ -320,7 +320,7 @@ files that nothing imports are deleted, and so is the dead `coachTabs.js`.
       forces a password change, and the workspace opens only after that.
 - [x] *(Browser)* Archiving an athlete removes them from the session picker and the
       roster, and their sets are kept. *(Opening an archived athlete's own page in
-      ANALYTICS moved to spec 09; see below.)*
+      ANALYTICS moved to spec 16; see below.)*
 - [x] *(Browser)* All three states — SESSION, ANALYTICS, PLANNING — still work as
       before for a regular coach.
 - [x] The word "head coach" does not appear on the Coaches screen or in its messages.
@@ -370,8 +370,8 @@ and against an empty one:
 every frozen daily report that includes them still opens from ANALYTICS → Reports. But
 ANALYTICS → Athlete and History pick an athlete from a list, and an archived athlete is
 no longer on it, so their own page cannot be opened. Fixing that means the Analytics
-picker offering archived athletes, which is a decision for spec 09 (it changes the
-picker for everyone). **Decided 2026-10-06: left for spec 09**, which already reworks
+picker offering archived athletes, which is a decision for spec 16 (it changes the
+picker for everyone). **Decided 2026-10-06: left for spec 16**, which already reworks
 that picker.
 
 **Found and fixed while building:**
@@ -396,7 +396,7 @@ that picker.
   the button. Braydon's optional "choose the temporary password yourself" field is
   gone: the server always makes one.
 - **Deactivate and Reset password ask first**, in the browser's own confirm box. A
-  styled dialog is spec 06's shared-pieces work.
+  styled dialog is spec 08's shared-pieces work.
 - **The session strip is not on the Coaches page**, matching the board. The bottom
   navbar is, with nothing selected.
 - **Of Braydon's 14 screen tests, 13 are carried over** to the new screens, and 4 are
@@ -571,7 +571,7 @@ not moved. Both happen from `main`, which moves from `SprintBranch` when Devin s
 
 1. **The laptop preview compose file (`b59a531`) is skipped.** Bring it over later if wanted.
 2. **Archive lives with the roster, not in a separate roster tab of Braydon's.** When
-   this spec was written that meant PLANNING → Groups. [Spec 07](../ui/07-planning.md)
+   this spec was written that meant PLANNING → Groups. [Spec 14](../ui/14-planning.md)
    moves the roster to its own **Roster** tab; put Archive wherever the roster is when
    Phase 2 is built.
 3. **Merge into `SprintBranch` only after Phase 4**, with each phase reviewed on the branch first.
