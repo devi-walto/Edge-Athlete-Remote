@@ -2,8 +2,8 @@
 
 - Owner: Devin Walton
 - Date: 2026-11-14
-- Status: **Draft for Devin's review.** Not scheduled. Decisions marked *proposed* need his
-  call. Business note: "full data export in every tier" is on the build-before-selling
+- Status: **Written, not scheduled.** Devin answered the open questions 2026-11-14; the
+  remaining *proposed* points are smaller and can be settled when phases are cut. Business note: "full data export in every tier" is on the build-before-selling
   list (kept in the business repo).
 - Depends on: [12 Hosting](../remote/12-hosting.md) (the remote server, `eactl`),
   [17 Locations](17-concurrent-sessions.md) (a local install is one location of its
@@ -69,7 +69,8 @@ A zip, so a coach can open it:
   the counts per table.
 - **One JSON Lines file per table** (`athletes.jsonl`, `sets.jsonl`, …): every row with its
   original id, foreign keys and timestamps, exactly as stored. This is what Sync reads.
-- **One CSV per table people care about** (athletes, sessions, sets, reps, maxes, programs,
+- **One CSV per table people care about** (Devin, 2026-11-14: yes; a coach checking "can I
+  really get my data out?" opens the spreadsheet) (athletes, sessions, sets, reps, maxes, programs,
   reports), with names in place of ids where that helps a spreadsheet ("Riley Brooks",
   "Back Squat"). For people; Sync ignores them.
 - **What is never in it:** passwords and their hashes, sign-in tokens, sensor logins and
@@ -90,13 +91,17 @@ What goes in, by kind of table (from `models.py`, 2026-11-14):
 
 ## Sync
 
-- **Who:** an administrator, from the coach's settings, on either side. One local install
-  pairs with its school's remote server (*proposed:* paired once with a code from the remote
-  server, the way a sensor is claimed, so a stranger can't push data into a school).
-- **Two ways to carry it** (*proposed*): **direct**, when the local install can reach the
-  internet (it sends and receives over the school's address); or **by file**, when the
-  school's network won't allow it: download the sync file on one side, upload it on the
-  other. Same file either way.
+- **Who:** an administrator, from the coach's settings, on either side. **A local install is
+  paired once with its school's remote server using a code** from the remote server, the way
+  a sensor is added (Devin, 2026-11-14), so nobody else can send data into a school.
+- **Two ways to carry it, one file** (Devin, 2026-11-14):
+  - **Local ↔ remote: by file first.** Download the sync file on one side, upload it on the
+    other (a laptop between them). Works on any network, including a school's that blocks
+    outside connections. **Direct over the internet** comes after, for a local install that
+    can reach the school's address.
+  - **Remote ↔ remote: over the internet.** Moving a school from one remote server to
+    another (for example onto its own dedicated cloud, the Elite plan) uses the same file
+    sent directly between the two servers.
 - **What a sync does, each direction:** the finished sessions the other side hasn't seen,
   with everything under them; the shared records changed since the last sync; maxes with
   their original times. Then it records how far it got, so the next sync starts there.
@@ -113,20 +118,20 @@ What goes in, by kind of table (from `models.py`, 2026-11-14):
   with the remote server, never with each other. The remote server is the hub; every sync
   is still between two sides.
 - **Logins:** each side keeps its own. Athletes' logins live on the remote server; a local
-  install has none (spec 18: gym tablets need no login). Coaches: *open question*, below.
+  install has none (spec 18: gym tablets need no login). **Coaches are matched by
+  username** (Devin, 2026-11-14): a coach who exists on only one side is created on the
+  other with no usable password, and sets one with the normal reset.
 - **Locations (spec 17):** a local install is one location of its school. Its sessions
   arrive online at that location; the remote server's other locations' sessions are sent
   down only if the coach wants the gym to see them (*proposed:* yes, read-only history).
 
-## Still to confirm (Devin)
+## Answered (Devin, 2026-11-14)
 
-1. **Coach logins across the two sides.** Coaches are referred to by records (a group's
-   coaches, who planned what). Proposed: match coaches by username; a coach who exists on
-   only one side is created on the other without a usable password (they set one with the
-   usual reset).
-2. **Direct, by file, or both?** Proposed: both, file first (it works on any network).
-3. **Pairing with a code** from the remote server: yes?
-4. **CSVs in the export** as well as the machine-readable files: yes?
+1. Coaches are matched by username; a missing one is created without a usable password.
+2. Local ↔ remote: by file first, then direct over the internet. Remote ↔ remote (moving a
+   school between servers): over the internet.
+3. A local install pairs once with its remote server, using a code.
+4. The export includes CSVs for people, as well as the files Sync reads.
 
 ## Phases (outline; cut properly when scheduled)
 
@@ -140,7 +145,7 @@ What goes in, by kind of table (from `models.py`, 2026-11-14):
 3. **Sync by file, both directions:** finished sessions added, changed shared records with
    the remote server winning, maxes with their times; running sessions held back.
 4. **Pairing and direct sync;** the button in the coach's settings, with what was sent and
-   received.
+   received; moving a school between remote servers over the internet.
 5. **Rehearsal:** a gym install and the remote server each record a workout the same day;
    sync both ways; both workouts are on both sides, maxes and prescribed weights unchanged.
 
