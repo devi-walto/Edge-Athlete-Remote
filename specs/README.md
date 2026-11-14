@@ -103,6 +103,7 @@ By v0.8.3 (2026-11-09) CI ran **1,114 tests** on every pull request: the backend
 | 13 | [Registry of schools and operator's console](later/13-registry-and-console.md) | Written, later |
 | 15 | [Usage history and cloud cost](later/15-usage-and-cost.md) | Written, later (Phase 0, recording, can start any time) |
 | 17 | [Locations, and several sessions at once](later/17-concurrent-sessions.md) | Written, later; revised 2026-11-14 (locations, rooms, idle sessions); after spec 18 |
+| 20 | [Data export, and syncing a local install with the remote server](later/20-data-export-and-sync.md) | Draft 2026-11-14, for review |
 | 18 | Shared racks online (common login) | Written on `feature-shared_racks` only |
 
 ## The roadmap after the class
@@ -151,7 +152,7 @@ rules:
 ### 4. Operations and scale
 
 Spec 13 (registry and console), spec 15 (usage, cost and load baselines), a second node.
-**Data export and sync** (to write, agreed 2026-11-14): one export format holding every
+**Data export and sync**, [spec 20](later/20-data-export-and-sync.md) (draft 2026-11-14): one export format holding every
 table with its original ids and timestamps; "Export my data" in every tier (the
 anti-lock-in promise); a manual "Sync my data" button in the coach's settings between a
 local install and the remote server, built on the design already in
