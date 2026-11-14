@@ -117,10 +117,27 @@ first).
 
 ## Locations
 
-- **The table:** `Location` (id, `name`, `address` optional, created, archived). Made with
-  one row on every install by the migration, named after the installation ("Demo U") and
-  renamable; a local install has one forever (a gym box is one room; sync, in its own
-  spec, treats a local install as one location of its school).
+- **The table** (fields agreed 2026-11-14, so later ideas don't each need a migration):
+
+  | Field | What it's for |
+  |---|---|
+  | `name` | "Main weight room"; editable in the app |
+  | `short_name` | "Main", "FB": a rack tablet's header, the TV, the brackets after a shared rack name |
+  | `kind` | weight room, field or track, or online (athletes at home): an online location never shows an address or map link |
+  | `address` | for a later "where's my session" link for athletes |
+  | `latitude`, `longitude` | the map link without guessing from the address; later, perhaps checking a check-in happened there |
+  | `timezone` | which day a late session counts as (daily reports, "still open from an earlier day"), for programs with facilities apart or online teams |
+  | `color` | a small tag telling locations apart on the coach's screens, from the colour tokens only |
+  | `archived_at` | retire a location without losing its history |
+  | `created_at`, `updated_at` | housekeeping |
+
+  Left out on purpose (Devin): directions for athletes, a sort order. Lists sort by name;
+  the location the migration made is the default for new devices. Also left out until
+  there's a use: opening hours, phone, capacity (count its racks), Wi-Fi name, an outside
+  system's id; and no catch-all "extra" field (nothing checks what's in it).
+- **Made with one row on every install by the migration,** named after the installation
+  ("Demo U") and renamable; a local install has one forever (a gym box is one room; sync,
+  in its own spec, treats a local install as one location of its school).
 - **What refers to it:** a session (`TrainingSession.location`), a rack tablet
   (`RackScreen.location`, chosen at "Set up this rack"), a school sensor
   (`Node.location`: **follows the rack it's paired with**, so it's only asked for a sensor
@@ -140,27 +157,29 @@ first).
 - **Their sets file into the session of the rack they lift at,** so each location's daily
   report holds what was lifted there. Their history, maxes and progress are one record
   either way.
-- **Open question (Devin):** an athlete who isn't on the other location's roster (their
-  group isn't training there today). Proposed: the rack's check-in list shows the running
-  session's roster as today; a coach adds them to that session (as now) if they should be
-  there. Alternative: the list also offers "someone from another session", searching every
-  running session's athletes.
+- **An athlete not on that location's roster** (their team's session is running in the
+  other room, and they walk over to lift here): the rack's check-in list shows this
+  session's roster, as today; a coach adds them to this session if they should be here
+  (Devin, 2026-11-14: an unlikely case, keep it simple).
 
 ## Sessions left running, and idle sessions
 
 - **The warning:** inside the coach's session banner (`SessionWidget`), once two or more
-  sessions have been running longer than a threshold (proposed: 4 hours), one line names
+  sessions have been running longer than **4 hours** (Devin, 2026-11-14), one line names
   each with how long it has run. The existing "Still open from an earlier day" flag stays,
   per session.
-- **Idle:** no set completed at any of the session's racks for a threshold (proposed:
-  60 minutes). An idle session is **suspended**: its rack tablets show "No session yet",
+- **Idle:** no set completed at any of the session's racks for **120 minutes** (Devin,
+  2026-11-14: long enough for warm-ups or a team talk mid-lift). An idle session is **suspended**: its rack tablets show "No session yet",
   its live room and TV stop updating and its online athletes' racks close, so it stops
   costing compute; its data and roster are untouched and nothing is frozen. A coach
   **resumes** it (it picks up exactly where it was) or **ends** it (the daily report is
   made then).
-- **Ended automatically, later:** a session suspended for a long threshold (proposed: until
-  the next morning, or 12 hours) is ended as if a coach had pressed End, so a report always
-  exists eventually. **Open question (Devin):** keep this, or leave every end to a coach.
+- **Ended automatically, later:** a session suspended for **24 hours** (Devin, 2026-11-14)
+  is ended as if a coach had pressed End, so a report always exists eventually.
+- **Make-ups after it ends** are their own spec (to write; see the specs index): today the
+  server still accepts a set filed into an ended session (the original design's make-up
+  flow) and every set has `is_makeup`, but no screen does it and the daily report, frozen
+  at the end, wouldn't show it.
 - **Whether suspending saves compute in practice:** the live room, TV and tablets poll and
   listen only while a session runs, and online athletes' racks hold live connections; a
   suspended session has none of these. Spec 15 (usage) measures it.
@@ -203,9 +222,9 @@ Every "which session?" question becomes **"which session for this ..."**:
 `active_session()` stays for a gym box and for a school with the switch off; the callers
 above move to the "for this rack / coach / display" versions.
 
-**Proposed change to the switch (2026-11-14, Devin to confirm):** instead of on/off, the
+**The switch becomes a count (Devin, 2026-11-14: decided):** instead of on/off, the
 registry records **how many locations the school may have** (1 unless set), applied the
-same way (`EA_LOCATIONS_ALLOWED`). One running session per location follows from it, so
+same way (`EA_LOCATIONS_ALLOWED`), and sold that way ("Program: up to 2 rooms"). One running session per location follows from it, so
 "several sessions at once" needs no separate switch. An online-only school with two teams
 lifting at the same hour gives each its own location ("Football", "Track"); the address is
 optional.

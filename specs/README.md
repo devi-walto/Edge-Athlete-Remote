@@ -158,6 +158,13 @@ local install and the remote server, built on the design already in
 `docs/journal/core/remote/databases.md` (first a copy, then only finished sessions are
 added each way, the remote server wins a shared record edited on both sides). Several
 rooms on the remote server are spec 17, not sync: one school, one database.
+**Make-up sessions** (to write, Devin 2026-11-14): an athlete who missed a session does it
+later, and the sets count toward the missed day. Devin's idea: the missed session leaves
+each absent athlete a pointer; any one-off session they lift later can be pointed at it,
+bringing in that day's plan, and their sets file into the original session as make-ups.
+Today the server still accepts a set filed into an ended session and every set has
+`is_makeup` (the original design's flow), but no screen does it, and the daily report,
+frozen at the end, wouldn't include it.
 
 ### 5. Kept out of this repository
 
